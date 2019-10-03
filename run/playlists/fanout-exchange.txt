@@ -1,0 +1,5 @@
+throughput/exchanges/FanoutBenchmark1.json
+throughput/exchanges/FanoutBenchmark2.json
+throughput/exchanges/FanoutBenchmark3.json
+throughput/exchanges/FanoutBenchmark4.json
+latency/exchanges/FanoutBenchmark1.json

@@ -1,0 +1,55 @@
+{
+    "topologyName": "OverloadBenchmark3",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "stress",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "exchanges": [
+                {
+                    "name": "ex1",
+                    "type": "fanout"
+                }
+            ],
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1,
+                    "bindings": [
+                        { "from": "ex1" }
+                    ]
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 10,
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent",
+                    "msgsPerSecondPerPublisher": 5000,
+                    "messageSize": 10240
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "Publishers",
+            "values": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 10,
+            "applyToGroup": "p1"
+        }
+    }
+}

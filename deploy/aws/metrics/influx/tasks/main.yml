@@ -1,0 +1,53 @@
+---
+# tasks file for influx
+
+- name: Import InfluxDB GPG signing key
+  apt_key: url=https://repos.influxdata.com/influxdb.key state=present
+
+- name: Add InfluxDB repository
+  apt_repository: repo='deb https://repos.influxdata.com/ubuntu xenial stable' state=present
+
+- name: Install InfluxDB packages
+  apt: name=influxdb state=present
+
+- name: Modify InfluxDB data dir
+  replace:
+    dest=/etc/influxdb/influxdb.conf
+    regexp='^  dir = "/var/lib/influxdb/data"$'
+    replace='  dir = "/data/influxdb/lib/data"'
+
+- name: Modify InfluxDB WAL dir
+  replace:
+    dest=/etc/influxdb/influxdb.conf
+    regexp='^  wal-dir = "/var/lib/influxdb/wal"$'
+    replace='  wal-dir = "/data/influxdb/lib/wal"'
+
+- name: Modify InfluxDB meta dir
+  replace:
+    dest=/etc/influxdb/influxdb.conf
+    regexp='^  dir = "/var/lib/influxdb/meta"$'
+    replace='  dir = "/data/influxdb/lib/meta"'
+
+- name:  make influxdb directory belong to influxdb
+  file:
+    path: /data/influxdb
+    owner: influxdb
+    group: influxdb
+    recurse: true
+
+- name: Start the InfluxDB service
+  service: 
+    name=influxdb 
+    state=started 
+    enabled=yes
+
+- name: Pause for InfluxDB service
+  pause: seconds=3
+
+- name: Create database
+  command: /usr/bin/influx -execute 'CREATE DATABASE {{ influx_database.name }}'
+  ignore_errors: yes
+
+- name: Create user
+  command: /usr/bin/influx -execute "create user {{ influx_user.name }} with password '{{ influx_user.password }}'"
+  ignore_errors: yes

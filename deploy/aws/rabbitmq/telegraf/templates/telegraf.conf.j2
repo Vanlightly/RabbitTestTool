@@ -1,0 +1,32 @@
+[agent]
+  hostname = "{{ hostname }}"
+  flush_interval = "15s"
+  interval = "15s"
+
+
+# Input Plugins
+[[inputs.cpu]]
+    percpu = true
+    totalcpu = true
+    collect_cpu_time = false
+    report_active = false
+[[inputs.disk]]
+    ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+[[inputs.io]]
+[[inputs.mem]]
+[[inputs.net]]
+[[inputs.system]]
+[[inputs.swap]]
+[[inputs.netstat]]
+[[inputs.processes]]
+[[inputs.kernel]]
+[[inputs.rabbitmq]]
+  username = "{{ rabbitmq_user.name }}"
+  password = "{{ rabbitmq_user.password }}"
+
+# Output Plugin InfluxDB
+[[outputs.influxdb]]
+  database = "{{ influx_db_name }}"
+  urls = [ "{{ influx_url }}" ]
+  username = "{{ influx_user.name }}"
+  password = "{{ influx_user.password }}"

@@ -1,0 +1,209 @@
+---
+- name: Set hosts file with instance ips
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {{ item.ip }} {{ item.host }}
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.host }}"
+    # owner: root
+    # group: root
+    # mode: 0644
+  with_items: "{{ rabbitmq_hosts }}"
+  when: rabbitmq_hosts is defined
+
+- name: Install RabbitMQ public key
+  apt_key:
+    url: https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc
+    state: present
+
+# - name: Add RabbitMQ Bintray repo
+#   apt_repository:
+#     repo: deb https://dl.bintray.com/rabbitmq/debian bionic main
+#     state: present
+#     filename: rabbitmq
+
+# - name: Add Rabbitmq-Erlang Bintray repo
+#   apt_repository:
+#     repo: deb http://dl.bintray.com/rabbitmq-erlang/debian bionic erlang
+#     state: present
+#     filename: erlang
+
+# - name: Install Erlang
+#   apt:
+#     name: "{{ item }}"
+#     update_cache: yes
+#     install_recommends: yes
+#     state: present
+#   with_items:
+#     - erlang-base
+#     - erlang-asn1
+#     - erlang-crypto
+#     - erlang-eldap
+#     - erlang-ftp
+#     - erlang-inets
+#     - erlang-mnesia
+#     - erlang-os-mon
+#     - erlang-parsetools
+#     - erlang-public-key
+#     - erlang-runtime-tools
+#     - erlang-snmp
+#     - erlang-ssl
+#     - erlang-syntax-tools
+#     - erlang-tftp
+#     - erlang-tools
+#     - erlang-xmerl
+
+- name: Install Erlang Solutions public key
+  apt_key:
+    url: https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
+    state: present
+
+- name: copy Erlang DEB file to /tmp
+  copy: 
+    src: "{{ local_deb_file_dir }}/{{ erlang_deb_file }}"
+    dest: /tmp
+  when: install_from == 'deb'
+
+- name: Install Erlang from DEB file
+  apt:
+    deb: "/tmp/{{ erlang_deb_file }}"
+  when: install_from == 'deb'
+
+# - name: Add Erlang Solutions official repo
+#   apt_repository:
+#     repo: deb https://packages.erlang-solutions.com/ubuntu bionic contrib
+#     state: present
+#     filename: rabbitmq
+
+# - name: Install Erlang
+#   apt:
+#     name: erlang
+#     update_cache: yes
+#     install_recommends: yes
+#     state: present
+
+# - name: Install RabbitMQ from repo
+#   apt:
+#     name: "rabbitmq-server={{ rabbitmq_version }}"
+#     update_cache: yes
+#     #install_recommends: yes
+#     state: present
+#   when: install_from == 'repo'
+
+- name: Install RabbitMQ dependencies
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    install_recommends: yes
+    state: present
+  with_items:
+    - socat 
+    - logrotate 
+    - init-system-helpers
+    - adduser
+  when: install_from == 'deb'
+
+- name: copy DEB file to /tmp
+  copy: 
+    src: "{{ local_deb_file_dir }}/{{ deb_file }}"
+    dest: /tmp
+  when: install_from == 'deb'
+
+- name: Install RabbitMQ from DEB file
+  apt:
+    deb: "/tmp/{{ deb_file }}"
+  when: install_from == 'deb'
+
+- name: Stop service rabbitmq-server
+  service:
+    name: rabbitmq-server
+    state: stopped
+
+- name: Remove files
+  file:
+    path: /var/log/rabbitmq
+    state: absent
+
+- name: Remove files
+  file:
+    path: /var/lib/rabbitmq
+    state: absent
+
+- name: create symlink to rabbitmq log directory
+  file:
+    src: /rabbitmq/log
+    dest: /var/log/rabbitmq
+    owner: rabbitmq
+    group: rabbitmq
+    state: link
+    force: true
+
+- name: create symlink to rabbitmq data directory
+  file:
+    src: /rabbitmq/data
+    dest: /var/lib/rabbitmq
+    owner: rabbitmq
+    group: rabbitmq
+    state: link
+    force: true
+
+- name:  make data directory belong to rabbitmq
+  file:
+    path: /rabbitmq/data
+    owner: rabbitmq
+    group: rabbitmq
+
+- name:  make log directory belong to rabbitmq
+  file:
+    path: /rabbitmq/log
+    owner: rabbitmq
+    group: rabbitmq
+
+- name: Set rabbitmq erlang cookie
+  template:
+    src: erlang.cookie.j2
+    dest: /rabbitmq/data/.erlang.cookie
+    owner: rabbitmq
+    group: rabbitmq
+    mode: 0400
+
+- name: Start service rabbitmq-server
+  service:
+    name: rabbitmq-server
+    state: started
+  
+- name: Enable RabbitMQ plugins
+  rabbitmq_plugin:
+    names: rabbitmq_management
+    state: enabled
+  notify:
+    - restart rabbitmq
+
+- include_tasks: join_cluster.yml
+  when: node_role == "joinee"
+
+- name: Create default vhost
+  rabbitmq_vhost:
+    name: "{{ default_vhost }}"
+    tracing: no
+    state: present
+  when: node_role == "master"
+
+- name: Add RabbitMQ Deploy user
+  rabbitmq_user:
+    user: "{{ rabbitmq_user.name }}"
+    password: "{{ rabbitmq_user.password }}"
+    tags: administrator
+    vhost: "{{ default_vhost }}"
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*
+    state: present
+  when: node_role == "master"
+
+- name: Remove default user
+  rabbitmq_user:
+    user: guest
+    state: absent
+  when: node_role == "master"
+

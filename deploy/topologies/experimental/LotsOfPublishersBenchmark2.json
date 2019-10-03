@@ -1,0 +1,56 @@
+{
+    "topologyName": "TP_LotsOfPublishersBenchmark2",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "throughput",
+    "description": "1kb msgs. Confirms (1000) and manual acks (500/1). Scale out publishers",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "publishMode": {
+                        "useConfirms": true,
+                        "inFlightLimit": 1000
+                    },
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "random"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 1024
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 2,
+                    "queueGroup": "q1",
+                    "ackMode": {
+                        "manualAcks": true,
+                        "consumerPrefetch": 500,
+                        "ackInterval": 1
+                    }
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "Publishers",
+            "values": [10, 20, 30, 40, 50, 50, 50, 50, 50, 50, 
+                60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+                70, 70, 70, 70, 70, 70, 70, 70, 70, 70],
+            "stepDurationSeconds": 30,
+            "rampUpSeconds": 10
+        }
+    }
+}

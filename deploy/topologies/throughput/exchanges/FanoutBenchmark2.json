@@ -1,0 +1,54 @@
+{
+  "topologyName": "TP_FanoutBenchmark2",
+  "topologyType": "fixed",
+  "benchmarkType": "throughput",
+  "description": "One pub/queue/con, 512 byte msg",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": 1,
+      "exchanges": [
+        {
+          "name": "ex1",
+          "type": "fanout"
+        }
+      ],
+      "queueGroups": [
+        {
+          "group": "q1",
+          "scale": 1,
+          "bindings": [
+            {
+              "from": "ex1"
+            }
+          ]
+        }
+      ],
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": 1,
+          "sendToExchange": {
+            "exchange": "ex1",
+            "routingKeyMode": "none"
+          },
+          "deliveryMode": "Persistent",
+          "messageSize": 512
+        }
+      ],
+      "consumerGroups": [
+        {
+          "group": "c1",
+          "scale": 1,
+          "queueGroup": "q1"
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": 120,
+      "rampUpSeconds": 10
+    }
+  }
+}

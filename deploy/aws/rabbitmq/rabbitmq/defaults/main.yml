@@ -1,0 +1,5 @@
+default_vhost: "benchmark"
+rabbitmq_version: 3.7.17
+rabbitmq_erlang_cookie: 12345
+node_role: "master"
+is_cluster: false

@@ -1,0 +1,53 @@
+{
+    "topologyName": "TP_BackgroundLoad1",
+    "topologyType": "fixed",
+    "benchmarkType": "throughput",
+    "description": "1kb msgs. Confirms (1000) and manual acks (500/1).",
+    "vhosts": [
+        {
+            "name": "background",
+            "scale": 1,
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "publishMode": {
+                        "useConfirms": true,
+                        "inFlightLimit": 1000
+                    },
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "random"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 1024,
+                    "msgsPerSecondPerPublisher": 1000
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1",
+                    "ackMode": {
+                        "manualAcks": true,
+                        "consumerPrefetch": 500,
+                        "ackInterval": 1
+                    }
+                }
+            ]
+        }
+    ],
+    "dimensions": {
+        "fixedDimensions": {
+            "durationSeconds": 120,
+            "rampUpSeconds": 10
+        }
+    }
+}

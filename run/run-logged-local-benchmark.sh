@@ -1,0 +1,20 @@
+java -jar ../target/rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+--mode logged-benchmark \
+--topology "$1" \
+--policies "$6" \
+--technology "$2"  \
+--version "$3" \
+--config-file "$4" \
+--node 1 \
+--run-id "$5" \
+--run-tag 1 \
+--config-tag 1 \
+--node-number 1 \
+--instance local \
+--volume local \
+--volume-size 1000 \
+--filesystem ext4 \
+--tenancy local \
+--hosting local \
+--core-count 0 \
+--threads-per-core 0 \

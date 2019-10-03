@@ -1,0 +1,45 @@
+{
+    "topologyName": "SCALE_Large_1kb",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "stress",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 500
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 500,
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "Counterpart"
+                    },
+                    "deliveryMode": "Persistent",
+                    "msgsPerSecondPerPublisher": 1,
+                    "messageSize": 1024
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 500,
+                    "queueGroup": "q1"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "PublisherRate",
+            "values": [1, 10, 50, 100, 250, 500, 750, 1000],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 30
+        }
+    }
+}

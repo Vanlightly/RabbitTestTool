@@ -1,0 +1,131 @@
+package com.jackvanlightly.rabbittesttool.clients.publishers;
+
+import com.jackvanlightly.rabbittesttool.topology.model.publishers.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class PublisherSettings {
+    private List<Integer> streams;
+    private PublisherMode publisherMode;
+    private SendToMode sendToMode;
+    private SendToExchange sendToExchange;
+    private SendToQueueGroup sendToQueueGroup;
+    private int messageSize;
+    private List<MessageHeader> availableHeaders;
+    private int messageHeadersPerMessage;
+    private boolean useMandatoryFlag;
+    private DeliveryMode deliveryMode;
+    private int publishRatePerSecond;
+    private int frameMax;
+
+    public PublisherSettings(SendToExchange sendToExchange,
+                             PublisherMode publisherMode,
+                             List<Integer> streams,
+                             int messageSize,
+                             DeliveryMode deliveryMode,
+                             int frameMax) {
+        this.sendToExchange = sendToExchange;
+        this.publisherMode = publisherMode;
+        this.streams = streams;
+        this.messageSize = messageSize;
+        this.deliveryMode = deliveryMode;
+        this.sendToMode = SendToMode.Exchange;
+        this.frameMax = frameMax;
+
+        this.availableHeaders = new ArrayList<>();
+    }
+
+    public PublisherSettings(SendToQueueGroup sendToQueueGroup,
+                             PublisherMode publisherMode,
+                             List<Integer> streams,
+                             int messageSize,
+                             DeliveryMode deliveryMode,
+                             int frameMax) {
+        this.sendToQueueGroup = sendToQueueGroup;
+        this.publisherMode = publisherMode;
+        this.streams = streams;
+        this.messageSize = messageSize;
+        this.deliveryMode = deliveryMode;
+        this.sendToMode = SendToMode.QueueGroup;
+        this.frameMax = frameMax;
+
+        this.availableHeaders = new ArrayList<>();
+    }
+
+    public List<Integer> getStreams() {
+        return streams;
+    }
+
+    public int getMessageSize() {
+        return messageSize;
+    }
+
+    public PublisherMode getPublisherMode() {
+        return publisherMode;
+    }
+
+    public SendToExchange getSendToExchange() {
+        return sendToExchange;
+    }
+
+    public SendToQueueGroup getSendToQueueGroup() {
+        return sendToQueueGroup;
+    }
+
+    public SendToMode getSendToMode() {
+        return sendToMode;
+    }
+
+    public List<MessageHeader> getAvailableHeaders() {
+        return availableHeaders;
+    }
+
+    public void setAvailableHeaders(List<MessageHeader> availableHeaders) {
+        this.availableHeaders = availableHeaders;
+    }
+
+    public int getMessageHeadersPerMessage() {
+        return messageHeadersPerMessage;
+    }
+
+    public void setMessageHeadersPerMessage(int messageHeadersPerMessage) {
+        this.messageHeadersPerMessage = messageHeadersPerMessage;
+    }
+
+    public boolean useMandatoryFlag() {
+        return useMandatoryFlag;
+    }
+
+    public void setUseMandatoryFlag(boolean useMandatoryFlag) {
+        this.useMandatoryFlag = useMandatoryFlag;
+    }
+
+    public DeliveryMode getDeliveryMode() {
+        return deliveryMode;
+    }
+
+    public void setDeliveryMode(DeliveryMode deliveryMode) {
+        this.deliveryMode = deliveryMode;
+    }
+
+    public boolean isUseMandatoryFlag() {
+        return useMandatoryFlag;
+    }
+
+    public int getPublishRatePerSecond() {
+        return publishRatePerSecond;
+    }
+
+    public void setPublishRatePerSecond(int publishRatePerSecond) {
+        this.publishRatePerSecond = publishRatePerSecond;
+    }
+
+    public int getFrameMax() {
+        return frameMax;
+    }
+
+    public void setFrameMax(int frameMax) {
+        this.frameMax = frameMax;
+    }
+}

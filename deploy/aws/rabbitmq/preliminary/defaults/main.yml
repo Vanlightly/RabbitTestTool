@@ -1,0 +1,5 @@
+---
+# defaults file for preliminary
+hostname: rabbitmq1
+filesystem: xfs
+volume_size: 200

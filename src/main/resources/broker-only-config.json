@@ -1,0 +1,8 @@
+{
+  "broker-hosts": "localhost",
+  "broker-mgmt-port": "15672",
+  "broker-port": "5672",
+  "broker-user": "guest",
+  "broker-password": "guest",
+  "broker-vhost": "benchmark"
+}

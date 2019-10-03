@@ -1,0 +1,43 @@
+{
+  "topologyName": "TP_VhostBenchmark2",
+  "topologyType": "fixed",
+  "benchmarkType": "throughput",
+  "description": "1 vhosts, 10 queues with 1kb persistent messages",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": 1,
+      "queueGroups": [
+        {
+          "group": "q1",
+          "scale": 10
+        }
+      ],
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": 10,
+          "sendToQueueGroup": {
+            "queueGroup": "q1",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "Persistent",
+          "messageSize": 1024
+        }
+      ],
+      "consumerGroups": [
+        {
+          "group": "c1",
+          "scale": 10,
+          "queueGroup": "q1"
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": 120,
+      "rampUpSeconds": 10
+    }
+  }
+}

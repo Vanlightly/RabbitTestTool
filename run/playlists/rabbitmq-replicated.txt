@@ -1,0 +1,4 @@
+rabbitmq-only/throughput/replicated/MirroredQueueBenchmark1.json
+rabbitmq-only/throughput/replicated/QuorumQueueBenchmark1.json
+rabbitmq-only/latency/replicated/MirroredQueueBenchmark1.json
+rabbitmq-only/latency/replicated/QuorumQueueBenchmark1.json

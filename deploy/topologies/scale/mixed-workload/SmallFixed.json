@@ -1,0 +1,95 @@
+{
+    "topologyName": "SCALE_SmallBenchmark2",
+    "topologyType": "fixed",
+    "benchmarkType": "stress",
+    "description": "Increasing pub rate",
+    "vhosts": [
+        {
+            "name": "scale",
+            "scale": 1,
+            "exchanges": [
+                { "name": "ex1", "type": "fanout" },
+                { "name": "ex2", "type": "fanout" },
+                { "name": "ex3", "type": "fanout" },
+                { "name": "ex4", "type": "topic" },
+                { "name": "ex5", "type": "topic" },
+                { "name": "ex6", "type": "topic" },
+                { "name": "ex7", "type": "direct" },
+                { "name": "ex8", "type": "direct" },
+                { "name": "ex9", "type": "direct" },
+                { "name": "ex10", "type": "headers" }
+            ],
+            "queueGroups": [
+                { "group": "q1", "scale": 10, "bindings": [{ "from": "ex1" }] },
+                { "group": "q2", "scale": 5, "bindings": [{ "from": "ex2" }] },
+                { "group": "q3", "scale": 1, "bindings": [{ "from": "ex3" }] },
+                { "group": "q4a", "scale": 3, "bindings": [{ "from": "ex4", "bindingKey": "AAAAA.BBBBB.CCCCC" }] },
+                { "group": "q4b", "scale": 3, "bindings": [{ "from": "ex4", "bindingKey": "DDDDD.EEEEE.FFFFF" }] },
+                { "group": "q5a", "scale": 3, "bindings": [{ "from": "ex5", "bindingKey": "#.CCCCC" }] },
+                { "group": "q5b", "scale": 3, "bindings": [{ "from": "ex5", "bindingKey": "#.FFFFF" }] },
+                { "group": "q6a", "scale": 3, "bindings": [{ "from": "ex6", "bindingKey": "AAAAA.*.CCCCC" }] },
+                { "group": "q6b", "scale": 3, "bindings": [{ "from": "ex6", "bindingKey": "DDDDD.*.FFFFF" }] },
+                { "group": "q7", "scale": 1, "bindings": [{ "from": "ex7", "bindingKey": "AAAAAAAAAA" }] },
+                { "group": "q8", "scale": 1, "bindings": [{ "from": "ex8", "bindingKey": "AAAAAAAAAA" }] },
+                { "group": "q9a", "scale": 1, "bindings": [{ "from": "ex9", "bindingKey": "XXXXXXXXXX" }] },
+                { "group": "q9b", "scale": 1, "bindings": [{ "from": "ex9", "bindingKey": "YYYYYYYYYY" }] },
+                { "group": "q9c", "scale": 1, "bindings": [{ "from": "ex9", "bindingKey": "ZZZZZZZZZZ" }] },
+                { "group": "q10", "scale": 2, "bindings": [{ "from": "ex10", "properties": 
+                    [
+                        { "key": "x-match", "value": "any" },
+                        { "key": "custom01", "value": "aaaaaaaaaa", "type": "string" },
+                        { "key": "custom02", "value": "bbbbbbbbbb", "type": "string" }
+                    ] 
+                    }] }
+            ],
+            "publisherGroups": [
+                { "group": "p1", "scale": 10, "publishMode": { "useConfirms": true, "inFlightLimit": 100}, "sendToExchange": { "exchange": "ex1", "routingKeyMode": "none" }, "deliveryMode": "Persistent", "messageSize": 16384, "msgsPerSecondPerPublisher": 1 },
+                { "group": "p2", "scale": 1, "sendToExchange": { "exchange": "ex2", "routingKeyMode": "none" }, "deliveryMode": "Transient", "messageSize": 65535, "msgsPerSecondPerPublisher": 10 },
+                { "group": "p3", "scale": 10, "sendToExchange": { "exchange": "ex3", "routingKeyMode": "none" }, "deliveryMode": "Persistent", "messageSize": 512, "msgsPerSecondPerPublisher": 1 },
+                { "group": "p4", "scale": 5, "publishMode": { "useConfirms": true, "inFlightLimit": 100}, "sendToExchange": { "exchange": "ex4", "routingKeyMode": "MultiValue", "routingKeys": ["AAAAA.BBBBB.CCCCC", "DDDDD.EEEEE.FFFFF", "GGGGG.HHHHH.IIIII"] }, "deliveryMode": "Persistent", "messageSize": 2048, "msgsPerSecondPerPublisher": 10 },
+                { "group": "p5", "scale": 10, "sendToExchange": { "exchange": "ex5", "routingKeyMode": "MultiValue", "routingKeys": ["AAAAA.BBBBB.CCCCC", "DDDDD.EEEEE.FFFFF", "GGGGG.HHHHH.IIIII"] }, "deliveryMode": "Persistent", "messageSize": 2048, "msgsPerSecondPerPublisher": 10 },
+                { "group": "p6", "scale": 2, "sendToExchange": { "exchange": "ex6", "routingKeyMode": "MultiValue", "routingKeys": ["AAAAA.BBBBB.CCCCC", "DDDDD.EEEEE.FFFFF", "GGGGG.HHHHH.IIIII"] }, "deliveryMode": "Persistent", "messageSize": 2048, "msgsPerSecondPerPublisher": 10 },
+                { "group": "p7", "scale": 2, "publishMode": { "useConfirms": true, "inFlightLimit": 10}, "sendToExchange": { "exchange": "ex7", "routingKeyMode": "MultiValue", "routingKeys": ["AAAAAAAAAA", "BBBBBBBBBB", "CCCCCCCCCC"] }, "deliveryMode": "Persistent", "messageSize": 2048, "msgsPerSecondPerPublisher": 10 },
+                { "group": "p8", "scale": 2, "sendToExchange": { "exchange": "ex8", "routingKeyMode": "MultiValue", "routingKeys": ["AAAAAAAAAA", "BBBBBBBBBB", "CCCCCCCCCC"] }, "deliveryMode": "Persistent", "messageSize": 8192, "msgsPerSecondPerPublisher": 10 },
+                { "group": "p9", "scale": 2, "sendToExchange": { "exchange": "ex9", "routingKeyMode": "MultiValue", "routingKeys": ["XXXXXXXXXX", "YYYYYYYYYY", "ZZZZZZZZZZ"] }, "deliveryMode": "Persistent", "messageSize": 131072, "msgsPerSecondPerPublisher": 2 },
+                { "group": "p10", "scale": 1,
+                    "sendToExchange": {
+                        "exchange": "ex10",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 1048576,
+                    "availableHeaders": [
+                        { "key": "custom01", "value": "aaaaaaaaaa", "type": "string" },
+                        { "key": "custom02", "value": "bbbbbbbbbb", "type": "string" }
+                    ],
+                    "headersPerMessage": 2,
+                    "msgsPerSecondPerPublisher": 5
+                }
+            ],
+            "consumerGroups": [
+                { "group": "c1", "scale": 10, "queueGroup": "q1", "ackMode": { "manualAcks": true, "consumerPrefetch": 100, "ackInterval": 10 } },
+                { "group": "c2", "scale": 5, "queueGroup": "q2", "ackMode": { "manualAcks": true, "consumerPrefetch": 10, "ackInterval": 1 } },
+                { "group": "c3", "scale": 2, "queueGroup": "q3", "ackMode": { "manualAcks": true, "consumerPrefetch": 100, "ackInterval": 10 } },
+                { "group": "c4a", "scale": 3, "queueGroup": "q4a", "ackMode": { "manualAcks": true, "consumerPrefetch": 100, "ackInterval": 10 } },
+                { "group": "c4b", "scale": 3, "queueGroup": "q4b" },
+                { "group": "c5a", "scale": 3, "queueGroup": "q5a", "ackMode": { "manualAcks": true, "consumerPrefetch": 100, "ackInterval": 10 } },
+                { "group": "c5b", "scale": 3, "queueGroup": "q5b" },
+                { "group": "c6a", "scale": 3, "queueGroup": "q6a", "ackMode": { "manualAcks": true, "consumerPrefetch": 100, "ackInterval": 10 } },
+                { "group": "c6b", "scale": 3, "queueGroup": "q6b" },
+                { "group": "c7", "scale": 1, "queueGroup": "q7", "ackMode": { "manualAcks": true, "consumerPrefetch": 100, "ackInterval": 10 } },
+                { "group": "c8", "scale": 1, "queueGroup": "q8" },
+                { "group": "c9a", "scale": 1, "queueGroup": "q9a", "ackMode": { "manualAcks": true, "consumerPrefetch": 1, "ackInterval": 1 } },
+                { "group": "c9b", "scale": 1, "queueGroup": "q9b" },
+                { "group": "c9c", "scale": 1, "queueGroup": "q9c", "ackMode": { "manualAcks": true, "consumerPrefetch": 10, "ackInterval": 10 } },
+                { "group": "c10", "scale": 1, "queueGroup": "q10" , "ackMode": { "manualAcks": true, "consumerPrefetch": 1, "ackInterval": 1 } }
+            ]
+        }
+    ],
+    "dimensions": {
+        "fixedDimensions": {
+            "durationSeconds": 120,
+            "rampUpSeconds": 10
+        }
+    }
+}

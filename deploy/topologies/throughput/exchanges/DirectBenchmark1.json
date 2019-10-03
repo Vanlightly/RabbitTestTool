@@ -1,0 +1,55 @@
+{
+  "topologyName": "TP_DirectBenchmark1",
+  "topologyType": "fixed",
+  "benchmarkType": "throughput",
+  "description": "Single, fixed, short routing key",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": 1,
+      "exchanges": [
+        {
+          "name": "ex1",
+          "type": "direct"
+        }
+      ],
+      "queueGroups": [
+        {
+          "group": "q1",
+          "scale": 1,
+          "bindings": [
+            {
+              "from": "ex1",
+              "bindingKey": "rk1"
+            }
+          ]
+        }
+      ],
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": 1,
+          "sendToExchange": {
+            "exchange": "ex1",
+            "routingKey": "rk1",
+            "routingKeyMode": "fixedvalue"
+          },
+          "deliveryMode": "Persistent"
+        }
+      ],
+      "consumerGroups": [
+        {
+          "group": "c1",
+          "scale": 1,
+          "queueGroup": "q1"
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": 120,
+      "rampUpSeconds": 10
+    }
+  }
+}

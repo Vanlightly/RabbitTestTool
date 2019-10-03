@@ -1,0 +1,25 @@
+- hosts: "tag_inventorygroup_benchmarking_loadgen_{{ technology }}{{ node }}_{{ run_tag }}"
+  remote_user: ubuntu
+  become: yes
+  vars_files:
+    # change to location of var files
+  tasks:
+    # detect skipping due to no matching hosts found issue
+    - name: Create a file to signal the playbook ran
+      file:
+        path: run_check
+        state: touch
+
+    - name: Update all packages
+      apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+        force_apt_get: true
+
+    - name: Install Java 8
+      apt:
+        name: default-jre
+        update_cache: yes
+        install_recommends: yes
+        state: present

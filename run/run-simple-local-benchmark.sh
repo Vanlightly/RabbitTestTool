@@ -1,0 +1,17 @@
+java -jar ../target/rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+--mode simple-benchmark \
+--topology "$1" \
+--policies "$4" \
+--technology "$2"  \
+--version "$3" \
+--metrics-influx-uri http://localhost:8086 \
+--metrics-influx-user amqp \
+--metrics-influx-password amqp \
+--metrics-influx-database amqp \
+--metrics-influx-interval 10 \
+--broker-hosts localhost \
+--broker-mgmt-port 15672 \
+--broker-port 5672 \
+--broker-user guest \
+--broker-password guest \
+--broker-vhost benchmark

@@ -1,0 +1,16 @@
+{
+  "metrics-influx-uri": "http://localhost:8086",
+  "metrics-influx-user": "amqp",
+  "metrics-influx-password": "amqp",
+  "metrics-influx-database": "amqp",
+  "metrics-influx-interval": "10",
+  "broker-hosts": "localhost",
+  "broker-mgmt-port": "15672",
+  "broker-port": "5672",
+  "broker-user": "guest",
+  "broker-password": "guest",
+  "broker-vhost": "benchmark",
+  "postgres-jdbc-url": "jdbc:postgresql://localhost:5432/amqpbenchmarks",
+  "postgres-user": "postgres",
+  "postgres-pwd": "docker"
+}
