@@ -745,6 +745,33 @@ $ python3.6 run-logged-aws-playlist.py \
 --parallel 5
 ```
 
+An example with background load:
+
+```bash
+$ python3.6 run-logged-aws-playlist.py \
+--playlist-file playlists/all-rounder.txt \
+--aws-config-file /path/to/your/aws-config-file.json \
+--loadgen-instance c5.xlarge \
+--config-tag c1 \
+--technology rabbitmq \
+--version 3.7.15 \
+--instance c5d.large \
+--volume local-nvme \
+--volume-size 46.6 \
+--filesystem xfs \
+--tenancy default \
+--core-count 1 \
+--threads-per-core 2 \
+--gap-seconds 30 \
+--repeat 1 \
+--parallel 5 \
+--bg-topology-file background/AddRemoveCpuLoad.json \
+--bg-delay 0 \
+--bg-step-seconds 120
+```
+
+Note that the bg-topology-file is relative to the topologies directory.
+
 #### Side-by-side broker playlist
 
 A side-by-side run takes two configurations and runs them at the same time. Each of the two configurations gets its own config-tag, in this example c1 and c2.
@@ -762,6 +789,13 @@ The list of arguments with a 1 or 2 suffix are:
 - --no-tcp-delay
 - --cluster-size
 - --policies-file
+
+The following arguments are not available yet for side-by-side:
+- --bg-topology-file
+- --bg-policies-file
+- --bg-delay
+- --bg-step-seconds
+- --bg-step-repeat
 
 ```bash
 $ python3.6 run-logged-aws-side-by-side-playlist.py \
