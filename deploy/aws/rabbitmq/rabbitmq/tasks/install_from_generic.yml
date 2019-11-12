@@ -100,12 +100,16 @@
 - name: Start RabbitMQ
   command: /rabbitmq/sbin/rabbitmq-server start -detached
 
-- name: Wait 1 minute for RabbitMQ to start
-  pause:
-    minutes: 1
+# - name: Wait 1 minute for RabbitMQ to start
+#   pause:
+#     minutes: 1
 
 - name: Enable RabbitMQ Management plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_management
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
 
 - name: Enable RabbitMQ top plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_top
