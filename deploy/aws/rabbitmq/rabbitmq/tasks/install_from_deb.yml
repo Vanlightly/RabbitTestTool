@@ -1,0 +1,104 @@
+---
+- name: Install RabbitMQ dependencies
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    install_recommends: yes
+    state: present
+  with_items:
+    - socat 
+    - logrotate 
+    - init-system-helpers
+    - adduser
+
+- name: copy DEB file to /tmp
+  copy: 
+    src: "{{ local_deb_file_dir }}/{{ deb_file }}"
+    dest: /tmp
+
+- name: Install RabbitMQ from DEB file
+  apt:
+    deb: "/tmp/{{ deb_file }}"
+
+- name: Stop service rabbitmq-server
+  service:
+    name: rabbitmq-server
+    state: stopped
+
+- name: Remove files
+  file:
+    path: /var/log/rabbitmq
+    state: absent
+
+- name: Remove files
+  file:
+    path: /var/lib/rabbitmq
+    state: absent
+
+- name: create symlink to rabbitmq log directory
+  file:
+    src: /rabbitmq/log
+    dest: /var/log/rabbitmq
+    owner: rabbitmq
+    group: rabbitmq
+    state: link
+    force: true
+
+- name: create symlink to rabbitmq data directory
+  file:
+    src: /rabbitmq/data
+    dest: /var/lib/rabbitmq
+    owner: rabbitmq
+    group: rabbitmq
+    state: link
+    force: true
+
+- name:  make data directory belong to rabbitmq
+  file:
+    path: /rabbitmq/data
+    owner: rabbitmq
+    group: rabbitmq
+
+- name:  make log directory belong to rabbitmq
+  file:
+    path: /rabbitmq/log
+    owner: rabbitmq
+    group: rabbitmq
+
+- name: Set rabbitmq erlang cookie
+  template:
+    src: erlang.cookie.j2
+    dest: /rabbitmq/data/.erlang.cookie
+    owner: rabbitmq
+    group: rabbitmq
+    mode: 0400
+
+- name: Start service rabbitmq-server
+  service:
+    name: rabbitmq-server
+    state: started
+
+- name: Create default vhost
+  rabbitmq_vhost:
+    name: "{{ default_vhost }}"
+    tracing: no
+    state: present
+  when: node_role == "master"
+
+- name: Add RabbitMQ Deploy user
+  rabbitmq_user:
+    user: "{{ rabbitmq_user.name }}"
+    password: "{{ rabbitmq_user.password }}"
+    tags: administrator
+    vhost: "{{ default_vhost }}"
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*
+    state: present
+  when: node_role == "master"
+
+- name: Remove default user
+  rabbitmq_user:
+    user: guest
+    state: absent
+  when: node_role == "master"

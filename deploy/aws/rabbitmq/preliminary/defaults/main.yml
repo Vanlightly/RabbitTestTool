@@ -3,3 +3,4 @@
 hostname: rabbitmq1
 filesystem: xfs
 volume_size: 200
+fd_limit: 500000

@@ -8,6 +8,37 @@
 - name: set hostname
   hostname:
     name: "{{ hostname }}"
+
+- name: Increase file descriptor limit for root
+  pam_limits:
+    domain: 'root'
+    limit_type: '-'
+    limit_item: nofile
+    value: "{{ fd_limit }}"
+
+- name: Increase file descriptor limit for ubuntu
+  pam_limits:
+    domain: 'ubuntu'
+    limit_type: 'soft'
+    limit_item: nofile
+    value: "{{ fd_limit }}"
+
+- name: Enable pam_limits.so
+  lineinfile:
+    path: /etc/pam.d/common-session
+    insertafter: EOF
+    line: 'session required pam_limits.so'
+
+- name: Ensure the locale exists
+  locale_gen:
+    name: en_US.UTF-8
+    state: present
+
+- name: set as default locale
+  command: update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+
+- name: Reboot the machine with all defaults
+  reboot:
     
 - name: Update all packages
   apt:
@@ -16,12 +47,12 @@
     update_cache: yes
     force_apt_get: true
 
-- name: Install Python
-  apt:
-    name: python
-    update_cache: yes
-    install_recommends: yes
-    state: present
+# - name: Install Python
+#   apt:
+#     name: python
+#     update_cache: yes
+#     install_recommends: yes
+#     state: present
     
 - name: get name of second volume
   shell: "lsblk | grep {{ volume_size_label }} | cut -d' ' -f1"

@@ -3,3 +3,6 @@ rabbitmq_version: 3.7.17
 rabbitmq_erlang_cookie: 12345
 node_role: "master"
 is_cluster: false
+prometheus_enabled: true
+allocation_strategy: rss
+disk_limit: 1000000000
