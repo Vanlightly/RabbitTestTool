@@ -9,65 +9,114 @@ from collections import namedtuple
 
 class Runner:
     def __init__(self):
-        self.benchmark_status = ""
+        self._benchmark_status = dict()
+
+    def get_benchmark_statuses(self):
+        return self._benchmark_status
+
+    def get_benchmark_status(self, status_id):
+        return self._benchmark_status[status_id]
     
-    def run_benchmark(self, ba, sa, run_tag, topology, policies):
-        status_id = ba.technology + ba.node
+    def run_benchmark(self, unique_conf, common_conf, topology, policies):
+        status_id = unique_conf.technology + unique_conf.node_number
 
         broker_user = "benchmark"
-        broker_password = sa.password
+        broker_password = common_conf.password
 
         nodes = ""
-        for x in range(int(ba.cluster_size)):
+        for x in range(int(unique_conf.cluster_size)):
             comma = ","
             if x == 0:
                 comma = ""
 
-            node_number = int(ba.node) + x
+            node_number = int(unique_conf.node_number) + x
             nodes = f"{nodes}{comma}rabbit@rabbitmq{node_number}"
 
-        self.benchmark_status[status_id] = "started"
-        exit_code = subprocess.call(["bash", "run-logged-aws-benchmark.sh", ba.node, sa.key_pair, ba.technology, ba.broker_version, ba.instance, ba.volume, ba.filesystem, sa.hosting, ba.tenancy, sa.password, sa.postgres_url, sa.postgres_user, sa.postgres_pwd, topology, sa.run_id, broker_user, broker_password, run_tag, ba.core_count, ba.threads_per_core, ba.config_tag, str(ba.cluster_size), ba.no_tcp_delay, policies, str(sa.override_step_seconds), str(sa.override_step_repeat), nodes, str(sa.override_step_msg_limit), sa.override_broker_hosts, ba.try_connect_local])
-        if exit_code != 0:
-            print(f"Benchmark {ba.node} failed")
-            self.benchmark_status[status_id] = "failed"
-        else:
-            self.benchmark_status[status_id] = "success"
+        self._benchmark_status[status_id] = "started"
+        exit_code = subprocess.call(["bash", "run-logged-aws-benchmark.sh", 
+                                unique_conf.node_number, 
+                                common_conf.key_pair, 
+                                unique_conf.technology, 
+                                unique_conf.broker_version, 
+                                unique_conf.instance, 
+                                unique_conf.volume, 
+                                unique_conf.filesystem, 
+                                common_conf.hosting, 
+                                unique_conf.tenancy, 
+                                common_conf.password, 
+                                common_conf.postgres_url, 
+                                common_conf.postgres_user, 
+                                common_conf.postgres_pwd, 
+                                topology, 
+                                common_conf.run_id, 
+                                broker_user, 
+                                broker_password, 
+                                common_conf.run_tag, 
+                                unique_conf.core_count, 
+                                unique_conf.threads_per_core, 
+                                unique_conf.config_tag, 
+                                str(unique_conf.cluster_size), 
+                                unique_conf.no_tcp_delay, 
+                                policies, 
+                                str(common_conf.override_step_seconds), 
+                                str(common_conf.override_step_repeat), 
+                                nodes, 
+                                str(common_conf.override_step_msg_limit), 
+                                common_conf.override_broker_hosts, 
+                                unique_conf.try_connect_local])
 
-    def run_background_load_across_runs(self, ba1_list, sharedArgs, run_tag, parallel_count):
+        if exit_code != 0:
+            print(f"Benchmark {unique_conf.node_number} failed")
+            self._benchmark_status[status_id] = "failed"
+        else:
+            self._benchmark_status[status_id] = "success"
+
+    def run_background_load_across_runs(self, unique_conf_list, common_conf):
         bg_threads = list()
-        for p in range(parallel_count):
-            ba1 = ba1_list[p]
-            t1 = threading.Thread(target=run_background_load, args=(ba1, sharedArgs, run_tag,))
+        for p in range(common_conf.parallel_count):
+            unique_conf = unique_conf_list[p]
+            t1 = threading.Thread(target=self.run_background_load, args=(unique_conf, common_conf,))
             bg_threads.append(t1)
 
         for bt in bg_threads:
             bt.start()
 
         time.sleep(10)
-        print(f"Delaying start of benchmark by {ba1_list[0].bg_delay} seconds")
-        time.sleep(ba1_list[0].bg_delay)
+        print(f"Delaying start of benchmark by {common_conf.background_delay} seconds")
+        time.sleep(common_conf.background_delay)
 
-    def run_background_load(self, ba, sa, run_tag):
-        global benchmark_status
-        print(f"Starting background load for {ba.node}")
-        status_id = ba.technology + ba.node
+    def run_background_load(self, unique_conf, common_conf):
+        print(f"Starting background load for {unique_conf.node_number}")
+        status_id = unique_conf.technology + unique_conf.node_number
 
         broker_user = "benchmark"
-        broker_password = sa.password
-        topology = ba.bg_topology_file
-        policies = ba.bg_policies_file
-        step_seconds = str(ba.bg_step_seconds)
-        step_repeat = str(ba.bg_step_repeat)
+        broker_password = common_conf.password
+        topology = common_conf.background_topology_file
+        policies = common_conf.background_policies_file
+        step_seconds = str(common_conf.background_step_seconds)
+        step_repeat = str(common_conf.background_step_repeat)
 
         nodes = ""
-        for x in range(int(ba.cluster_size)):
+        for x in range(int(unique_conf.cluster_size)):
             comma = ","
             if x == 0:
                 comma = ""
 
-            node_number = int(ba.node) + x
+            node_number = int(unique_conf.node_number) + x
             nodes = f"{nodes}{comma}{node_number}"
 
-        self.benchmark_status[status_id] = "started"
-        subprocess.Popen(["bash", "run-background-load-aws.sh", broker_user, broker_password, str(ba.cluster_size), sa.key_pair, ba.node, nodes, policies, step_seconds, step_repeat, run_tag, ba.technology, topology, ba.broker_version])
+        self._benchmark_status[status_id] = "started"
+        subprocess.Popen(["bash", "run-background-load-aws.sh", 
+                        broker_user, 
+                        broker_password, 
+                        str(unique_conf.cluster_size), 
+                        common_conf.key_pair, 
+                        unique_conf.node_number, 
+                        nodes, 
+                        policies, 
+                        step_seconds, 
+                        step_repeat, 
+                        common_conf.run_tag, 
+                        unique_conf.technology, 
+                        topology, 
+                        unique_conf.broker_version])
