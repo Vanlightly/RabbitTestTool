@@ -1,3 +1,1 @@
-scale/simple/Small1kb.json
 scale/simple/Medium1kb.json
-scale/simple/Large1kb.json

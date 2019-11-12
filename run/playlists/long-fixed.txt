@@ -1,1 +1,1 @@
-throughput/long-running/LongRunningBenchmark2.json
+experimental/LongFixedTest.json

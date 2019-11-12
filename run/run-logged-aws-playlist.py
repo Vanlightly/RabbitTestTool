@@ -129,10 +129,10 @@ def run_benchmark(ba, sa, run_tag, topology, policies):
             comma = ""
 
         node_number = int(ba.node) + x
-        nodes = f"{nodes}{comma}{node_number}"
+        nodes = f"{nodes}{comma}rabbit@rabbitmq{node_number}"
 
     benchmark_status[status_id] = "started"
-    exit_code = subprocess.call(["bash", "run-logged-aws-benchmark.sh", ba.node, sa.key_pair, ba.technology, ba.broker_version, ba.instance, ba.volume, ba.filesystem, sa.hosting, ba.tenancy, sa.password, sa.postgres_url, sa.postgres_user, sa.postgres_pwd, topology, sa.run_id, broker_user, broker_password, run_tag, ba.core_count, ba.threads_per_core, ba.config_tag, str(ba.cluster_size), ba.no_tcp_delay, policies, str(sa.override_step_seconds), str(sa.override_step_repeat), nodes])
+    exit_code = subprocess.call(["bash", "run-logged-aws-benchmark.sh", ba.node, sa.key_pair, ba.technology, ba.broker_version, ba.instance, ba.volume, ba.filesystem, sa.hosting, ba.tenancy, sa.password, sa.postgres_url, sa.postgres_user, sa.postgres_pwd, topology, sa.run_id, broker_user, broker_password, run_tag, ba.core_count, ba.threads_per_core, ba.config_tag, str(ba.cluster_size), ba.no_tcp_delay, policies, str(sa.override_step_seconds), str(sa.override_step_repeat), nodes, str(sa.override_step_msg_limit), sa.override_broker_hosts, ba.try_connect_local])
     if exit_code != 0:
         print(f"Benchmark {ba.node} failed")
         benchmark_status[status_id] = "failed"
@@ -234,9 +234,12 @@ repeat_count = int(get_optional_arg(args, "--repeat", "1"))
 parallel_count = int(get_optional_arg(args, "--parallel", "1"))
 override_step_seconds = int(get_optional_arg(args, "--override-step-seconds", "0"))
 override_step_repeat = int(get_optional_arg(args, "--override-step-repeat", "0"))
+override_step_msg_limit = int(get_optional_arg(args, "--override-step-msg-limit", "0"))
+override_broker_hosts = get_optional_arg(args, "--override-broker-hosts", "")
 postgres_url = get_mandatory_arg(args, "--postgres-jdbc-url")
 postgres_user = get_mandatory_arg(args, "--postgres-user")
 postgres_pwd = get_mandatory_arg_no_print(args, "--postgres-password")
+node_counter = int(get_optional_arg(args, "--start-node-num-from", "1"))
 
 config_tag1  = get_mandatory_arg(args, "--config-tag")
 technology1 = get_mandatory_arg_validated(args, "--technology", ["rabbitmq"])
@@ -249,28 +252,28 @@ fs1 = get_mandatory_arg_validated(args, "--filesystem", ["ext4", "xfs"])
 tenancy1 = get_mandatory_arg_validated(args, "--tenancy", ["default","dedicated"])
 core_count1 = get_mandatory_arg(args, "--core-count")
 no_tcp_delay1 = get_optional_arg(args, "--no-tcp-delay", "true")
+try_connect_local1 = get_optional_arg(args, "--try-connect-local", "false")
 threads_per_core1 = get_mandatory_arg(args, "--threads-per-core")
 vars_file = get_optional_arg(args, "--vars-file", f".variables/{technology1}-vars.yml")
 
 run_id = str(uuid.uuid4())
 print(f"RUN ID = {run_id}")
 
-BrokerArgs = namedtuple("BrokerArgs", "node technology broker_version cluster_size instance volume volume_size filesystem tenancy core_count threads_per_core no_tcp_delay config_tag vars_file bg_topology_file bg_policies_file bg_delay bg_step_seconds bg_step_repeat")
-SharedArgs = namedtuple("SharedArgs", "key_pair subnet ami broker_sg loadgen_sg loadgen_instance hosting password postgres_url postgres_user postgres_pwd run_id override_step_seconds override_step_repeat")
+BrokerArgs = namedtuple("BrokerArgs", "node technology broker_version cluster_size instance volume volume_size filesystem tenancy core_count threads_per_core no_tcp_delay config_tag vars_file bg_topology_file bg_policies_file bg_delay bg_step_seconds bg_step_repeat, try_connect_local")
+SharedArgs = namedtuple("SharedArgs", "key_pair subnet ami broker_sg loadgen_sg loadgen_instance hosting password postgres_url postgres_user postgres_pwd run_id override_step_seconds override_step_repeat override_step_msg_limit override_broker_hosts")
 
 print("Preparing broker configurations:")
 
 number_modifer = cluster_size1
 ba1_list = list()
-node_counter = 1
 for x in range(parallel_count):
     node_number1 = node_counter
     print(f" - configuration 1: {technology1}{node_number1}")
-    ba1_args = BrokerArgs(str(node_number1), technology1, version1, cluster_size1, instance1, volume1, volume_size1, fs1, tenancy1, core_count1, threads_per_core1, no_tcp_delay1, config_tag1, vars_file, background_topology_file, background_policies_file, background_delay, background_step_seconds, background_step_repeat)
+    ba1_args = BrokerArgs(str(node_number1), technology1, version1, cluster_size1, instance1, volume1, volume_size1, fs1, tenancy1, core_count1, threads_per_core1, no_tcp_delay1, config_tag1, vars_file, background_topology_file, background_policies_file, background_delay, background_step_seconds, background_step_repeat, try_connect_local1)
     ba1_list.append(ba1_args)
     node_counter += cluster_size1
 
-sharedArgs = SharedArgs(key_pair, subnet, ami_id, broker_sg, loadgen_sg, loadgen_instance, "aws", password, postgres_url, postgres_user, postgres_pwd, run_id, override_step_seconds, override_step_repeat)
+sharedArgs = SharedArgs(key_pair, subnet, ami_id, broker_sg, loadgen_sg, loadgen_instance, "aws", password, postgres_url, postgres_user, postgres_pwd, run_id, override_step_seconds, override_step_repeat, override_step_msg_limit, override_broker_hosts)
 
 deploy_status = dict()
 benchmark_status = dict()

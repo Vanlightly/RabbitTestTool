@@ -8,23 +8,27 @@ INFLUX_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values
 echo "Will connect to InfluxDB at ip $INFLUX_IP"
 
 BROKER_IPS=""
-for NODE in $(seq $1 $LAST_NODE)
-do
-    BROKER_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=benchmarking_${3}${NODE}_${18}" --query "Reservations[*].Instances[*].PrivateIpAddress" --output=text)
+if [ "${29}" != "" ]; then
+    BROKER_IPS="${29}"
+else
+    for NODE in $(seq $1 $LAST_NODE)
+    do
+        BROKER_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=benchmarking_${3}${NODE}_${18}" --query "Reservations[*].Instances[*].PrivateIpAddress" --output=text)
 
-    if [[ $NODE != $LAST_NODE ]]; then
-        BROKER_IPS+="${BROKER_IP},"
-    else
-        BROKER_IPS+="${BROKER_IP}"
-    fi
-done
+        if [[ $NODE != $LAST_NODE ]]; then
+            BROKER_IPS+="${BROKER_IP}:5672,"
+        else
+            BROKER_IPS+="${BROKER_IP}:5672"
+        fi
+    done
+fi
 
 LOADGEN_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=benchmarking_loadgen_$3$1_${18}" --query "Reservations[*].Instances[*].PublicIpAddress" --output=text)
 
 echo "Will connect to load gen server at ip $LOADGEN_IP"
 echo "Will connect to $3 at ipS $BROKER_IPs"
 
-ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@$LOADGEN_IP java -Xms4096m -Xmx8192m -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@$LOADGEN_IP java -Xms4096m -Xmx16384m -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
 --mode logged-benchmark \
 --topology "./topologies/${14}" \
 --policies "./policies/${24}" \
@@ -49,7 +53,6 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --metrics-influx-interval 10 \
 --broker-hosts "$BROKER_IPS" \
 --broker-mgmt-port 15672 \
---broker-port 5672 \
 --broker-user "${16}" \
 --broker-password "${17}" \
 --broker-vhost benchmark \
@@ -57,4 +60,6 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --postgres-user "${12}" \
 --postgres-pwd "${13}" \
 --override-step-seconds "${25}" \
---override-step-repeat "${26}"
+--override-step-repeat "${26}" \
+--override-step-msg-limit "${28}" \
+--try-connect-local "${30}"
