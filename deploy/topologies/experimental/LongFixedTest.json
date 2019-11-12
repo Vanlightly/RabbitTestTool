@@ -7,42 +7,39 @@
     {
       "name": "benchmark",
       "scale": 1,
-      "exchanges": [
-        {
-          "name": "ex1",
-          "type": "fanout"
-        }
-      ],
       "queueGroups": [
-        {
-          "group": "q1",
-          "scale": 1,
-          "bindings": [
-            {
-              "from": "ex1"
-            }
-          ]
-        }
+          {
+              "group": "q1",
+              "scale": 1
+          }
       ],
       "publisherGroups": [
-        {
-          "group": "p1",
-          "scale": 1,
-          "sendToExchange": {
-            "exchange": "ex1",
-            "routingKeyMode": "none"
-          },
-          "deliveryMode": "Persistent",
-          "messageSize": 1024,
-          "msgsPerSecondPerPublisher": 100
-        }
+          {
+              "group": "p1",
+              "scale": 2,
+              "publishMode": {
+                  "useConfirms": true,
+                  "inFlightLimit": 1000
+              },
+              "sendToQueueGroup": {
+                  "queueGroup": "q1",
+                  "mode": "random"
+              },
+              "deliveryMode": "Persistent",
+              "messageSize": 1024
+          }
       ],
       "consumerGroups": [
-        {
-          "group": "c1",
-          "scale": 1,
-          "queueGroup": "q1"
-        }
+          {
+              "group": "c1",
+              "scale": 1,
+              "queueGroup": "q1",
+              "ackMode": {
+                  "manualAcks": true,
+                  "consumerPrefetch": 500,
+                  "ackInterval": 1
+              }
+          }
       ]
     }
   ],

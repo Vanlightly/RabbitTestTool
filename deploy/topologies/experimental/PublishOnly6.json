@@ -1,0 +1,45 @@
+{
+    "topologyName": "PublishOnly6",
+    "topologyType": "Fixed",
+    "benchmarkType": "throughput",
+    "description": "100 queues, one publisher per queue, 64Kb messages",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 100,
+            "exchanges": [
+                {
+                    "name": "ex1",
+                    "type": "fanout"
+                }
+            ],
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1,
+                    "bindings": [
+                        { "from": "ex1" }
+                    ]
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 65536
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "fixedDimensions": {
+            "durationSeconds": 60,
+            "rampUpSeconds": 10
+        }
+    }
+}

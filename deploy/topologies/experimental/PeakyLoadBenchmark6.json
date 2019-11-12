@@ -47,8 +47,8 @@
     "dimensions" : {
         "singleDimension": {
             "dimension": "PublisherRate",
-            "values": [600, 1000, 1000, 600, 600, 600, 600],
-            "stepDurationSeconds": 60,
+            "values": [400, 1000, 1000, 400, 400, 400, 400, 400, 400],
+            "stepDurationSeconds": 120,
             "rampUpSeconds": 10
         }
     }

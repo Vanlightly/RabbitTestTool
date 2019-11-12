@@ -6,7 +6,7 @@
     "vhosts": [
         {
             "name": "background",
-            "scale": 1,
+            "scale": 10,
             "queueGroups": [
                 {
                     "group": "q1",
@@ -27,7 +27,7 @@
                     },
                     "deliveryMode": "Persistent",
                     "messageSize": 1024,
-                    "msgsPerSecondPerPublisher": 1000
+                    "msgsPerSecondPerPublisher": 10
                 }
             ],
             "consumerGroups": [

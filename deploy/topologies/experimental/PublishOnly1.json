@@ -2,7 +2,7 @@
     "topologyName": "PublishOnly",
     "topologyType": "Fixed",
     "benchmarkType": "throughput",
-    "description": "One publisher only, 1024 byte messages",
+    "description": "One publisher only, 16 byte messages",
     "vhosts": [
         {
             "name": "benchmark",
@@ -31,7 +31,7 @@
                         "routingKeyMode": "none"
                     },
                     "deliveryMode": "Persistent",
-                    "messageSize": 1024
+                    "messageSize": 16
                 }
             ]
         }

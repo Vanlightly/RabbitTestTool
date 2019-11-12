@@ -8,7 +8,7 @@
             "properties" : [
                 { "key": "x-queue-type", "value": "quorum", "type": "string" },
                 { "key": "x-quorum-initial-group-size", "value": "3", "type": "int" },
-                { "key": "x-max-in-memory-length", "value": "10000", "type": "int" }
+                { "key": "x-max-in-memory-length", "value": "100000", "type": "int" }
             ]
         }
     ]

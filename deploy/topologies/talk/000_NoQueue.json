@@ -1,0 +1,41 @@
+{
+    "topologyName": "TALK_002_PersistentOneQueue",
+    "topologyType": "Fixed",
+    "benchmarkType": "throughput",
+    "description": "Persistent, 16 byte, 1 pub/queue/con, increasing pub rate",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "exchanges": [
+                {
+                  "name": "ex1",
+                  "type": "fanout"
+                }
+              ],
+              "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 50,
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "fixedDimensions": {
+            "durationSeconds": 300,
+            "rampUpSeconds": 10
+        }
+    }
+}

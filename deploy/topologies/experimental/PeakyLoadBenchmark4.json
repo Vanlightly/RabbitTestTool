@@ -1,5 +1,5 @@
 {
-    "topologyName": "TP_PeakyLoadBenchmark4",
+    "topologyName": "TP_PeakyLoadBenchmark3",
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
     "description": "1kb msgs. 20 publishers. Confirms (1000) and manual acks (500/1). Peaky pub rate",
@@ -47,8 +47,8 @@
     "dimensions" : {
         "singleDimension": {
             "dimension": "PublisherRate",
-            "values": [400, 1000, 1000, 400, 400, 400, 400],
-            "stepDurationSeconds": 60,
+            "values": [200, 1000, 1000, 200, 200, 200, 200, 200, 200],
+            "stepDurationSeconds": 120,
             "rampUpSeconds": 10
         }
     }
