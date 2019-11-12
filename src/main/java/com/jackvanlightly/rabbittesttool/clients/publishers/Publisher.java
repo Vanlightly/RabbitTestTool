@@ -1,15 +1,10 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
-import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
-import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
-import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
-import com.jackvanlightly.rabbittesttool.clients.WithNagleSocketConfigurator;
+import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
-import com.jackvanlightly.rabbittesttool.topology.model.publishers.DeliveryMode;
-import com.jackvanlightly.rabbittesttool.topology.model.publishers.MessageHeader;
-import com.jackvanlightly.rabbittesttool.topology.model.publishers.RoutingKeyMode;
-import com.jackvanlightly.rabbittesttool.topology.model.publishers.SendToMode;
+import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
+import com.jackvanlightly.rabbittesttool.topology.model.publishers.*;
 import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 import org.slf4j.Logger;
@@ -62,6 +57,8 @@ public class Publisher implements Runnable {
     private int sentInPeriod;
     private int limitInPeriod;
     private int periodNs;
+    private long sentCount;
+    private long sendLimit;
 
     public Publisher(String publisherId,
                      MessageModel messageModel,
@@ -95,6 +92,7 @@ public class Publisher implements Runnable {
         this.availableMessageHeaderCombinations = initializeHeaders(publisherSettings.getMessageHeadersPerMessage());
         this.availableHeaderCount = this.availableMessageHeaderCombinations.size();
         this.inFlightLimit = this.publisherSettings.getPublisherMode().getInFlightLimit();
+        this.sendLimit = this.publisherSettings.getMessageLimit();
         initializeStreamCounter();
         initializeRouting();
     }
@@ -160,6 +158,10 @@ public class Publisher implements Runnable {
         return publisherStats.getAndResetRealSent();
     }
 
+    public void resetSendCount() {
+        this.sentCount = 0;
+    }
+
     @Override
     public void run() {
         while(!isCancelled) {
@@ -213,30 +215,39 @@ public class Publisher implements Runnable {
                         inflightSemaphore.acquire();
                     }
 
-                    publish(channel, currentStream, pendingConfirms);
+                    boolean send = sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit);
 
-                    currentStream++;
-                    if (currentStream > maxStream)
-                        currentStream = 0;
+                    if(send) {
+                        publish(channel, currentStream, pendingConfirms);
+                        sentCount++;
 
-                    if (rateLimit) {
-                        this.sentInPeriod++;
-                        long now = System.nanoTime();
-                        long elapsedNs = now - periodStartNs;
+                        currentStream++;
+                        if (currentStream > maxStream)
+                            currentStream = 0;
 
-                        if (this.sentInPeriod >= this.limitInPeriod) {
-                            // perhaps should look at a monotonic time instead
-                            long waitNs = this.periodNs - elapsedNs;
-                            if (waitNs > 0)
-                                waitFor((int) (waitNs / 1000000));
+                        if (rateLimit) {
+                            this.sentInPeriod++;
+                            long now = System.nanoTime();
+                            long elapsedNs = now - periodStartNs;
 
-                            // may need to adjust for drift over time
-                            periodStartNs = System.nanoTime();
-                            this.sentInPeriod = 0;
-                        } else if (now - periodStartNs > this.periodNs) {
-                            periodStartNs = now;
-                            this.sentInPeriod = 0;
+                            if (this.sentInPeriod >= this.limitInPeriod) {
+                                // perhaps should look at a monotonic time instead
+                                long waitNs = this.periodNs - elapsedNs;
+                                if (waitNs > 0)
+                                    waitFor((int) (waitNs / 1000000));
+
+                                // may need to adjust for drift over time
+                                periodStartNs = System.nanoTime();
+                                this.sentInPeriod = 0;
+                            } else if (now - periodStartNs > this.periodNs) {
+                                periodStartNs = now;
+                                this.sentInPeriod = 0;
+                            }
                         }
+
+                    }
+                    else {
+                        waitFor(10);
                     }
                 }
 
@@ -301,93 +312,6 @@ public class Publisher implements Runnable {
         }
     }
 
-//    @Override
-//    public void handleAck(long seqNo, boolean multiple) {
-//        try {
-//            int numConfirms = 0;
-//            long currentTime = MessageUtils.getTimestamp();
-//            long[] latencies;
-//            if (multiple) {
-//                ConcurrentNavigableMap<Long, MessagePayload> confirmed = pendingConfirms.headMap(seqNo, true);
-//                List<MessagePayload> confirmedList = new ArrayList<>();
-//                for (Map.Entry<Long, MessagePayload> entry : confirmed.entrySet())
-//                    confirmedList.add(entry.getValue());
-//
-//                numConfirms = confirmedList.size();
-//                latencies = new long[numConfirms];
-//                int index = 0;
-//                for (MessagePayload mp : confirmedList) {
-//                    latencies[index] = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
-//                    index++;
-//                    messageModel.sent(mp);
-//                }
-//                confirmed.clear();
-//            } else {
-//                MessagePayload mp = pendingConfirms.remove(seqNo);
-//                if(mp != null) {
-//                    latencies = new long[]{MessageUtils.getDifference(mp.getTimestamp(), currentTime)};
-//                    numConfirms = 1;
-//                    messageModel.sent(mp);
-//                }
-//                else
-//                {
-//                    latencies = new long[0];
-//                    numConfirms = 0;
-//                }
-//            }
-//
-//            if(numConfirms > 0) {
-//                inflightSemaphore.release(numConfirms);
-//                stats.handleConfirm(numConfirms, latencies);
-//            }
-//        }
-//        catch(Exception e) {
-//            e.printStackTrace();
-//            LOGGER.error("Error in handleAck.", e);
-//        }
-//    }
-//
-//    @Override
-//    public void handleNack(long seqNo, boolean multiple) {
-//        try {
-//            int numConfirms;
-//            if (multiple) {
-//                ConcurrentNavigableMap<Long, MessagePayload> confirmed = pendingConfirms.headMap(seqNo, true);
-//                numConfirms = confirmed.size();
-//                confirmed.clear();
-//            } else {
-//                pendingConfirms.remove(seqNo);
-//                numConfirms = 1;
-//            }
-//            inflightSemaphore.release(numConfirms);
-//            stats.handleNack(numConfirms);
-//        }
-//        catch(Exception e) {
-//            e.printStackTrace();
-//            LOGGER.error("Error in handleNack.", e);
-//        }
-//    }
-//
-//    @Override
-//    public void handleReturn(int replyCode,
-//                             String replyText,
-//                             String exchange,
-//                             String routingKey,
-//                             AMQP.BasicProperties properties,
-//                             byte[] body) {
-//        stats.handleReturn();
-//    }
-//
-//    @Override
-//    public void handleBlocked(String reason) {
-//        stats.handleBlockedConnection();
-//    }
-//
-//    @Override
-//    public void handleUnblocked() {
-//        stats.handleUnblockedConnection();
-//    }
-
     private void publish(Channel channel, int currentStream, ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms) throws IOException {
         long seqNo = channel.getNextPublishSeqNo();
         long timestamp = MessageUtils.getTimestamp();
@@ -425,9 +349,21 @@ public class Publisher implements Runnable {
         factory.setUsername(connectionSettings.getUser());
         factory.setPassword(connectionSettings.getPassword());
         factory.setVirtualHost(connectionSettings.getVhost());
-        factory.setHost(connectionSettings.getHost());
-        factory.setPort(connectionSettings.getPort());
-        factory.setConnectionTimeout(30);
+
+        String host = "";
+        if(connectionSettings.isTryConnectToLocalBroker()
+                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
+                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
+            host = QueueHosts.getHost(connectionSettings.getVhost(), getQueueCounterpart());
+        }
+        else {
+            host = connectionSettings.getNextHostAndPort();
+        }
+
+        factory.setHost(host.split(":")[0]);
+        factory.setPort(Integer.valueOf(host.split(":")[1]));
+
+        factory.setConnectionTimeout(5000);
         factory.setAutomaticRecoveryEnabled(false);
         factory.setRequestedFrameMax(publisherSettings.getFrameMax());
         factory.setRequestedHeartbeat(10);
@@ -548,6 +484,9 @@ public class Publisher implements Runnable {
         AMQP.BasicProperties.Builder propertiesBuilder = new AMQP.BasicProperties.Builder();
         if (publisherSettings.getDeliveryMode() == DeliveryMode.Persistent) {
             propertiesBuilder.deliveryMode(2);
+        }
+        else {
+            propertiesBuilder.deliveryMode(1);
         }
 
         if(publisherSettings.getMessageHeadersPerMessage() > 0) {

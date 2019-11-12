@@ -5,5 +5,6 @@ public enum ExchangeType {
     Fanout,
     Topic,
     Headers,
-    ConsistentHash
+    ConsistentHash,
+    ModulusHash
 }

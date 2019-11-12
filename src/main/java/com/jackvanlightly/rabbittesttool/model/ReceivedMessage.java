@@ -4,13 +4,15 @@ import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 
 public class ReceivedMessage {
     private MessagePayload messagePayload;
-    private boolean redelivered;
+    private long receiveTimestamp;
     private long lag;
+    private boolean redelivered;
 
-    public ReceivedMessage(MessagePayload messagePayload, boolean redelivered, long lag) {
+    public ReceivedMessage(MessagePayload messagePayload, boolean redelivered, long lag, long receiveTimestamp) {
         this.messagePayload = messagePayload;
         this.redelivered = redelivered;
         this.lag = lag;
+        this.receiveTimestamp = receiveTimestamp;
     }
 
     public MessagePayload getMessagePayload() {
@@ -35,5 +37,13 @@ public class ReceivedMessage {
 
     public void setLag(long lag) {
         this.lag = lag;
+    }
+
+    public long getReceiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    public void setReceiveTimestamp(long receiveTimestamp) {
+        this.receiveTimestamp = receiveTimestamp;
     }
 }

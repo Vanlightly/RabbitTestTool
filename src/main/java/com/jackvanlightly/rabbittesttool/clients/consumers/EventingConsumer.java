@@ -66,7 +66,7 @@ public class EventingConsumer extends DefaultConsumer {
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
         MessagePayload mp = MessageGenerator.toMessagePayload(body);
         long lag = MessageUtils.getLag(mp.getTimestamp());
-        messageModel.received(new ReceivedMessage(mp, envelope.isRedeliver(), lag));
+        messageModel.received(new ReceivedMessage(mp, envelope.isRedeliver(), lag, System.nanoTime()));
 
         int headerCount = 0;
         if(properties != null && properties.getHeaders() != null)

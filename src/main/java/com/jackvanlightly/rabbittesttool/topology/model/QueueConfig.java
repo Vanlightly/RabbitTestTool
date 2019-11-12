@@ -59,8 +59,14 @@ public class QueueConfig {
 
     public List<String> getInitialQueues() {
         List<String> queues = new ArrayList<>();
-        for(int i = 1; i<= scale; i++)
-            queues.add(getQueueName(i));
+
+        if(this.group.equals("sharded")) {
+            queues.add("sharded");
+        }
+        else {
+            for (int i = 1; i <= scale; i++)
+                queues.add(getQueueName(i));
+        }
 
         return queues;
     }

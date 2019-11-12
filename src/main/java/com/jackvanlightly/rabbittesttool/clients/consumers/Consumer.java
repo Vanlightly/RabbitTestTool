@@ -2,6 +2,7 @@ package com.jackvanlightly.rabbittesttool.clients.consumers;
 
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
+import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.clients.WithNagleSocketConfigurator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
@@ -124,6 +125,8 @@ public class Consumer implements Runnable {
             return;
         }
 
+        ClientUtils.waitFor(5000, isCancelled);
+
         this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
 
     }
@@ -187,6 +190,9 @@ public class Consumer implements Runnable {
                     LOGGER.error("Consumer " + consumerId + " could not close channel", e);
                 }
             }
+            else {
+                exitReason = 3;
+            }
 
             return exitReason;
         }
@@ -197,9 +203,17 @@ public class Consumer implements Runnable {
         factory.setUsername(connectionSettings.getUser());
         factory.setPassword(connectionSettings.getPassword());
         factory.setVirtualHost(connectionSettings.getVhost());
-        factory.setHost(connectionSettings.getHost());
-        factory.setPort(connectionSettings.getPort());
-        factory.setConnectionTimeout(30);
+
+        String host = "";
+        if(connectionSettings.isTryConnectToLocalBroker())
+            host = QueueHosts.getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+        else
+            host = connectionSettings.getNextHostAndPort();
+
+        factory.setHost(host.split(":")[0]);
+        factory.setPort(Integer.valueOf(host.split(":")[1]));
+
+        factory.setConnectionTimeout(5000);
         factory.setAutomaticRecoveryEnabled(false);
         factory.setShutdownTimeout(0);
         factory.setRequestedFrameMax(consumerSettings.getFrameMax());

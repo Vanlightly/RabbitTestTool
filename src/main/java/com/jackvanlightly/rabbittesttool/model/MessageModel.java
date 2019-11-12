@@ -11,6 +11,8 @@ public class MessageModel {
     private Set<MessagePayload> actualReceived;
     private Queue<ReceivedMessage> receiveQueue;
     private List<Violation> violations;
+    private List<Long> receiveIntervals;
+    private long lastReceived;
     private boolean isCancelled;
     private boolean enabled;
 
@@ -20,6 +22,7 @@ public class MessageModel {
         expectsToReceive = new HashSet<>();
         actualReceived = new HashSet<>();
         violations = new ArrayList<>();
+        receiveIntervals = new ArrayList<>();
     }
 
     public void stopMonitoring() {
@@ -58,6 +61,13 @@ public class MessageModel {
                 ClientUtils.waitFor(100, this.isCancelled);
             }
             else {
+                if(lastReceived == 0) {
+                    lastReceived = msg.getReceiveTimestamp();
+                } else {
+                    receiveIntervals.add(msg.getReceiveTimestamp() - msg.getMessagePayload().getTimestamp());
+                    lastReceived = msg.getMessagePayload().getTimestamp();
+                }
+
                 if(actualReceived.contains(msg.getMessagePayload()) && !msg.isRedelivered())
                     violations.add(new Violation(ViolationType.NonRedeliveredDuplicate, msg.getMessagePayload()));
 
@@ -88,10 +98,19 @@ public class MessageModel {
                 .collect(Collectors.toList());
     }
 
+    public long getMaxReceiveInterval() {
+        return receiveIntervals.stream().max(Long::compareTo).get();
+    }
+
+    public long getSentCount() {
+        return expectsToReceive.size();
+    }
+
     private Set<MessagePayload> getReceivedMissing() {
         Set<MessagePayload> expectedCopy = new HashSet<>(expectsToReceive);
         expectedCopy.removeAll(actualReceived);
 
         return expectedCopy;
     }
+
 }

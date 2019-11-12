@@ -141,6 +141,11 @@ public class CmdArguments {
         printStream.println("TODO - WIP");
     }
 
+    public static void printRecoveryTimeHelp(PrintStream printStream) {
+
+        printStream.println("TODO - WIP");
+    }
+
     private Map<String,String> arguments;
     private boolean helpRequested;
 
@@ -153,8 +158,13 @@ public class CmdArguments {
                 startPos = 1;
                 helpRequested = true;
             }
-            else
+            else {
+                StringBuilder sb = new StringBuilder();
+                for(String arg : args)
+                    sb.append(arg + " ");
+                LOGGER.info(sb.toString());
                 throw new RuntimeException("You have supplied an odd number of arguments. Arguments are expected in --key value format. Use the help argument for more information.");
+            }
         }
 
         // load any config file arguments first

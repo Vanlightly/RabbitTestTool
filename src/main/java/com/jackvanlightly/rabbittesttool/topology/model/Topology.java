@@ -12,9 +12,11 @@ public class Topology {
     private FixedConfig fixedConfig;
     private VariableConfig variableConfig;
     private List<Policy> policies;
+    private boolean declareArtefacts;
 
     public Topology() {
         policies = new ArrayList<>();
+        declareArtefacts = true;
     }
 
     public String getTopologyName() {
@@ -79,5 +81,13 @@ public class Topology {
 
     public void setPolicies(List<Policy> policies) {
         this.policies = policies;
+    }
+
+    public boolean shouldDeclareArtefacts() {
+        return declareArtefacts;
+    }
+
+    public void setDeclareArtefacts(boolean declareArtefacts) {
+        this.declareArtefacts = declareArtefacts;
     }
 }

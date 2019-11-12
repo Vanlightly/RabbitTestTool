@@ -40,6 +40,7 @@ public class ExchangeConfig {
             case Direct: return "direct";
             case Topic: return "topic";
             case ConsistentHash: return "x-consistent-hash";
+            case ModulusHash: return "x-modulus-hash";
             default:
                 throw new RuntimeException("Unsupported exchange type: " + exchangeType);
         }

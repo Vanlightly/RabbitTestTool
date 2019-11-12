@@ -18,13 +18,15 @@ public class PublisherSettings {
     private DeliveryMode deliveryMode;
     private int publishRatePerSecond;
     private int frameMax;
+    private long messageLimit;
 
     public PublisherSettings(SendToExchange sendToExchange,
                              PublisherMode publisherMode,
                              List<Integer> streams,
                              int messageSize,
                              DeliveryMode deliveryMode,
-                             int frameMax) {
+                             int frameMax,
+                             long messageLimit) {
         this.sendToExchange = sendToExchange;
         this.publisherMode = publisherMode;
         this.streams = streams;
@@ -32,6 +34,7 @@ public class PublisherSettings {
         this.deliveryMode = deliveryMode;
         this.sendToMode = SendToMode.Exchange;
         this.frameMax = frameMax;
+        this.messageLimit = messageLimit;
 
         this.availableHeaders = new ArrayList<>();
     }
@@ -41,7 +44,8 @@ public class PublisherSettings {
                              List<Integer> streams,
                              int messageSize,
                              DeliveryMode deliveryMode,
-                             int frameMax) {
+                             int frameMax,
+                             long messageLimit) {
         this.sendToQueueGroup = sendToQueueGroup;
         this.publisherMode = publisherMode;
         this.streams = streams;
@@ -49,6 +53,7 @@ public class PublisherSettings {
         this.deliveryMode = deliveryMode;
         this.sendToMode = SendToMode.QueueGroup;
         this.frameMax = frameMax;
+        this.messageLimit = messageLimit;
 
         this.availableHeaders = new ArrayList<>();
     }
@@ -127,5 +132,13 @@ public class PublisherSettings {
 
     public void setFrameMax(int frameMax) {
         this.frameMax = frameMax;
+    }
+
+    public long getMessageLimit() {
+        return messageLimit;
+    }
+
+    public void setMessageLimit(long messageLimit) {
+        this.messageLimit = messageLimit;
     }
 }

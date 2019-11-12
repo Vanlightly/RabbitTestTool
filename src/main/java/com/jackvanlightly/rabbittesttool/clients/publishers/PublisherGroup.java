@@ -90,7 +90,8 @@ public class PublisherGroup {
                     StreamUtils.getStreams(publisherConfig.getStreams()),
                     publisherConfig.getMessageSize(),
                     publisherConfig.getDeliveryMode(),
-                    publisherConfig.getFrameMax());
+                    publisherConfig.getFrameMax(),
+                    publisherConfig.getMessageLimit());
         }
         else {
             settings = new PublisherSettings(publisherConfig.getSendToQueueGroup(),
@@ -98,7 +99,8 @@ public class PublisherGroup {
                     StreamUtils.getStreams(publisherConfig.getStreams()),
                     publisherConfig.getMessageSize(),
                     publisherConfig.getDeliveryMode(),
-                    publisherConfig.getFrameMax());
+                    publisherConfig.getFrameMax(),
+                    publisherConfig.getMessageLimit());
         }
 
         settings.setPublishRatePerSecond(publisherConfig.getPublishRatePerSecond());
@@ -164,6 +166,11 @@ public class PublisherGroup {
     public void setRoutingKeyIndex(int rkIndex) {
         for(Publisher publisher : this.publishers)
             publisher.setRoutingKeyIndex(rkIndex);
+    }
+
+    public void resetSendCount() {
+        for(Publisher publisher : this.publishers)
+            publisher.resetSendCount();
     }
 
     public List<Long> getRecordedSendCounts() {

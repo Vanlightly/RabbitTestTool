@@ -5,6 +5,7 @@ public class StepOverride {
     private int stepSeconds;
     private int messageSize;
     private int msgsPerSecondPerPublisher;
+    private long messageLimit;
 
     public StepOverride() {
         msgsPerSecondPerPublisher = -1;
@@ -56,5 +57,13 @@ public class StepOverride {
 
     public void setMsgsPerSecondPerPublisher(int msgsPerSecondPerPublisher) {
         this.msgsPerSecondPerPublisher = msgsPerSecondPerPublisher;
+    }
+
+    public long getMessageLimit() {
+        return messageLimit;
+    }
+
+    public void setMessageLimit(long messageLimit) {
+        this.messageLimit = messageLimit;
     }
 }

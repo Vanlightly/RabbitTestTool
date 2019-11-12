@@ -8,8 +8,8 @@ public class ConnectionSettings {
     private String user;
     private String password;
     private String vhost;
-    private int port;
     private int managementPort;
+    private boolean tryConnectToLocalBroker;
     private boolean noTcpDelay;
     private static AtomicInteger currentHost = new AtomicInteger(0);
 
@@ -45,14 +45,6 @@ public class ConnectionSettings {
         this.vhost = vhost;
     }
 
-    public int getPort() {
-        return port;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
     public int getManagementPort() {
         return managementPort;
     }
@@ -69,8 +61,30 @@ public class ConnectionSettings {
         this.noTcpDelay = noTcpDelay;
     }
 
-    public String getHost() {
-        return hosts.get(currentHost.addAndGet(1) % hosts.size());
+    public String getNextHostAndPort() {
+        int index = currentHost.addAndGet(1) % hosts.size();
+        return hosts.get(index);
+    }
+
+    public String getHostAndPort(int index) {
+        return hosts.get(index);
+    }
+
+    public String getHostOnly() {
+        int index = currentHost.addAndGet(1) % hosts.size();
+        return hosts.get(index).split(":")[0];
+    }
+
+    public String getHostOnly(int index) {
+        return hosts.get(index).split(":")[0];
+    }
+
+    public boolean isTryConnectToLocalBroker() {
+        return tryConnectToLocalBroker;
+    }
+
+    public void setTryConnectToLocalBroker(boolean tryConnectToLocalBroker) {
+        this.tryConnectToLocalBroker = tryConnectToLocalBroker;
     }
 
     public ConnectionSettings getClone(String vhostName) {
@@ -79,9 +93,9 @@ public class ConnectionSettings {
         cs.setPassword(password);
         cs.setUser(user);
         cs.setVhost(vhostName);
-        cs.setPort(port);
         cs.setManagementPort(managementPort);
         cs.setHosts(hosts);
+        cs.setTryConnectToLocalBroker(tryConnectToLocalBroker);
 
         return cs;
     }

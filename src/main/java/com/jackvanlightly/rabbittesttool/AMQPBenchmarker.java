@@ -52,6 +52,9 @@ public class AMQPBenchmarker {
             case Modes.Model:
                 runModelDrivenTest(arguments);
                 break;
+            case Modes.RecoveryTime:
+                runModelDrivenTest(arguments);
+                break;
             case Modes.Comparison:
                 runComparison(arguments);
                 break;
@@ -72,6 +75,9 @@ public class AMQPBenchmarker {
                     break;
                 case Modes.Model:
                     CmdArguments.printModelHelp(System.out);
+                    break;
+                case Modes.RecoveryTime:
+                    CmdArguments.printRecoveryTimeHelp(System.out);
                     break;
                 case Modes.Comparison:
                     CmdArguments.printComparisonHelp(System.out);
@@ -174,6 +180,52 @@ public class AMQPBenchmarker {
         }
     }
 
+    private static void runRecoveryTimeTest(CmdArguments arguments) {
+        try {
+            BenchmarkRegister benchmarkRegister = null;
+            InfluxMetrics metrics = new InfluxMetrics();
+
+            if(arguments.hasMetrics())
+                metrics.configure(arguments);
+
+            benchmarkRegister = new ConsoleRegister(System.out);
+
+            String topologyPath = arguments.getStr("--topology");
+            String policiesPath = arguments.getStr("--policies", "none");
+            StepOverride stepOverride = getStepOverride(arguments);
+            BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
+            InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
+            ConnectionSettings connectionSettings = getConnectionSettings(arguments);
+            Duration gracePeriod = Duration.ofSeconds(0);
+            MessageModel messageModel = new MessageModel(true);
+
+            ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
+            modelExecutor.execute(() -> messageModel.monitorProperties());
+
+            runBenchmark(topologyPath,
+                    policiesPath,
+                    stepOverride,
+                    benchmarkRegister,
+                    metrics,
+                    brokerConfig,
+                    instanceConfig,
+                    connectionSettings,
+                    arguments.hasMetrics(),
+                    messageModel,
+                    gracePeriod);
+
+            messageModel.stopMonitoring();
+            modelExecutor.shutdown();
+
+            System.out.println(MessageFormat.format("Messages sent: {0}, Recovery Time Seconds: {1}",
+                    messageModel.getSentCount(),
+                    messageModel.getMaxReceiveInterval()*1000000));
+        }
+        catch(Exception e) {
+            LOGGER.error("Failed running recovery time test", e);
+        }
+    }
+
     private static void runSimpleBenchmark(CmdArguments arguments) {
         try {
             BenchmarkRegister benchmarkRegister = null;
@@ -214,6 +266,7 @@ public class AMQPBenchmarker {
         stepOverride.setStepSeconds(cmdArguments.getInt("--override-step-seconds", 0));
         stepOverride.setStepRepeat(cmdArguments.getInt("--override-step-repeat", 0));
         stepOverride.setMessageSize(cmdArguments.getInt("--override-step-msg-size", 0));
+        stepOverride.setMessageLimit(cmdArguments.getInt("--override-step-msg-limit", 0));
         stepOverride.setMsgsPerSecondPerPublisher(cmdArguments.getInt("--override-step-pub-rate", -1));
 
         return stepOverride;
@@ -285,7 +338,7 @@ public class AMQPBenchmarker {
             TopologyLoader topologyLoader = new TopologyLoader();
             Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride);
 
-            TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings);
+            TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings, brokerConfig);
 
             int sampleIntervalMs = 10000;
 
@@ -316,8 +369,10 @@ public class AMQPBenchmarker {
             // to prevent unkillable threads
             waitFor(30000);
 
-            for(VirtualHost vhost : topology.getVirtualHosts())
-                topologyGenerator.deleteVHost(vhost);
+            if(topology.shouldDeclareArtefacts()) {
+                for (VirtualHost vhost : topology.getVirtualHosts())
+                    topologyGenerator.deleteVHost(vhost);
+            }
         }
         catch(Exception e) {
             LOGGER.error("Unexpected error in main", e);
@@ -381,7 +436,7 @@ public class AMQPBenchmarker {
     private static BrokerConfiguration getBrokerConfigWithDefaults(CmdArguments arguments) {
         return new BrokerConfiguration(arguments.getStr("--technology", "?"),
                 arguments.getStr("--version", "?"),
-                arguments.getListStr("--nodes", "1"));
+                arguments.getListStr("--nodes", "rabbit@rabbitmq1"));
     }
 
     private static BrokerConfiguration getBrokerConfig(CmdArguments arguments) {
@@ -407,10 +462,10 @@ public class AMQPBenchmarker {
         ConnectionSettings connectionSettings = new ConnectionSettings();
         connectionSettings.setHosts(Arrays.asList(cmdArguments.getStr("--broker-hosts").split(",")));
         connectionSettings.setManagementPort(Integer.valueOf(cmdArguments.getStr("--broker-mgmt-port")));
-        connectionSettings.setPort(Integer.valueOf(cmdArguments.getStr("--broker-port")));
         connectionSettings.setUser(cmdArguments.getStr("--broker-user"));
         connectionSettings.setPassword(cmdArguments.getStr("--broker-password"));
         connectionSettings.setNoTcpDelay(cmdArguments.getBoolean("--tcp-no-delay", true));
+        connectionSettings.setTryConnectToLocalBroker(cmdArguments.getBoolean("--try-connect-local", false));
 
         return connectionSettings;
     }

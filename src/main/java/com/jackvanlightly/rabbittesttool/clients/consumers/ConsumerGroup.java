@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.consumers;
 
+import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
@@ -63,12 +64,14 @@ public class ConsumerGroup {
     }
 
     public void createInitialConsumers() {
-        for(int i = 0; i < this.consumerConfig.getScale(); i++)
+        for(int i = 0; i < this.consumerConfig.getScale(); i++) {
             addConsumer();
+        }
     }
 
     public void startInitialConsumers() {
         for(Consumer consumer : this.consumers) {
+            ClientUtils.waitFor(100, false);
             this.executorService.execute(consumer);
         }
     }
@@ -111,6 +114,7 @@ public class ConsumerGroup {
 
     public void addAndStartConsumer() {
         Consumer consumer = addConsumer();
+        ClientUtils.waitFor(100, false);
         this.executorService.execute(consumer);
     }
 

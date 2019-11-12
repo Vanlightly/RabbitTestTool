@@ -24,6 +24,7 @@ public class PublisherConfig {
     private List<MessageHeader> availableHeaders;
     private int publishRatePerSecond;
     private int streams;
+    private long messageLimit;
 
     public PublisherConfig() {
         availableHeaders = new ArrayList<>();
@@ -144,5 +145,13 @@ public class PublisherConfig {
 
     public void setFrameMax(int frameMax) {
         this.frameMax = frameMax;
+    }
+
+    public long getMessageLimit() {
+        return messageLimit;
+    }
+
+    public void setMessageLimit(long messageLimit) {
+        this.messageLimit = messageLimit;
     }
 }

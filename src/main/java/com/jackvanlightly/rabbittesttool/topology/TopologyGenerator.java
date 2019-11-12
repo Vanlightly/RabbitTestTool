@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
+import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
 import org.apache.commons.lang3.StringUtils;
@@ -23,12 +24,15 @@ public class TopologyGenerator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TopologyGenerator.class);
     private ConnectionSettings connectionSettings;
+    private BrokerConfiguration brokerConfig;
     private String baseUrl;
     private Random rand;
 
-    public TopologyGenerator(ConnectionSettings connectionSettings) {
+    public TopologyGenerator(ConnectionSettings connectionSettings,
+                             BrokerConfiguration brokerConfig) {
         this.connectionSettings = connectionSettings;
-        this.baseUrl = "http://" + connectionSettings.getHost() + ":" + connectionSettings.getManagementPort();
+        this.brokerConfig = brokerConfig;
+        this.baseUrl = "http://" + connectionSettings.getHostOnly() + ":" + connectionSettings.getManagementPort();
         this.rand = new Random();
     }
 
@@ -83,19 +87,19 @@ public class TopologyGenerator {
         }
     }
 
-    public void declareQueuesAndBindings(QueueConfig queueConfig, List<String> nodes) {
-        int nodeIndex = rand.nextInt(nodes.size());
+    public void declareQueuesAndBindings(QueueConfig queueConfig) {
+        int nodeIndex = rand.nextInt(brokerConfig.getNodes().size());
         for(int i = 1; i<= queueConfig.getScale(); i++) {
-            declareQueue(queueConfig, i, nodes.get(nodeIndex));
+            declareQueue(queueConfig, i, nodeIndex);
             declareQueueBindings(queueConfig, i);
 
             nodeIndex++;
-            if(nodeIndex >= nodes.size())
+            if(nodeIndex >= brokerConfig.getNodes().size())
                 nodeIndex = 0;
         }
     }
 
-    public void declareQueue(QueueConfig queueConfig, int ordinal, String node) {
+    public void declareQueue(QueueConfig queueConfig, int ordinal, int nodeIndex) {
         //TODO queue properties
         //String queueTemplate = "{\"auto_delete\":false,\"durable\":true,\"arguments\":{},\"node\":\"rabbit@rabbitmq" + node + "\"}";
 
@@ -108,13 +112,16 @@ public class TopologyGenerator {
             }
         }
 
+        String queueName = queueConfig.getQueueName(ordinal);
+
         JSONObject queue = new JSONObject();
         queue.put("auto_delete", false);
         queue.put("durable", true);
-        queue.put("node", "rabbit@rabbitmq" + node);
+        queue.put("node", brokerConfig.getNodes().get(nodeIndex));
         queue.put("arguments", arguments);
 
-        put(getQueueUrl(queueConfig.getVhostName(), queueConfig.getQueueName(ordinal)), queue.toString());
+        put(getQueueUrl(queueConfig.getVhostName(), queueName), queue.toString());
+        QueueHosts.register(queueConfig.getVhostName(), queueName, connectionSettings.getHostAndPort(nodeIndex));
 
         if(queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("ha-mode"))) {
             JSONObject policyJson = new JSONObject();
@@ -131,8 +138,7 @@ public class TopologyGenerator {
                 }
             }
             policyJson.put("definition", definition);
-
-            put(getHaQueuesPolicyUrl(queueConfig.getQueueName(ordinal), queueConfig.getVhostName()), policyJson.toString());
+            put(getHaQueuesPolicyUrl(queueName, queueConfig.getVhostName()), policyJson.toString());
         }
     }
 

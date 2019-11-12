@@ -176,6 +176,7 @@ public class TopologyLoader {
             pgConfig.setDeliveryMode(getDeliveryMode(getMandatoryStrValue(pgJson, "deliveryMode")));
             pgConfig.setHeadersPerMessage(getOptionalIntValue(pgJson, "headersPerMessage", 0));
             pgConfig.setFrameMax(getOptionalIntValue(pgJson, "frameMax", 0));
+            pgConfig.setMessageLimit(stepOverride.getMessageLimit());
 
             if (pgJson.has("availableHeaders")) {
                 JSONArray headersArr = pgJson.getJSONArray("availableHeaders");
@@ -592,8 +593,9 @@ public class TopologyLoader {
             case "header": return ExchangeType.Headers;
             case "headers": return ExchangeType.Headers;
             case "consistenthash": return ExchangeType.ConsistentHash;
+            case "modulushash": return ExchangeType.ModulusHash;
             default:
-                throw new TopologyException("Only 'fanout', 'direct', 'topic', 'headers' and 'consistenthash' are valid values for 'exchanges.type'");
+                throw new TopologyException("Only 'fanout', 'direct', 'topic', 'headers', 'consistenthash' and 'modulushash' are valid values for 'exchanges.type'");
         }
     }
 

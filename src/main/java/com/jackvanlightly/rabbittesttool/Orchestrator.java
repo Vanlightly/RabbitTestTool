@@ -84,21 +84,32 @@ public class Orchestrator {
 
     private void initialSetup(Topology topology, List<String> nodes) {
         for(VirtualHost vhost : topology.getVirtualHosts()) {
-            topologyGenerator.declareVHost(vhost);
-            topologyGenerator.declareExchanges(vhost);
-            topologyGenerator.declarePolicies(vhost.getName(), topology.getPolicies());
-
-            addQueueGroups(vhost, nodes);
+            if(topology.shouldDeclareArtefacts()) {
+                topologyGenerator.declareVHost(vhost);
+                topologyGenerator.declareExchanges(vhost);
+                topologyGenerator.declarePolicies(vhost.getName(), topology.getPolicies());
+            }
+            addQueueGroups(vhost, topology, nodes, topology.shouldDeclareArtefacts());
             addPublisherGroups(vhost, topology);
             addConsumerGroups(vhost, topology);
             stats.addClientGroups(publisherGroups, consumerGroups);
         }
     }
 
-    private void addQueueGroups(VirtualHost vhost, List<String> nodes) {
+    private void addQueueGroups(VirtualHost vhost, Topology topology, List<String> nodes, boolean declareQueues) {
         for(QueueConfig queueConfig : vhost.getQueues()) {
             QueueGroup queueGroup = new QueueGroup(vhost.getName(), queueConfig, nodes, topologyGenerator);
-            queueGroup.createInitialQueues();
+
+            if(topology.getTopologyType() == TopologyType.SingleVariable && topology.getVariableConfig().getDimension() == VariableDimension.Queues)
+                queueGroup.createAllQueues(declareQueues, topology.getVariableConfig().getMaxScale().intValue());
+            else if(topology.getTopologyType() == TopologyType.MultiVariable
+                    && topology.getVariableConfig().hasMultiDimension(VariableDimension.Queues)) {
+                queueGroup.createAllQueues(declareQueues, topology.getVariableConfig().getMaxScale(VariableDimension.Queues).intValue());
+            }
+            else {
+                queueGroup.createInitialQueues(declareQueues);
+            }
+
             queueGroups.add(queueGroup);
         }
     }
@@ -179,13 +190,17 @@ public class Orchestrator {
     }
 
     private void setConsumerCountStats() {
-        int totalConsumers = consumerGroups.stream().map(x -> x.getConsumerCount()).reduce(0, Integer::sum);
-        stats.setConsumerCount(totalConsumers);
+        if(!consumerGroups.isEmpty()) {
+            int totalConsumers = consumerGroups.stream().map(x -> x.getConsumerCount()).reduce(0, Integer::sum);
+            stats.setConsumerCount(totalConsumers);
+        }
     }
 
     private void setPublisherCountStats() {
-        int totalPublishers = publisherGroups.stream().map(x -> x.getPublisherCount()).reduce(0, Integer::sum);
-        stats.setPublisherCount(totalPublishers);
+        if(!publisherGroups.isEmpty()) {
+            int totalPublishers = publisherGroups.stream().map(x -> x.getPublisherCount()).reduce(0, Integer::sum);
+            stats.setPublisherCount(totalPublishers);
+        }
     }
 
     private void setQueueCountStats() {
@@ -194,25 +209,29 @@ public class Orchestrator {
     }
 
     private void setTargetPublisherRateStats() {
-        int totalPublishers = publisherGroups.stream()
-                .map(x -> x.getPublisherCount())
-                .reduce(0, Integer::sum);
+        if(!publisherGroups.isEmpty()) {
+            int totalPublishers = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount())
+                    .reduce(0, Integer::sum);
 
-        int averageTargetRate = publisherGroups.stream()
-                .map(x -> x.getPublisherCount() * x.getPublishRatePerSecond())
-                .reduce(0, Integer::sum) / totalPublishers;
-        stats.setTargetPublishRate(averageTargetRate);
+            int averageTargetRate = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount() * x.getPublishRatePerSecond())
+                    .reduce(0, Integer::sum) / totalPublishers;
+            stats.setTargetPublishRate(averageTargetRate);
+        }
     }
 
     private void setPublisherInFlightLimitStats() {
-        int totalPublishers = publisherGroups.stream()
-                .map(x -> x.getPublisherCount())
-                .reduce(0, Integer::sum);
+        if(!publisherGroups.isEmpty()) {
+            int totalPublishers = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount())
+                    .reduce(0, Integer::sum);
 
-        int averageInFlightLimit = publisherGroups.stream()
-                .map(x -> x.getPublisherCount() * x.getInFlightLimit())
-                .reduce(0, Integer::sum) / totalPublishers;
-        stats.setPublisherInFlightLimit(averageInFlightLimit);
+            int averageInFlightLimit = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount() * x.getInFlightLimit())
+                    .reduce(0, Integer::sum) / totalPublishers;
+            stats.setPublisherInFlightLimit(averageInFlightLimit);
+        }
     }
 
     private void performFixedBenchmark(String runId,
@@ -231,6 +250,7 @@ public class Orchestrator {
         int step = 1;
         while(step <= fixedConfig.getStepRepeat()) {
             // wait for the ramp up time before recording and timing the run
+            resetMessageSentCounts();
             waitFor(fixedConfig.getStepRampUpSeconds() * 1000);
 
             // start recording and log start
@@ -284,7 +304,7 @@ public class Orchestrator {
                 setSingleDimensionStepValue(variableConfig,
                         variableConfig.getDimension(),
                         variableConfig.getValues().get(i));
-
+                resetMessageSentCounts();
                 setCountStats();
 
                 // wait for the ramp up time before recording and timing the step
@@ -327,6 +347,7 @@ public class Orchestrator {
                     variableConfig.getMultiValues().get(0)[vd]);
         }
 
+        resetMessageSentCounts();
         setCountStats();
 
         // start the publishers and consumers
@@ -352,7 +373,7 @@ public class Orchestrator {
                         stepValues += ",";
                     stepValues += variableConfig.getMultiValues().get(i)[vd].toString();
                 }
-
+                resetMessageSentCounts();
                 setCountStats();
 
                 // wait for the ramp up time before recording and timing the step
@@ -590,6 +611,12 @@ public class Orchestrator {
                 else
                     publisherGroup.modifyPublishRatePerSecond(value);
             }
+        }
+    }
+
+    private void resetMessageSentCounts() {
+        for(PublisherGroup publisherGroup : this.publisherGroups) {
+            publisherGroup.resetSendCount();
         }
     }
 

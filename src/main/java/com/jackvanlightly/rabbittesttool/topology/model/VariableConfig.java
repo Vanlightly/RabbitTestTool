@@ -27,6 +27,15 @@ public class VariableConfig {
         return multiDimensions;
     }
 
+    public boolean hasMultiDimension(VariableDimension variableDimension) {
+        for(int i=0; i<multiDimensions.length; i++) {
+            if(multiDimensions[i] == variableDimension)
+                return true;
+        }
+
+        return false;
+    }
+
     public void setMultiDimensions(VariableDimension[] multiDimensions) {
         this.multiDimensions = multiDimensions;
     }
@@ -83,7 +92,7 @@ public class VariableConfig {
         return maxScales;
     }
 
-    public Double getMaxScales(VariableDimension dimension) {
+    public Double getMaxScale(VariableDimension dimension) {
         Map<VariableDimension, Double> maxScales = getMaxScales();
         if(maxScales.containsKey(dimension))
             return maxScales.get(dimension);
