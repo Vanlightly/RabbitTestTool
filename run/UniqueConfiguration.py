@@ -3,21 +3,21 @@ from command_args import get_args, get_optional_arg, get_mandatory_arg, get_mand
 class UniqueConfiguration:
     def __init__(self, args, suffix):
         self.suffix = suffix
-        self.config_tag  = get_mandatory_arg(args, "--config-tag" + self.suffix)
-        self.technology = get_mandatory_arg_validated(args, "--technology" + self.suffix, ["rabbitmq"])
-        self.cluster_size = int(get_optional_arg(args, "--cluster-size" + self.suffix, "1"))
-        self.broker_version = get_mandatory_arg(args, "--version" + self.suffix)
-        self.instance = get_mandatory_arg(args, "--instance" + self.suffix)
-        self.volume = get_mandatory_arg_validated(args, "--volume" + self.suffix, ["ebs-io1","ebs-st1","ebs-gp2","local-nvme"])
-        self.volume_size = get_mandatory_arg(args, "--volume-size" + self.suffix)
-        self.filesystem = get_mandatory_arg_validated(args, "--filesystem" + self.suffix, ["ext4", "xfs"])
-        self.tenancy = get_mandatory_arg_validated(args, "--tenancy" + self.suffix, ["default","dedicated"])
-        self.core_count = get_mandatory_arg(args, "--core-count" + self.suffix)
-        self.threads_per_core = get_mandatory_arg(args, "--threads-per-core" + self.suffix)
-        self.vars_file = get_optional_arg(args, "--vars-file" + self.suffix, f".variables/{self.technology}-vars.yml")
-        self.no_tcp_delay = get_optional_arg(args, "--no-tcp-delay" + self.suffix, "true")
-        self.policies_file = get_optional_arg(args, "--policies-file" + self.suffix, "none")
-        self.try_connect_local = get_optional_arg(args, "--try-connect-local" + self.suffix, "false")
+        self.config_tag  = get_mandatory_arg(args, "--config-tag", self.suffix)
+        self.technology = get_mandatory_arg_validated(args, "--technology", self.suffix, ["rabbitmq"])
+        self.cluster_size = int(get_optional_arg(args, "--cluster-size", self.suffix, "1"))
+        self.broker_version = get_mandatory_arg(args, "--version", self.suffix)
+        self.instance = get_mandatory_arg(args, "--instance", self.suffix)
+        self.volume = get_mandatory_arg_validated(args, "--volume", self.suffix, ["ebs-io1","ebs-st1","ebs-gp2","local-nvme"])
+        self.volume_size = get_mandatory_arg(args, "--volume-size", self.suffix)
+        self.filesystem = get_mandatory_arg_validated(args, "--filesystem", self.suffix, ["ext4", "xfs"])
+        self.tenancy = get_mandatory_arg_validated(args, "--tenancy", self.suffix, ["default","dedicated"])
+        self.core_count = get_mandatory_arg(args, "--core-count", self.suffix)
+        self.threads_per_core = get_mandatory_arg(args, "--threads-per-core", self.suffix)
+        self.vars_file = get_optional_arg(args, "--vars-file", self.suffix, f".variables/{self.technology}-vars.yml")
+        self.no_tcp_delay = get_optional_arg(args, "--no-tcp-delay", self.suffix, "true")
+        self.policies_file = get_optional_arg(args, "--policies-file", self.suffix, "none")
+        self.try_connect_local = get_optional_arg(args, "--try-connect-local", self.suffix, "false")
         self.node_number = -1
 
     def set_node_number(self, node_number):

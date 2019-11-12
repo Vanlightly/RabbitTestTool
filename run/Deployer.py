@@ -12,6 +12,15 @@ class Deployer:
     def __init__(self):
         self._deploy_status = dict()
 
+    def deploy(self, runner, configurations, common_conf):
+        if common_conf.run_tag == "none":
+            common_conf.run_tag = str(randint(1, 99999))
+        
+        self.parallel_deploy(configurations, common_conf)
+        
+        if common_conf.background_topology_file != "none":
+            runner.run_background_load_across_runs(configurations, common_conf)
+
     def get_deploy_status(self):
         return self._deploy_status
 
@@ -179,33 +188,41 @@ class Deployer:
                     print("teardown failed, will retry in 1 minute")
                     time.sleep(60)
 
-    def teardown_all(self, unique_conf_list, run_tag, no_destroy):
+    def teardown_all(self, configurations, run_tag, no_destroy):
         if no_destroy:
             print("No teardown as --no-destroy set to true")
         else:
             print("Terminating all servers")
-            for p in range(len(unique_conf_list)):
-                unique_conf = unique_conf_list[p]
+            
+            for config_tag in configurations:
+                print(f"TEARDOWN FOR configuration {config_tag}")
+                unique_conf_list = configurations[config_tag]
+                for p in range(len(unique_conf_list)):
+                    unique_conf = unique_conf_list[p]
 
-                for n in range(0, unique_conf.cluster_size):
-                    node_num = int(unique_conf.node_number) + n
-                    self.teardown(unique_conf.technology, str(node_num), run_tag, no_destroy)
-            print("All servers terminated")
-            exit(1)
+                    for n in range(0, unique_conf.cluster_size):
+                        node_num = int(unique_conf.node_number) + n
+                        print(f"TEARDOWN FOR node {node_num}")
+                        self.teardown(unique_conf.technology, str(node_num), run_tag, no_destroy)
+                print("All servers terminated")
+            exit(1)    
    
-    def parallel_deploy(self, unique_conf_list, common_conf):
+    def parallel_deploy(self, configurations, common_conf):
         d_threads = list()
-        for i in range(len(unique_conf_list)):
-            unique_conf = unique_conf_list[i]
-            if common_conf.no_deploy:
-                deploy1 = threading.Thread(target=self.update_single, args=(unique_conf, common_conf,))
-            else:
-                if unique_conf.cluster_size == 1:
-                    deploy1 = threading.Thread(target=self.deploy_single, args=(unique_conf, common_conf,))
-                else:
-                    deploy1 = threading.Thread(target=self.deploy_rabbitmq_cluster, args=(unique_conf, common_conf,))
 
-            d_threads.append(deploy1)
+        for config_tag in configurations:
+            unique_conf_list = configurations[config_tag]
+            for i in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[i]
+                if common_conf.no_deploy:
+                    deploy = threading.Thread(target=self.update_single, args=(unique_conf, common_conf,))
+                else:
+                    if unique_conf.cluster_size == 1:
+                        deploy = threading.Thread(target=self.deploy_single, args=(unique_conf, common_conf,))
+                    else:
+                        deploy = threading.Thread(target=self.deploy_rabbitmq_cluster, args=(unique_conf, common_conf,))
+
+                d_threads.append(deploy)
 
         for dt in d_threads:
             dt.start()
@@ -213,12 +230,15 @@ class Deployer:
         for dt in d_threads:
             dt.join()
         
-        for p in range(len(unique_conf_list)):
-            unique_conf = unique_conf_list[p]
-            status_id1 = unique_conf.technology + unique_conf.node_number
-        
-            if self._deploy_status[status_id1] != "success":
-                print(f"Deployment failed for node {unique_conf.technology}{unique_conf.node_number}")
-                if not common_conf.no_deploy:
-                    self.teardown_all(unique_conf_list, common_conf.run_tag, False)
-                    exit(1)
+        for config_tag in configurations:
+            unique_conf_list = configurations[config_tag]
+            
+            for p in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[p]
+                status_id1 = unique_conf.technology + unique_conf.node_number
+            
+                if self._deploy_status[status_id1] != "success":
+                    print(f"Deployment failed for node {unique_conf.technology}{unique_conf.node_number}")
+                    if not common_conf.no_deploy:
+                        self.teardown_all(configurations, common_conf.run_tag, False)
+                        

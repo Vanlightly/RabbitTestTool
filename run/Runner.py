@@ -71,12 +71,16 @@ class Runner:
         else:
             self._benchmark_status[status_id] = "success"
 
-    def run_background_load_across_runs(self, unique_conf_list, common_conf):
+    def run_background_load_across_runs(self, configurations, common_conf):
         bg_threads = list()
-        for p in range(common_conf.parallel_count):
-            unique_conf = unique_conf_list[p]
-            t1 = threading.Thread(target=self.run_background_load, args=(unique_conf, common_conf,))
-            bg_threads.append(t1)
+
+        for config_tag in configurations:
+            unique_conf_list = configurations[config_tag]
+            
+            for p in range(common_conf.parallel_count):
+                unique_conf = unique_conf_list[p]
+                t1 = threading.Thread(target=self.run_background_load, args=(unique_conf, common_conf,))
+                bg_threads.append(t1)
 
         for bt in bg_threads:
             bt.start()
