@@ -1,0 +1,55 @@
+{
+    "topologyName": "QueueRecovery10",
+    "topologyType": "MultipleDimensions",
+    "benchmarkType": "throughput",
+    "description": "Prepublish 1000000, consume with slow start",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "queueGroups": [{ "group": "q1", "scale": 1 }],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "publishMode": {
+                        "useConfirms": true,
+                        "inFlightLimit": 1000
+                    },
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "Counterpart"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 1024,
+                    "initialPublish": 1000000,
+                    "msgsPerSecondPerPublisher": 2
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1",
+                    "ProcessingMs": 1000,
+                    "ackMode": {
+                        "manualAcks": true,
+                        "consumerPrefetch": 1,
+                        "ackInterval": 1
+                    }
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "multipleDimensions": {
+            "dimensions": ["Prefetch","ProcessingMs"],
+            "multiValues": [
+                [1, 1000],
+                [100, 0]
+            ],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 5
+        }
+    }
+}

@@ -1,0 +1,84 @@
+{
+    "topologyName": "LT_HeadersExchangeBenchmark2.json",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "latency",
+    "description": "100 msgs/s. 4 headers in binding, increasing header count",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "exchanges": [
+                {
+                    "name": "ex1",
+                    "type": "headers"
+                }
+            ],
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1,
+                    "bindings": [
+                        {
+                            "from": "ex1",
+                            "properties": [
+                                { "key": "x-match", "value": "any" },
+                                { "key": "custom01", "value": "abcdefg", "type": "string"  },
+                                { "key": "custom02", "value": 400000002, "type": "int" },
+                                { "key": "custom03", "value": "bcdefga", "type": "string" },
+                                { "key": "custom04", "value": 400000004, "type": "int" }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 16,
+                    "availableHeaders": [
+                        { "key": "custom01", "value": "abcdefg", "type": "string" },
+                        { "key": "custom02", "value": 400000002, "type": "int" },
+                        { "key": "custom03", "value": "bcdefga", "type": "string" },
+                        { "key": "custom04", "value": 400000004, "type": "int" },
+                        { "key": "custom05", "value": "cdefgab", "type": "string" },
+                        { "key": "custom06", "value": 400000006, "type": "int" },
+                        { "key": "custom07", "value": "defgabc", "type": "string" },
+                        { "key": "custom08", "value": 400000008, "type": "int" },
+                        { "key": "custom09", "value": "efgabcd", "type": "string" },
+                        { "key": "custom10", "value": 400000010, "type": "int" },
+                        { "key": "custom11", "value": "fgabcde", "type": "string" },
+                        { "key": "custom12", "value": 400000012, "type": "int" },
+                        { "key": "custom13", "value": "gabcdef", "type": "string" },
+                        { "key": "custom14", "value": 400000014, "type": "int" },
+                        { "key": "custom15", "value": "bcdefgh", "type": "string" },
+                        { "key": "custom16", "value": 400000016, "type": "int" }
+                    ],
+                    "headersPerMessage": 1,
+                    "msgsPerSecondPerPublisher": 100
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "headersPerMessage",
+            "values": [1, 2, 4, 6, 8, 10, 12, 14, 16],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 10,
+            "applyToGroup": "p1"
+        }
+    }
+}

@@ -1,0 +1,45 @@
+{
+    "topologyName": "TALK_002_PersistentOneQueue",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "throughput",
+    "description": "Persistent, 16 byte, 1 pub/queue/con, increasing pub rate",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "Counterpart"
+                    },
+                    "deliveryMode": "Persistent"
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "PublisherRate",
+            "values": [1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000,
+                55000, 60000, 65000, 70000, 75000, 80000, 85000, 90000, 95000, 100000],
+            "stepDurationSeconds": 30,
+            "rampUpSeconds": 5
+        }
+    }
+}

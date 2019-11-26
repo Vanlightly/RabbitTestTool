@@ -1,0 +1,74 @@
+{
+  "topologyName": "fanout_exchange",
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "vhostCount", "default": "1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "16" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "false" },
+    { "name": "inflightLimit", "default": "0" },
+    { "name": "manualAcks", "default": "false" },
+    { "name": "consumerPrefetch", "default": "0" },
+    { "name": "ackInterval", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" }
+  ],
+  "description": "Fanout",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.vhostCount }}",
+      "exchanges": [ { "name": "ex1", "type": "fanout" }],
+      "queueGroups": [ 
+        { "group": "q1", 
+          "scale": "{{ var.queueCount }}", 
+          "bindings": [{ "from": "ex1" }],
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        } 
+      ],
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToExchange": {
+            "exchange": "ex1",
+            "routingKeyMode": "none"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        }
+      ],
+      "consumerGroups": [ 
+        { 
+          "group": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queueGroup": "q1",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}"
+          }
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

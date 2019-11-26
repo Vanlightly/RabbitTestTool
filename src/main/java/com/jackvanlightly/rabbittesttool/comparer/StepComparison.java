@@ -9,6 +9,7 @@ public class StepComparison {
     private String topologyDescription;
     private String dimensions;
     private int step;
+    private int runOrdinal;
     private String stepValues;
     private int recordingSeconds;
     private String benchmarkType;
@@ -39,13 +40,25 @@ public class StepComparison {
     private Comparison receiveRateAvg;
     private Comparison receiveRateMax;
     private Comparison receiveRateStdDev;
+    private Comparison sendVsReceiveDiffMin;
+    private Comparison sendVsReceiveDiffAvg;
+    private Comparison sendVsReceiveDiffMax;
+    private Comparison sendVsReceiveDiffStdDev;
 
-    public StepComparison(String topology, String topologyDescription, String dimensions, int step, String stepValues, int recordingSeconds, String benchmarkType) {
+    public StepComparison(String topology,
+                          String topologyDescription,
+                          String dimensions,
+                          int step,
+                          String stepValues,
+                          int runOrdinal,
+                          int recordingSeconds,
+                          String benchmarkType) {
         this.topology = topology;
         this.topologyDescription = topologyDescription;
         this.dimensions = dimensions;
         this.step = step;
         this.stepValues = stepValues;
+        this.runOrdinal = runOrdinal;
         this.recordingSeconds = recordingSeconds;
         this.benchmarkType = benchmarkType;
         sentCount = new Comparison("Sent Count");
@@ -74,6 +87,10 @@ public class StepComparison {
         receiveRateAvg = new Comparison("Avg Receive Rate");
         receiveRateStdDev = new Comparison("Std Dev Receive Rate");
         receiveRateMax = new Comparison("Max Receive Rate");
+        sendVsReceiveDiffMin = new Comparison("Min Send minus Receive");
+        sendVsReceiveDiffAvg = new Comparison("Avg Send minus Receive");
+        sendVsReceiveDiffStdDev = new Comparison("Std Send minus Receive");
+        sendVsReceiveDiffMax = new Comparison("Max Send minus Receive");
     }
 
     public String getTopology() {
@@ -82,6 +99,10 @@ public class StepComparison {
 
     public int getStep() {
         return step;
+    }
+
+    public int getRunOrdinal() {
+        return runOrdinal;
     }
 
     public Comparison getSentCount() {
@@ -188,8 +209,24 @@ public class StepComparison {
         return receiveRateStdDev;
     }
 
+    public Comparison getSendVsReceiveDiffMin() {
+        return sendVsReceiveDiffMin;
+    }
+
+    public Comparison getSendVsReceiveDiffAvg() {
+        return sendVsReceiveDiffAvg;
+    }
+
+    public Comparison getSendVsReceiveDiffMax() {
+        return sendVsReceiveDiffMax;
+    }
+
+    public Comparison getSendVsReceiveDiffStdDev() {
+        return sendVsReceiveDiffStdDev;
+    }
+
     public static String getCsvHeader() {
-        return "Topology|Topology Description|Dimensions|Step|StepValue|BenchmarkType|Duration|Measurement|C1 Runs|C2 Run|C1 Avg|C2 Avg|Change %|C1 StdDev|C2 StdDev|Change %|C1 Min|C2 Min|Change %|C1 Max|C2 Max|Change %";
+        return "Topology|Ordinal|Topology Description|Dimensions|Step|StepValue|BenchmarkType|Duration|Measurement|C1 Runs|C2 Run|C1 Avg|C2 Avg|Change %|C1 StdDev|C2 StdDev|Change %|C1 Min|C2 Min|Change %|C1 Max|C2 Max|Change %";
     }
 
 
@@ -202,6 +239,8 @@ public class StepComparison {
         //lines.add(getLine(receiveRateMin));
         lines.add(getLine(receiveRateAvg));
         lines.add(getLine(receiveRateStdDev));
+        lines.add(getLine(sendVsReceiveDiffAvg));
+        lines.add(getLine(sendVsReceiveDiffStdDev));
         //lines.add(getLine(receiveRateMax));
 //        lines.add(getLine(sentCount));
 //        lines.add(getLine(receiveCount));
@@ -232,8 +271,9 @@ public class StepComparison {
     private String getLine(Comparison comparison) {
         comparison.compare();
 
-        return MessageFormat.format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}|{9,number,#.####}|{10,number,#.####}|{11,number,#.####}|{12,number,#.####}|{13,number,#.####}|{14,number,#.####}|{15,number,#.####}|{16,number,#.####}|{17,number,#.####}|{18,number,#.####}|{19,number,#.####}|{20,number,#.####}|{21,number,#.####}",
+        return MessageFormat.format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}|{9}|{10,number,#.####}|{11,number,#.####}|{12,number,#.####}|{13,number,#.####}|{14,number,#.####}|{15,number,#.####}|{16,number,#.####}|{17,number,#.####}|{18,number,#.####}|{19,number,#.####}|{20,number,#.####}|{21,number,#.####}|{22,number,#.####}",
                 this.topology,
+                this.runOrdinal,
                 this.topologyDescription,
                 this.dimensions,
                 this.step,

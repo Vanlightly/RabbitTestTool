@@ -1,0 +1,4 @@
+throughput/vhosts/VhostBenchmark1.json
+throughput/vhosts/VhostBenchmark2.json
+throughput/vhosts/VhostBenchmark3.json
+throughput/vhosts/VhostBenchmark4.json

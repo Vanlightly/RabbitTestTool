@@ -1,0 +1,47 @@
+{
+    "topologyName": "TALK_005_PersistentOneQueueMultipleConsumers",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "throughput",
+    "description": "Persistent, 1kb, 1 pub/queue, increasing consumers",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "Counterpart"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 1024,
+                    "msgsPerSecondPerPublisher": 10000
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 100,
+                    "queueGroup": "q1",
+                    "processingMs": 5
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "consumers",
+            "values": [100],
+            "stepDurationSeconds": 600,
+            "rampUpSeconds": 5
+        }
+    }
+}

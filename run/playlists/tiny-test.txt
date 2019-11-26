@@ -1,1 +1,0 @@
-throughput/delivery-mode/DeliveryModeBenchmark2.json

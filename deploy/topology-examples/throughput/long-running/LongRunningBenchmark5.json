@@ -1,0 +1,43 @@
+{
+  "topologyName": "TP_LongRunningBenchmark5",
+  "topologyType": "fixed",
+  "benchmarkType": "throughput",
+  "description": "64 Kb persistent messages over 1 hour, 30 pub/queue/con",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": 1,
+      "queueGroups": [
+        {
+            "group": "q1",
+            "scale": 30
+        }
+      ],
+      "publisherGroups": [
+          {
+              "group": "p1",
+              "scale": 30,
+              "sendToQueueGroup": {
+                  "queueGroup": "q1",
+                  "mode": "random"
+              },
+              "deliveryMode": "Persistent",
+              "messageSize": 65536
+          }
+      ],
+      "consumerGroups": [
+          {
+              "group": "c1",
+              "scale": 30,
+              "queueGroup": "q1"
+          }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": 3600,
+      "rampUpSeconds": 10
+    }
+  }
+}

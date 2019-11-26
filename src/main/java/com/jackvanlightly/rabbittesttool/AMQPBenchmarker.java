@@ -3,6 +3,7 @@ package com.jackvanlightly.rabbittesttool;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.comparer.StatisticsComparer;
 import com.jackvanlightly.rabbittesttool.metrics.InfluxMetrics;
+import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.model.Violation;
 import com.jackvanlightly.rabbittesttool.register.BenchmarkRegister;
@@ -17,14 +18,13 @@ import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class AMQPBenchmarker {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AMQPBenchmarker.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("MAIN");
 
     public static void main(String[] args) {
 
@@ -52,9 +52,6 @@ public class AMQPBenchmarker {
             case Modes.Model:
                 runModelDrivenTest(arguments);
                 break;
-            case Modes.RecoveryTime:
-                runModelDrivenTest(arguments);
-                break;
             case Modes.Comparison:
                 runComparison(arguments);
                 break;
@@ -75,9 +72,6 @@ public class AMQPBenchmarker {
                     break;
                 case Modes.Model:
                     CmdArguments.printModelHelp(System.out);
-                    break;
-                case Modes.RecoveryTime:
-                    CmdArguments.printRecoveryTimeHelp(System.out);
                     break;
                 case Modes.Comparison:
                     CmdArguments.printComparisonHelp(System.out);
@@ -123,16 +117,33 @@ public class AMQPBenchmarker {
 
     private static void runModelDrivenTest(CmdArguments arguments) {
         try {
+            String runId = arguments.getStr("--run-id", UUID.randomUUID().toString());
             BenchmarkRegister benchmarkRegister = null;
             InfluxMetrics metrics = new InfluxMetrics();
 
             if(arguments.hasMetrics())
                 metrics.configure(arguments);
 
-            benchmarkRegister = new ConsoleRegister(System.out);
+            if (arguments.hasRegisterStore()) {
+                benchmarkRegister = new PostgresRegister(
+                        arguments.getStr("--postgres-jdbc-url"),
+                        arguments.getStr("--postgres-user"),
+                        arguments.getStr("--postgres-pwd"),
+                        arguments.getListStr("--nodes").get(0),
+                        runId,
+                        arguments.getStr("--run-tag", "?"),
+                        arguments.getStr("--config-tag", "?"));
+            }
+            else {
+                benchmarkRegister = new ConsoleRegister(System.out);
+            }
 
             String topologyPath = arguments.getStr("--topology");
+            Map<String,String> topologyVariables = arguments.getTopologyVariables();
             String policiesPath = arguments.getStr("--policies", "none");
+            Map<String,String> policyVariables = arguments.getPolicyVariables();
+            int ordinal = arguments.getInt("--run-ordinal", 1);
+            String benchmarkTags = arguments.getStr("--benchmark-tags", "");
             StepOverride stepOverride = getStepOverride(arguments);
             BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
@@ -143,8 +154,12 @@ public class AMQPBenchmarker {
             ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
             modelExecutor.execute(() -> messageModel.monitorProperties());
 
-            runBenchmark(topologyPath,
+            String benchmarkId = runBenchmark(Modes.Model,
+                    topologyPath,
+                    topologyVariables,
                     policiesPath,
+                    policyVariables,
+                    ordinal,
                     stepOverride,
                     benchmarkRegister,
                     metrics,
@@ -153,76 +168,31 @@ public class AMQPBenchmarker {
                     connectionSettings,
                     arguments.hasMetrics(),
                     messageModel,
-                    gracePeriod);
+                    gracePeriod,
+                    arguments.getArgsStr(","),
+                    benchmarkTags);
 
             messageModel.stopMonitoring();
             modelExecutor.shutdown();
 
             List<Violation> violations = messageModel.getViolations();
+            List<ConsumeInterval> consumeIntervals = messageModel.getConsumeIntervals();
 
-            if(violations.isEmpty()) {
-                System.out.println("No property violations detected");
-            }
-            else {
-                System.out.println("Property violations detected!");
-                for (Violation violation : violations) {
-                    System.out.println(MessageFormat.format("Type: {0}, Stream: {1}, SeqNo: {2}, Timestamp {3}",
-                            violation.getViolationType(),
-                            violation.getMessagePayload().getStream(),
-                            violation.getMessagePayload().getSequenceNumber(),
-                            violation.getMessagePayload().getTimestamp()));
-                }
-            }
+            LOGGER.info("SUMMARY for Run ID: " + runId + ", BenchmarkId: " + benchmarkId + "-----------------");
+            LOGGER.info("Violations: " + violations.size());
+            LOGGER.info("Consume Intervals: " + consumeIntervals.size());
 
+            if(!consumeIntervals.isEmpty()) {
+                LOGGER.info("Max Consume Interval ms: " + consumeIntervals.stream()
+                        .map(x -> x.getEndMessage().getReceiveTimestamp() - x.getStartMessage().getReceiveTimestamp())
+                        .max(Long::compareTo)
+                        .get());
+            }
+            benchmarkRegister.logViolations(benchmarkId, violations);
+            benchmarkRegister.logConsumeIntervals(benchmarkId, consumeIntervals);
         }
         catch(Exception e) {
-            LOGGER.error("Failed preparing local benchmark", e);
-        }
-    }
-
-    private static void runRecoveryTimeTest(CmdArguments arguments) {
-        try {
-            BenchmarkRegister benchmarkRegister = null;
-            InfluxMetrics metrics = new InfluxMetrics();
-
-            if(arguments.hasMetrics())
-                metrics.configure(arguments);
-
-            benchmarkRegister = new ConsoleRegister(System.out);
-
-            String topologyPath = arguments.getStr("--topology");
-            String policiesPath = arguments.getStr("--policies", "none");
-            StepOverride stepOverride = getStepOverride(arguments);
-            BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
-            InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
-            ConnectionSettings connectionSettings = getConnectionSettings(arguments);
-            Duration gracePeriod = Duration.ofSeconds(0);
-            MessageModel messageModel = new MessageModel(true);
-
-            ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
-            modelExecutor.execute(() -> messageModel.monitorProperties());
-
-            runBenchmark(topologyPath,
-                    policiesPath,
-                    stepOverride,
-                    benchmarkRegister,
-                    metrics,
-                    brokerConfig,
-                    instanceConfig,
-                    connectionSettings,
-                    arguments.hasMetrics(),
-                    messageModel,
-                    gracePeriod);
-
-            messageModel.stopMonitoring();
-            modelExecutor.shutdown();
-
-            System.out.println(MessageFormat.format("Messages sent: {0}, Recovery Time Seconds: {1}",
-                    messageModel.getSentCount(),
-                    messageModel.getMaxReceiveInterval()*1000000));
-        }
-        catch(Exception e) {
-            LOGGER.error("Failed running recovery time test", e);
+            LOGGER.error("Failed during model driven test", e);
         }
     }
 
@@ -237,14 +207,22 @@ public class AMQPBenchmarker {
             benchmarkRegister = new ConsoleRegister(System.out);
 
             String topologyPath = arguments.getStr("--topology");
+            Map<String,String> topologyVariables = arguments.getTopologyVariables();
             String policiesPath = arguments.getStr("--policies", "none");
+            Map<String,String> policyVariables = arguments.getPolicyVariables();
+            int ordinal = arguments.getInt("--run-ordinal", 1);
+            String benchmarkTags = arguments.getStr("--benchmark-tags", "");
             StepOverride stepOverride = getStepOverride(arguments);
             BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments);
 
-            runBenchmark(topologyPath,
+            runBenchmark(Modes.SimpleBenchmark,
+                    topologyPath,
+                    topologyVariables,
                     policiesPath,
+                    policyVariables,
+                    ordinal,
                     stepOverride,
                     benchmarkRegister,
                     metrics,
@@ -253,7 +231,9 @@ public class AMQPBenchmarker {
                     connectionSettings,
                     arguments.hasMetrics(),
                     new MessageModel(false),
-                    Duration.ZERO);
+                    Duration.ZERO,
+                    arguments.getArgsStr(","),
+                    benchmarkTags);
         }
         catch(Exception e) {
             LOGGER.error("Failed preparing local benchmark", e);
@@ -291,15 +271,23 @@ public class AMQPBenchmarker {
                         arguments.getStr("--config-tag"));
 
 
+                String benchmarkTags = arguments.getStr("--benchmark-tags","");
                 String topologyPath = arguments.getStr("--topology");
+                int ordinal = arguments.getInt("--run-ordinal", 1);
+                Map<String,String> topologyVariables = arguments.getTopologyVariables();
                 String policiesPath = arguments.getStr("--policies", "none");
+                Map<String,String> policyVariables = arguments.getPolicyVariables();
                 StepOverride stepOverride = getStepOverride(arguments);
                 BrokerConfiguration brokerConfig = getBrokerConfig(arguments);
                 InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
                 ConnectionSettings connectionSettings = getConnectionSettings(arguments);
 
-                runBenchmark(topologyPath,
+                runBenchmark(Modes.LoggedBenchmark,
+                        topologyPath,
+                        topologyVariables,
                         policiesPath,
+                        policyVariables,
+                        ordinal,
                         stepOverride,
                         benchmarkRegister,
                         metrics,
@@ -308,7 +296,9 @@ public class AMQPBenchmarker {
                         connectionSettings,
                         arguments.hasMetrics(),
                         new MessageModel(false),
-                        Duration.ZERO);
+                        Duration.ZERO,
+                        arguments.getArgsStr(","),
+                        benchmarkTags);
             } else {
                 LOGGER.error("No Postgres connection details were provided, a logged benchmark require postgres");
             }
@@ -318,17 +308,23 @@ public class AMQPBenchmarker {
         }
     }
 
-    private static void runBenchmark(String topologyPath,
-                                     String policyPath,
-                                     StepOverride stepOverride,
-                                     BenchmarkRegister benchmarkRegister,
-                                     InfluxMetrics metrics,
-                                     BrokerConfiguration brokerConfig,
-                                     InstanceConfiguration instanceConfig,
-                                     ConnectionSettings connectionSettings,
-                                     boolean publishRealTimeMetrics,
-                                     MessageModel messageModel,
-                                     Duration gracePeriod) {
+    private static String runBenchmark(String mode,
+                                       String topologyPath,
+                                       Map<String,String> topologyVariables,
+                                       String policyPath,
+                                       Map<String,String> policyVariables,
+                                       int ordinal,
+                                       StepOverride stepOverride,
+                                       BenchmarkRegister benchmarkRegister,
+                                       InfluxMetrics metrics,
+                                       BrokerConfiguration brokerConfig,
+                                       InstanceConfiguration instanceConfig,
+                                       ConnectionSettings connectionSettings,
+                                       boolean publishRealTimeMetrics,
+                                       MessageModel messageModel,
+                                       Duration gracePeriod,
+                                       String argumentsStr,
+                                       String benchmarkTags) {
         String benchmarkId = UUID.randomUUID().toString();
 
         Stats stats = null;
@@ -336,7 +332,7 @@ public class AMQPBenchmarker {
 
         try {
             TopologyLoader topologyLoader = new TopologyLoader();
-            Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride);
+            Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables);
 
             TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings, brokerConfig);
 
@@ -358,20 +354,23 @@ public class AMQPBenchmarker {
                     benchmarkRegister,
                     connectionSettings,
                     stats,
-                    messageModel);
+                    messageModel,
+                    mode);
 
 
-            benchmarkRegister.logBenchmarkStart(benchmarkId, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology);
+            benchmarkRegister.logBenchmarkStart(benchmarkId, ordinal, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology, argumentsStr, benchmarkTags);
             loggedStart = true;
             orchestrator.runBenchmark(benchmarkId, topology, brokerConfig.getNodes(), gracePeriod);
 
             // ensure all auto-recovering connections can recover before nuking the vhosts
             // to prevent unkillable threads
-            waitFor(30000);
+            waitFor(10000);
 
             if(topology.shouldDeclareArtefacts()) {
-                for (VirtualHost vhost : topology.getVirtualHosts())
+                for (VirtualHost vhost : topology.getVirtualHosts()) {
+                    LOGGER.info("Deleting vhost: " + vhost);
                     topologyGenerator.deleteVHost(vhost);
+                }
             }
         }
         catch(Exception e) {
@@ -395,6 +394,8 @@ public class AMQPBenchmarker {
         }
         LOGGER.info("Benchmark complete on node " + String.join(",", brokerConfig.getNodes()));
         //printThreads(node);
+
+        return benchmarkId;
     }
 
     private static InstanceConfiguration getInstanceConfigurationWithDefaults(CmdArguments arguments) {

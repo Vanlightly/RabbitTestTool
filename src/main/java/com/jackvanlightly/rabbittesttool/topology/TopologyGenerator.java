@@ -22,7 +22,7 @@ import java.util.Random;
 
 public class TopologyGenerator {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TopologyGenerator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("TOPOLOGY_GEN");
     private ConnectionSettings connectionSettings;
     private BrokerConfiguration brokerConfig;
     private String baseUrl;
@@ -105,10 +105,17 @@ public class TopologyGenerator {
 
         JSONObject arguments = new JSONObject();
 
+        boolean isQuorum = queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("x-queue-type") && x.getValue().equals("quorum"));
+
         if(queueConfig.getProperties() != null && !queueConfig.getProperties().isEmpty()) {
             for(Property prop : queueConfig.getProperties()) {
-                if(!prop.getKey().startsWith("ha-"))
-                    arguments.put(prop.getKey(), prop.getValue());
+                if(isQuorum && prop.getKey().equals("x-queue-mode"))
+                    continue;
+
+                if(prop.getKey().startsWith("ha-"))
+                    continue;
+
+                arguments.put(prop.getKey(), prop.getValue());
             }
         }
 
@@ -120,6 +127,7 @@ public class TopologyGenerator {
         queue.put("node", brokerConfig.getNodes().get(nodeIndex));
         queue.put("arguments", arguments);
 
+        System.out.println(queue.toString());
         put(getQueueUrl(queueConfig.getVhostName(), queueName), queue.toString());
         QueueHosts.register(queueConfig.getVhostName(), queueName, connectionSettings.getHostAndPort(nodeIndex));
 

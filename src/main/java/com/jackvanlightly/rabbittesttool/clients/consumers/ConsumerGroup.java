@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class ConsumerGroup {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerGroup.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("CONSUMER_GROUP");
     private List<Consumer> consumers;
     private ConnectionSettings connectionSettings;
     private ConsumerConfig consumerConfig;

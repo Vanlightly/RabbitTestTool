@@ -12,10 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 public class EventingConsumer extends DefaultConsumer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EventingConsumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("CONSUMER");
+    private String consumerId;
+    private String vhost;
+    private String queue;
     private Stats stats;
     private MessageModel messageModel;
     private int ackInterval;
@@ -23,8 +27,12 @@ public class EventingConsumer extends DefaultConsumer {
     private int prefetch;
     private int processingMs;
     private ConsumerStats consumerStats;
+    private boolean consumerCancelled;
 
-    public EventingConsumer(Channel channel,
+    public EventingConsumer(String consumerId,
+                            String vhost,
+                            String queue,
+                            Channel channel,
                             Stats stats,
                             MessageModel messageModel,
                             ConsumerStats consumerStats,
@@ -32,6 +40,9 @@ public class EventingConsumer extends DefaultConsumer {
                             int ackInterval,
                             int processingMs) {
         super(channel);
+        this.consumerId = consumerId;
+        this.vhost = vhost;
+        this.queue = queue;
         this.stats = stats;
         this.messageModel = messageModel;
         this.ackInterval = ackInterval;
@@ -66,7 +77,7 @@ public class EventingConsumer extends DefaultConsumer {
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
         MessagePayload mp = MessageGenerator.toMessagePayload(body);
         long lag = MessageUtils.getLag(mp.getTimestamp());
-        messageModel.received(new ReceivedMessage(mp, envelope.isRedeliver(), lag, System.nanoTime()));
+        messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, envelope.isRedeliver(), lag, System.currentTimeMillis()));
 
         int headerCount = 0;
         if(properties != null && properties.getHeaders() != null)
@@ -89,6 +100,7 @@ public class EventingConsumer extends DefaultConsumer {
     @Override
     public void handleCancel(String consumerTag) throws IOException {
         LOGGER.info("Consumer cancelled with tag: " + consumerTag);
+        consumerCancelled = true;
     }
 
     @Override
@@ -101,6 +113,10 @@ public class EventingConsumer extends DefaultConsumer {
         if(sig.isHardError() && !sig.isInitiatedByApplication())
             this.stats.handleConnectionError();
         LOGGER.info("Consumer shutdown with tag: " + consumerTag + " for reason: " + sig.getMessage());
+    }
+
+    public boolean isConsumerCancelled() {
+        return consumerCancelled;
     }
 
     private void waitFor(int milliseconds) {

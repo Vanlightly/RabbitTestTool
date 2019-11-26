@@ -19,6 +19,7 @@ public class PublisherSettings {
     private int publishRatePerSecond;
     private int frameMax;
     private long messageLimit;
+    private long initialPublish;
 
     public PublisherSettings(SendToExchange sendToExchange,
                              PublisherMode publisherMode,
@@ -26,7 +27,8 @@ public class PublisherSettings {
                              int messageSize,
                              DeliveryMode deliveryMode,
                              int frameMax,
-                             long messageLimit) {
+                             long messageLimit,
+                             long initialPublish) {
         this.sendToExchange = sendToExchange;
         this.publisherMode = publisherMode;
         this.streams = streams;
@@ -35,6 +37,7 @@ public class PublisherSettings {
         this.sendToMode = SendToMode.Exchange;
         this.frameMax = frameMax;
         this.messageLimit = messageLimit;
+        this.initialPublish = initialPublish;
 
         this.availableHeaders = new ArrayList<>();
     }
@@ -45,7 +48,8 @@ public class PublisherSettings {
                              int messageSize,
                              DeliveryMode deliveryMode,
                              int frameMax,
-                             long messageLimit) {
+                             long messageLimit,
+                             long initialPublish) {
         this.sendToQueueGroup = sendToQueueGroup;
         this.publisherMode = publisherMode;
         this.streams = streams;
@@ -54,6 +58,8 @@ public class PublisherSettings {
         this.sendToMode = SendToMode.QueueGroup;
         this.frameMax = frameMax;
         this.messageLimit = messageLimit;
+        this.initialPublish = initialPublish;
+        this.useMandatoryFlag = true;
 
         this.availableHeaders = new ArrayList<>();
     }
@@ -114,10 +120,6 @@ public class PublisherSettings {
         this.deliveryMode = deliveryMode;
     }
 
-    public boolean isUseMandatoryFlag() {
-        return useMandatoryFlag;
-    }
-
     public int getPublishRatePerSecond() {
         return publishRatePerSecond;
     }
@@ -140,5 +142,13 @@ public class PublisherSettings {
 
     public void setMessageLimit(long messageLimit) {
         this.messageLimit = messageLimit;
+    }
+
+    public long getInitialPublish() {
+        return initialPublish;
+    }
+
+    public void setInitialPublish(long initialPublish) {
+        this.initialPublish = initialPublish;
     }
 }

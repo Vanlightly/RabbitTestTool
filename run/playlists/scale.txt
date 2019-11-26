@@ -1,1 +1,0 @@
-scale/simple/Medium1kb.json

@@ -1,0 +1,73 @@
+{
+    "topologyName": "TALK_008_PersistentOneQueuePrefetchAckInterval",
+    "topologyType": "MultipleDimensions",
+    "benchmarkType": "throughput",
+    "description": "Persistent, 16 byte, 1 pub/queue/con, increasing ack interval",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "Counterpart"
+                    },
+                    "deliveryMode": "Persistent"
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1",
+                    "ackMode": {
+                        "manualAcks": true,
+                        "consumerPrefetch": 1,
+                        "ackInterval": 1
+                    }
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "multipleDimensions": {
+            "dimensions": ["PublisherRate","Prefetch","AckInterval"],
+            "multiValues": [[25000, 1, 1],
+            [25000, 1, 1],
+            [25000, 1, 1],
+            [25000, 1, 1],
+            [25000, 1, 1],
+            [25000, 1, 1],
+            [25000, 1, 1],
+            [25000, 1, 1],
+            [25000, 1, 1],
+            [1, 1, 1],
+            [1, 30, 15],
+            [1, 60, 30],
+            [1, 90, 45],
+            [1, 120, 60],
+            [1, 150, 75],
+            [1, 180, 90],
+            [1, 210, 105],
+            [1, 240, 120],
+            [1, 270, 135],
+            [1, 300, 150],
+            [1, 330, 165],
+            [1, 360, 180],
+            [1, 390, 195],
+            [1, 420, 210]
+            ],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 10
+        }
+    }
+}

@@ -7,10 +7,12 @@ import os.path
 from random import randint
 from UniqueConfiguration import UniqueConfiguration
 from CommonConfiguration import CommonConfiguration
+from printer import console_out
 
 class Deployer:
     def __init__(self):
         self._deploy_status = dict()
+        self.actor = "DEPLOYER"
 
     def deploy(self, runner, configurations, common_conf):
         if common_conf.run_tag == "none":
@@ -32,7 +34,7 @@ class Deployer:
                         unique_conf.technology, 
                         common_conf.run_tag], cwd="../deploy/aws")
         if exit_code != 0:
-            print(f"update {unique_conf.node_number} failed with exit code {exit_code}")
+            console_out(self.actor, f"update {unique_conf.node_number} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed"   
         else:
             self._deploy_status[status_id] = "success"
@@ -62,7 +64,7 @@ class Deployer:
                             volume_type], cwd="../deploy/aws")
 
         if exit_code != 0:
-            print(f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
+            console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed"   
         else:
             self._deploy_status[status_id] = "success"
@@ -89,7 +91,7 @@ class Deployer:
                                 unique_conf.volume_size, 
                                 volume_type], cwd="../deploy/aws")
         if exit_code != 0:
-            print(f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
+            console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed" 
             return  
         
@@ -119,7 +121,7 @@ class Deployer:
                                 volume_type], cwd="../deploy/aws")
 
         if exit_code != 0:
-            print(f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
+            console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed"   
             return
 
@@ -144,7 +146,7 @@ class Deployer:
                                 common_conf.run_tag], cwd="../deploy/aws")
 
             if exit_code != 0:
-                print(f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
+                console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
                 self._deploy_status[status_id] = "failed"   
             else:
                 self._deploy_status[status_id] = "success"
@@ -172,12 +174,12 @@ class Deployer:
                                 unique_conf.volume_size, 
                                 volume_type], cwd="../deploy/aws")    
         if exit_code != 0:
-            print(f"deploy of joinee rabbitmq{node} failed with exit code {exit_code}")
+            console_out(self.actor, f"deploy of joinee rabbitmq{node} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed"   
     
     def teardown(self, technology, node, run_tag, no_destroy):
         if no_destroy:
-            print("No teardown as --no-destroy set to true")
+            console_out(self.actor, "No teardown as --no-destroy set to true")
         else:
             terminated = False
             while not terminated:
@@ -185,26 +187,26 @@ class Deployer:
                 if exit_code == 0:
                     terminated = True
                 else:
-                    print("teardown failed, will retry in 1 minute")
+                    console_out(self.actor, "teardown failed, will retry in 1 minute")
                     time.sleep(60)
 
     def teardown_all(self, configurations, run_tag, no_destroy):
         if no_destroy:
-            print("No teardown as --no-destroy set to true")
+            console_out(self.actor, "No teardown as --no-destroy set to true")
         else:
-            print("Terminating all servers")
+            console_out(self.actor, "Terminating all servers")
             
             for config_tag in configurations:
-                print(f"TEARDOWN FOR configuration {config_tag}")
+                console_out(self.actor, f"TEARDOWN FOR configuration {config_tag}")
                 unique_conf_list = configurations[config_tag]
                 for p in range(len(unique_conf_list)):
                     unique_conf = unique_conf_list[p]
 
                     for n in range(0, unique_conf.cluster_size):
                         node_num = int(unique_conf.node_number) + n
-                        print(f"TEARDOWN FOR node {node_num}")
+                        console_out(self.actor, f"TEARDOWN FOR node {node_num}")
                         self.teardown(unique_conf.technology, str(node_num), run_tag, no_destroy)
-                print("All servers terminated")
+                console_out(self.actor, "All servers terminated")
             exit(1)    
    
     def parallel_deploy(self, configurations, common_conf):
@@ -238,7 +240,6 @@ class Deployer:
                 status_id1 = unique_conf.technology + unique_conf.node_number
             
                 if self._deploy_status[status_id1] != "success":
-                    print(f"Deployment failed for node {unique_conf.technology}{unique_conf.node_number}")
+                    console_out(self.actor, f"Deployment failed for node {unique_conf.technology}{unique_conf.node_number}")
                     if not common_conf.no_deploy:
                         self.teardown_all(configurations, common_conf.run_tag, False)
-                        

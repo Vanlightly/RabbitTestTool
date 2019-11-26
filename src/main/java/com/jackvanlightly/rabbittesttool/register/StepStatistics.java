@@ -7,6 +7,7 @@ public class StepStatistics {
     private String topologyDescription;
     private String dimensions;
     private String benchmarkType;
+    private int runOrdinal;
     private int step;
     private String stepValue;
     private String node;
@@ -46,6 +47,14 @@ public class StepStatistics {
 
     public void setStep(int step) {
         this.step = step;
+    }
+
+    public int getRunOrdinal() {
+        return runOrdinal;
+    }
+
+    public void setRunOrdinal(int runOrdinal) {
+        this.runOrdinal = runOrdinal;
     }
 
     public String getNode() {

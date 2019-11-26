@@ -6,10 +6,12 @@ import uuid
 import os.path
 from random import randint
 from collections import namedtuple
+from printer import console_out
 
 class Runner:
     def __init__(self):
         self._benchmark_status = dict()
+        self.actor = "RUNNER"
 
     def get_benchmark_statuses(self):
         return self._benchmark_status
@@ -17,11 +19,8 @@ class Runner:
     def get_benchmark_status(self, status_id):
         return self._benchmark_status[status_id]
     
-    def run_benchmark(self, unique_conf, common_conf, topology, policies):
+    def run_benchmark(self, unique_conf, common_conf, playlist_entry, policies, run_ordinal):
         status_id = unique_conf.technology + unique_conf.node_number
-
-        broker_user = "benchmark"
-        broker_password = common_conf.password
 
         nodes = ""
         for x in range(int(unique_conf.cluster_size)):
@@ -47,10 +46,10 @@ class Runner:
                                 common_conf.postgres_url, 
                                 common_conf.postgres_user, 
                                 common_conf.postgres_pwd, 
-                                topology, 
+                                playlist_entry.topology, 
                                 common_conf.run_id, 
-                                broker_user, 
-                                broker_password, 
+                                common_conf.username, 
+                                common_conf.password, 
                                 common_conf.run_tag, 
                                 unique_conf.core_count, 
                                 unique_conf.threads_per_core, 
@@ -63,10 +62,16 @@ class Runner:
                                 nodes, 
                                 str(common_conf.override_step_msg_limit), 
                                 common_conf.override_broker_hosts, 
-                                unique_conf.try_connect_local])
+                                unique_conf.try_connect_local,
+                                common_conf.mode,
+                                str(playlist_entry.grace_period_sec),
+                                str(run_ordinal),
+                                common_conf.tags,
+                                playlist_entry.get_topology_variables(),
+                                playlist_entry.get_policy_variables()])
 
         if exit_code != 0:
-            print(f"Benchmark {unique_conf.node_number} failed")
+            console_out(self.actor, f"Benchmark {unique_conf.node_number} failed")
             self._benchmark_status[status_id] = "failed"
         else:
             self._benchmark_status[status_id] = "success"
@@ -86,11 +91,11 @@ class Runner:
             bt.start()
 
         time.sleep(10)
-        print(f"Delaying start of benchmark by {common_conf.background_delay} seconds")
+        console_out(self.actor, f"Delaying start of benchmark by {common_conf.background_delay} seconds")
         time.sleep(common_conf.background_delay)
 
     def run_background_load(self, unique_conf, common_conf):
-        print(f"Starting background load for {unique_conf.node_number}")
+        console_out(self.actor, f"Starting background load for {unique_conf.node_number}")
         status_id = unique_conf.technology + unique_conf.node_number
 
         broker_user = "benchmark"

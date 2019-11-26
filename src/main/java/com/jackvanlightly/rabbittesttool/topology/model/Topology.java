@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Topology {
+    private String topologyJson;
+    private String policiesJson;
     private TopologyType topologyType;
     private BenchmarkType benchmarkType;
     private String topologyName;
@@ -89,5 +91,21 @@ public class Topology {
 
     public void setDeclareArtefacts(boolean declareArtefacts) {
         this.declareArtefacts = declareArtefacts;
+    }
+
+    public String getTopologyJson() {
+        return topologyJson;
+    }
+
+    public void setTopologyJson(String topologyJson) {
+        this.topologyJson = topologyJson;
+    }
+
+    public String getPoliciesJson() {
+        return policiesJson;
+    }
+
+    public void setPoliciesJson(String policiesJson) {
+        this.policiesJson = policiesJson;
     }
 }

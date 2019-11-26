@@ -1,0 +1,62 @@
+{
+    "topologyName": "LT_TopicBenchmark6",
+    "topologyType": "MultipleDimensions",
+    "benchmarkType": "latency",
+    "description": "1000 msgs/s. # match, growing rk length, compensating body size",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "exchanges": [
+                { "name": "ex1", "type": "topic" }
+            ],
+            "queueGroups": [
+                { "group": "q1", "scale": 1, "bindings": [{ "from": "ex1", "bindingKey": "#.c" }] },
+                { "group": "q2", "scale": 1, "bindings": [{ "from": "ex1", "bindingKey": "#.cccccccccc" }] },
+                { "group": "q3", "scale": 1, "bindings": [{ "from": "ex1", "bindingKey": "#.cccccccccccccccccccc" }] },
+                { "group": "q4", "scale": 1, "bindings": [{ "from": "ex1", "bindingKey": "#.cccccccccccccccccccccccccccccccccccccccc" }] },
+                { "group": "q5", "scale": 1, "bindings": [{ "from": "ex1", "bindingKey": "#.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" }] }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeys": [
+                            "a.b.c",
+                            "aaaaaaaaaa.bbbbbbbbbb.cccccccccc",
+                            "aaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccc",
+                            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccc",
+                            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
+                        "routingKeyMode": "index"
+                    },
+                    "deliveryMode": "Persistent",
+                    "msgsPerSecondPerPublisher": 1000
+                }
+            ],
+            "consumerGroups": [
+                { "group": "c1", "scale": 1, "queueGroup": "q1" },
+                { "group": "c2", "scale": 1, "queueGroup": "q2" },
+                { "group": "c3", "scale": 1, "queueGroup": "q3" },
+                { "group": "c4", "scale": 1, "queueGroup": "q4" },
+                { "group": "c5", "scale": 1, "queueGroup": "q5" }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "multipleDimensions": {
+            "dimensions": ["RoutingKeyIndex", "MessageSize"],
+            "multiValues": [
+                [0, 253],
+                [1, 226],
+                [2, 196],
+                [3, 146],
+                [4, 16]
+            ],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 10,
+            "applyToGroup": "p1"
+        }
+    }
+}

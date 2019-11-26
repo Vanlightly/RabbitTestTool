@@ -25,6 +25,7 @@ public class PublisherConfig {
     private int publishRatePerSecond;
     private int streams;
     private long messageLimit;
+    private long initialPublish;
 
     public PublisherConfig() {
         availableHeaders = new ArrayList<>();
@@ -153,5 +154,13 @@ public class PublisherConfig {
 
     public void setMessageLimit(long messageLimit) {
         this.messageLimit = messageLimit;
+    }
+
+    public long getInitialPublish() {
+        return initialPublish;
+    }
+
+    public void setInitialPublish(long initialPublish) {
+        this.initialPublish = initialPublish;
     }
 }

@@ -1,0 +1,23 @@
+{
+    "variables": [
+        { "name": "name", "default": "mirrored-queues" },
+        { "name": "pattern", "default": "" },
+        { "name": "priority", "default": "0" },
+        { "name": "haMode", "default": "all" },
+        { "name": "haParams", "default": "0" },
+        { "name": "haSyncMode", "default": "automatic" }
+    ],
+    "policies": [
+        {
+            "name": "{{ var.pattern }}",
+            "applyTo": "queues",
+            "pattern": "{{ var.pattern }}",
+            "priority": "{{ var.priority }}",
+            "properties" : [
+                { "key": "ha-mode", "value": "{{ var.haMode }}", "type": "string" },
+                { "key": "ha-params", "value": "{{ var.haParams }}", "type": "int" },
+                { "key": "ha-sync-mode", "value": "{{ var.haSyncMode }}", "type": "string" }
+            ]
+        }
+    ]
+}

@@ -2,31 +2,35 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
+import com.jackvanlightly.rabbittesttool.clients.consumers.Consumer;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BlockedListener;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.Semaphore;
 
 public class PublisherListener implements ConfirmListener, ReturnListener, BlockedListener {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PublisherListener.class);
     private MessageModel messageModel;
     private Stats stats;
     private ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
     private Semaphore inflightSemaphore;
+    private Set<MessagePayload> undeliverable;
 
     public PublisherListener(MessageModel messageModel, Stats stats, ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms, Semaphore inflightSemaphore) {
         this.messageModel = messageModel;
         this.stats = stats;
         this.pendingConfirms = pendingConfirms;
         this.inflightSemaphore = inflightSemaphore;
+        this.undeliverable = new HashSet<>();
     }
 
     @Override
@@ -46,7 +50,11 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
             for (MessagePayload mp : confirmedList) {
                 latencies[index] = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
                 index++;
-                messageModel.sent(mp);
+
+                if(!undeliverable.contains(mp))
+                    messageModel.sent(mp);
+                else
+                    undeliverable.remove(mp);
             }
             confirmed.clear();
         } else {
@@ -54,7 +62,11 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
             if(mp != null) {
                 latencies = new long[]{MessageUtils.getDifference(mp.getTimestamp(), currentTime)};
                 numConfirms = 1;
-                messageModel.sent(mp);
+
+                if(!undeliverable.contains(mp))
+                    messageModel.sent(mp);
+                else
+                    undeliverable.remove(mp);
             }
             else
             {
@@ -91,6 +103,13 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
                              String routingKey,
                              AMQP.BasicProperties properties,
                              byte[] body) {
+        try {
+            MessagePayload mp = MessageGenerator.toMessagePayload(body);
+            undeliverable.add(mp);
+        }
+        catch(Exception e) {
+            LOGGER.error("Failed registering basic return", e);
+        }
         stats.handleReturn();
     }
 

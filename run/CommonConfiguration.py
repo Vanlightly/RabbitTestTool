@@ -1,10 +1,12 @@
 import uuid
-from command_args import get_args, get_optional_arg, get_mandatory_arg, get_mandatory_arg_no_print, is_true, get_mandatory_arg_validated
+from command_args import get_args, get_optional_arg, get_mandatory_arg, get_mandatory_arg_no_print, is_true, get_mandatory_arg_validated, get_optional_arg_validated
 
 class CommonConfiguration:
 
     def __init__(self, args):
         self.run_id = str(uuid.uuid4())
+        self.tags = get_mandatory_arg(args, "--tags", "")
+        self.mode = get_optional_arg_validated(args, "--mode", "", ["logged-benchmark","model"], "logged-benchmark")
         self.config_count = int(get_optional_arg(args, "--config-count", "", "1"))
         self.new_instance_per_run = is_true(get_optional_arg(args, "--new-instance-per-run", "", "false"))
         self.no_destroy = is_true(get_optional_arg(args, "--no-destroy", "", "false"))
@@ -30,6 +32,7 @@ class CommonConfiguration:
         self.loadgen_instance = get_mandatory_arg(args, "--loadgen-instance", "")
         self.subnet = get_mandatory_arg(args, "--subnet", "")
         self.key_pair = get_mandatory_arg(args, "--keypair", "")
+        self.username = "benchmark"
         self.password = get_mandatory_arg(args, "--password", "")
         self.postgres_url = get_mandatory_arg(args, "--postgres-jdbc-url", "")
         self.postgres_user = get_mandatory_arg(args, "--postgres-user", "")

@@ -1,0 +1,57 @@
+{
+    "topologyName": "TP_E2eBenchmark6",
+    "topologyType": "Fixed",
+    "benchmarkType": "throughput",
+    "description": "ex->ex->ex->ex->ex->ex->ex->ex->ex->queue",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "exchanges": [
+                { "name": "ex1","type": "fanout" },
+                { "name": "ex2","type": "fanout", "bindings": [ { "from": "ex1" }] },
+                { "name": "ex3","type": "fanout", "bindings": [ { "from": "ex2" }] },
+                { "name": "ex4","type": "fanout", "bindings": [ { "from": "ex3" }] },
+                { "name": "ex5","type": "fanout", "bindings": [ { "from": "ex4" }] },
+                { "name": "ex6","type": "fanout", "bindings": [ { "from": "ex5" }] },
+                { "name": "ex7","type": "fanout", "bindings": [ { "from": "ex6" }] },
+                { "name": "ex8","type": "fanout", "bindings": [ { "from": "ex7" }] },
+                { "name": "ex9","type": "fanout", "bindings": [ { "from": "ex8" }] },
+                { "name": "ex10","type": "fanout", "bindings": [ { "from": "ex9" }] }
+            ],
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1,
+                    "bindings": [
+                        { "from": "ex10" }
+                    ]
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent"
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "fixedDimensions": {
+            "durationSeconds": 120,
+            "rampUpSeconds": 10
+        }
+    }
+}

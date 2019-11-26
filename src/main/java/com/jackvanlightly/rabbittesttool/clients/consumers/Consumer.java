@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.concurrent.*;
 
 public class Consumer implements Runnable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Consumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("CONSUMER");
 
     private String consumerId;
     private ConnectionSettings connectionSettings;
@@ -48,6 +48,7 @@ public class Consumer implements Runnable {
 
     public void signalStop() {
         isCancelled = true;
+        this.executorService.shutdown();
     }
 
     public void setAckInterval(int ackInterval) {
@@ -80,20 +81,25 @@ public class Consumer implements Runnable {
     public void run() {
         while(!isCancelled) {
             try {
-                Connection connection = getConnection();
-                LOGGER.info("Consumer " + consumerId + " opened connection");
+                Connection connection = null;
+                try {
+                    connection = getConnection();
+                    if(connection.isOpen()) {
+                        LOGGER.info("Consumer " + consumerId + " opened connection");
 
-                int exitReason = 0;
-                while (!isCancelled && exitReason != 3) {
-                    int currentStep = step;
-                    exitReason = startChannel(connection, currentStep);
+                        int exitReason = 0;
+                        while (!isCancelled && exitReason != 3) {
+                            int currentStep = step;
+                            exitReason = startChannel(connection, currentStep);
+                        }
+                    }
                 }
-
-                if(connection.isOpen()) {
-                    connection.close(AMQP.REPLY_SUCCESS, "Closed by RabbitTestTool", 3000);
-                    LOGGER.info("Consumer " + consumerId + " closed connection");
+                finally {
+                    if (connection != null && connection.isOpen()) {
+                        connection.close(AMQP.REPLY_SUCCESS, "Closed by RabbitTestTool", 3000);
+                        LOGGER.info("Consumer " + consumerId + " closed connection");
+                    }
                 }
-                this.executorService.shutdownNow();
             } catch (IOException e) {
                 if(!isCancelled)
                     stats.handleConnectionError();
@@ -115,16 +121,20 @@ public class Consumer implements Runnable {
     }
 
     private void recreateConsumerExecutor() {
-        LOGGER.info("Consumer " + consumerId + " will restart in 5 seconds");
-        this.executorService.shutdownNow();
         try {
-            this.executorService.awaitTermination(5, TimeUnit.SECONDS);
+            this.executorService.shutdown();
+            this.executorService.awaitTermination(10, TimeUnit.SECONDS);
+            LOGGER.info("Consumer " + consumerId + " connection thread pool stopped");
         }
         catch (InterruptedException e) {
+            LOGGER.info("Could not stop consumer " + consumerId + " connection thread pool");
             Thread.currentThread().interrupt();
-            return;
+
+            if(isCancelled)
+                return;
         }
 
+        LOGGER.info("Consumer " + consumerId + " will restart in 5 seconds");
         ClientUtils.waitFor(5000, isCancelled);
 
         this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
@@ -150,26 +160,32 @@ public class Consumer implements Runnable {
         LOGGER.info("Consumer " + consumerId + " opened channel");
         try {
             boolean noAck = false;
+
             if (consumerSettings.getAckMode().isManualAcks()) {
                 channel.confirmSelect();
             } else {
                 noAck = true;
             }
 
-            if (consumerSettings.getAckMode().getConsumerPrefetch() > 0)
+            if (consumerSettings.getAckMode().getConsumerPrefetch() > 0) {
                 channel.basicQos(consumerSettings.getAckMode().getConsumerPrefetch());
+            }
 
-            eventingConsumer = new EventingConsumer(channel,
+            eventingConsumer = new EventingConsumer(consumerId,
+                    connectionSettings.getVhost(),
+                    consumerSettings.getQueue(),
+                    channel,
                     stats,
                     messageModel,
                     consumerStats,
                     consumerSettings.getAckMode().getConsumerPrefetch(),
                     consumerSettings.getAckMode().getAckInterval(),
                     consumerSettings.getProcessingMs());
+
             String consumerTag = channel.basicConsume(consumerSettings.getQueue(), noAck, eventingConsumer);
             LOGGER.info("Consumer " + consumerId + " consuming with tag: " + consumerTag);
 
-            while (!isCancelled && currentStep.equals(step) && channel.isOpen()) {
+            while (!isCancelled && currentStep.equals(step) && channel.isOpen() && !eventingConsumer.isConsumerCancelled()) {
                 ClientUtils.waitFor(100, this.isCancelled);
             }
 
@@ -180,19 +196,25 @@ public class Consumer implements Runnable {
             else
                 exitReason = 3;
         }
+        catch(Exception e) {
+            LOGGER.error("Failed setting up a consumer", e);
+            throw e;
+        }
         finally {
             if(channel.isOpen()) {
                 try {
                     channel.close();
-                    LOGGER.info("Consumer " + consumerId + " closed channel");
+                    LOGGER.info("Consumer " + consumerId + " closed channel with exit reason " + exitReason);
                 }
                 catch(Exception e) {
-                    LOGGER.error("Consumer " + consumerId + " could not close channel", e);
+                    LOGGER.error("Consumer " + consumerId + " could not close channel with exit reason " + exitReason, e);
                 }
             }
             else {
                 exitReason = 3;
             }
+
+            ClientUtils.waitFor(1000, isCancelled);
 
             return exitReason;
         }

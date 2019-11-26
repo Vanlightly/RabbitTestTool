@@ -13,10 +13,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class Publisher implements Runnable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Publisher.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("PUBLISHER");
 
     private String publisherId;
     private MessageModel messageModel;
@@ -162,6 +163,61 @@ public class Publisher implements Runnable {
         this.sentCount = 0;
     }
 
+    public void performInitialSend() {
+        while(!isCancelled) {
+            Connection connection = null;
+            Channel channel = null;
+            try {
+                connection = getConnection();
+                channel = connection.createChannel();
+                ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
+                Semaphore inflightSemaphore = new Semaphore(1000);
+                PublisherListener listener = new PublisherListener(messageModel, stats, pendingConfirms, inflightSemaphore);
+
+                LOGGER.info("Publisher " + publisherId + " opened channel for initial publish");
+
+                channel.confirmSelect();
+                channel.addConfirmListener(listener);
+                channel.addReturnListener(listener);
+
+                int currentStream = 0;
+                while (!isCancelled) {
+                    inflightSemaphore.acquire();
+
+                    publish(channel, currentStream, pendingConfirms, true);
+                    sentCount++;
+                    currentStream++;
+
+                    if (currentStream > maxStream)
+                        currentStream = 0;
+
+                    if(sentCount >= publisherSettings.getInitialPublish())
+                        break;
+                }
+
+                LOGGER.info("Publisher " + publisherId + " stopping initial publish");
+
+                tryClose(channel);
+                tryClose(connection);
+            } catch (Exception e) {
+                LOGGER.error("Publisher" + publisherId + " failed in initial publish", e);
+                tryClose(channel);
+                tryClose(connection);
+                waitFor(5000);
+            }
+
+            if(sentCount >= publisherSettings.getInitialPublish())
+                break;
+
+            if(!isCancelled) {
+                LOGGER.info("Publisher" + publisherId + " restarting to complete initial publish");
+                waitFor(1000);
+            }
+        }
+
+        LOGGER.info("Publisher " + publisherId + " completed initial send");
+    }
+
     @Override
     public void run() {
         while(!isCancelled) {
@@ -174,7 +230,7 @@ public class Publisher implements Runnable {
 
                 connection = getConnection();
                 channel = connection.createChannel();
-                LOGGER.info("Publisher " + publisherId + " opened channel. Has " + (maxStream + 1) + " streams.");
+                LOGGER.info("Publisher " + publisherId + " opened channel. Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
 
                 if (this.useConfirms) {
                     channel.confirmSelect();
@@ -218,7 +274,7 @@ public class Publisher implements Runnable {
                     boolean send = sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit);
 
                     if(send) {
-                        publish(channel, currentStream, pendingConfirms);
+                        publish(channel, currentStream, pendingConfirms, false);
                         sentCount++;
 
                         currentStream++;
@@ -231,7 +287,6 @@ public class Publisher implements Runnable {
                             long elapsedNs = now - periodStartNs;
 
                             if (this.sentInPeriod >= this.limitInPeriod) {
-                                // perhaps should look at a monotonic time instead
                                 long waitNs = this.periodNs - elapsedNs;
                                 if (waitNs > 0)
                                     waitFor((int) (waitNs / 1000000));
@@ -312,7 +367,7 @@ public class Publisher implements Runnable {
         }
     }
 
-    private void publish(Channel channel, int currentStream, ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms) throws IOException {
+    private void publish(Channel channel, int currentStream, ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms, boolean isInitialPublish) throws IOException {
         long seqNo = channel.getNextPublishSeqNo();
         long timestamp = MessageUtils.getTimestamp();
 
@@ -321,7 +376,9 @@ public class Publisher implements Runnable {
         MessagePayload mp = new MessagePayload(stream, streamSeqNo, timestamp);
         AMQP.BasicProperties messageProperties = getProperties();
 
-        if(this.useConfirms)
+        if(isInitialPublish)
+            pendingConfirms.put(seqNo, mp);
+        else if(this.useConfirms)
             pendingConfirms.put(seqNo, mp);
         else
             messageModel.sent(mp);

@@ -1,0 +1,22 @@
+{
+    "variables": [
+        { "name": "name", "default": "quorum-queues" },
+        { "name": "pattern", "default": "" },
+        { "name": "priority", "default": "0" },
+        { "name": "groupSize", "default": "3" },
+        { "name": "maxInMemoryLength", "default": "0" }
+    ],
+    "policies": [
+        {
+            "name": "{{ var.pattern }}",
+            "applyTo": "queues",
+            "pattern": "{{ var.pattern }}",
+            "priority": "{{ var.priority }}",
+            "properties" : [
+                { "key": "x-queue-type", "value": "quorum", "type": "string" },
+                { "key": "x-quorum-initial-group-size", "value": "{{ var.groupSize }}", "type": "int" },
+                { "key": "x-max-in-memory-length", "value": "{{ var.maxInMemoryLength }}", "type": "int" }
+            ]
+        }
+    ]
+}

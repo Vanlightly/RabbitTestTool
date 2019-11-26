@@ -1,0 +1,21 @@
+{
+    "playlistEntries": [
+        { 
+            "topology": "throughput/point-to-point/point-to-point.json", 
+            "topologyVariables": { "consumerCount": "10" } 
+        }
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" 
+        },
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "100000" 
+        }
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "policies": [
+        {
+            "name": "sharded-queues-10",
+            "applyTo": "exchanges",
+            "pattern": "^sharded$",
+            "priority": 1,
+            "properties" : [
+                { "key": "shards-per-node", "value": "60", "type": "int" }
+            ]
+        }
+    ]
+}

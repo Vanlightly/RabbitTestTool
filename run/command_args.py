@@ -83,6 +83,15 @@ def get_mandatory_arg_validated(args_dict, key, suffix, allowed_values):
         print(f"Missing mandatory argument {key}")
         exit(1)
 
+def get_optional_arg_validated(args_dict, key, suffix, allowed_values, default_value):
+    suffix_key = f"{key}{suffix}"
+    if suffix_key in args_dict:
+        return get_mandatory_arg_validated(args_dict, key, suffix, allowed_values)
+    elif key in args_dict:
+        return get_mandatory_arg_validated(args_dict, key, suffix, allowed_values)
+    else:
+        return default_value
+
 def get_optional_arg(args_dict, key, suffix, default_value):
     suffix_key = f"{key}{suffix}"
     if suffix_key in args_dict:
@@ -97,7 +106,7 @@ def get_optional_arg(args_dict, key, suffix, default_value):
         print(f"DEFAULT {key}={default_value}")
         return default_value
 
-def get_optional_arg_validated(args_dict, key, suffix, default_value, allowed_values):
+def get_optional_arg_validated(args_dict, key, suffix, allowed_values, default_value):
     suffix_key = f"{key}{suffix}"
     if suffix_key in args_dict:
         val = args_dict[suffix_key]

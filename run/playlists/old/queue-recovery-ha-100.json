@@ -1,0 +1,27 @@
+{
+    "playlistEntries": [
+        { "topologyValues": "2000,100", "triggerAt": 200010 },
+        { "topologyValues": "4000,100", "triggerAt": 400010 },
+        { "topologyValues": "6000,100", "triggerAt": 600010 },
+        { "topologyValues": "8000,100", "triggerAt": 800010 },
+        { "topologyValues": "12000,100", "triggerAt": 1200010 },
+        { "topologyValues": "14000,100", "triggerAt": 1400010 },
+        { "topologyValues": "16000,100", "triggerAt": 1600010 },
+        { "topologyValues": "18000,100", "triggerAt": 1800010 },
+        { "topologyValues": "20000,100", "triggerAt": 2000010 },
+        { "topologyValues": "22000,100", "triggerAt": 2200010 },
+        { "topologyValues": "24000,100", "triggerAt": 2400010 },
+        { "topologyValues": "26000,100", "triggerAt": 2600010 },
+        { "topologyValues": "28000,100", "triggerAt": 2800010 },
+        { "topologyValues": "30000,100", "triggerAt": 3000010 }
+    ],
+    "commonAttributes": {
+        "topology": "recovery/QueueRecovery.template",
+        "policy": "mirrored-queue-rep-factor.template",
+        "policyValues": "2",
+        "hasBrokerActions": true,
+        "brokerAction": "restart-broker",
+        "triggerType": "msgs",
+        "gracePeriodSec": 6000
+    }
+}

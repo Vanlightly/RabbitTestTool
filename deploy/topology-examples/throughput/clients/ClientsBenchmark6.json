@@ -1,0 +1,61 @@
+{
+    "topologyName": "TP_ClientsBenchmark6",
+    "topologyType": "MultipleDimensions",
+    "benchmarkType": "throughput",
+    "description": "One pub, Increasing fanout",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "exchanges": [
+                {
+                    "name": "ex1",
+                    "type": "fanout"
+                }
+            ],
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1,
+                    "bindings": [
+                        { "from": "ex1" }
+                    ]
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent"
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "multipleDimensions": {
+            "dimensions": ["Queues", "Consumers"],
+            "multiValues": [
+                [1,1],
+                [2,2],
+                [4,4],
+                [8,8],
+                [16,16],
+                [32,32],
+                [64,64]
+            ],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 10
+        }
+    }
+}

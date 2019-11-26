@@ -1,8 +1,13 @@
 package com.jackvanlightly.rabbittesttool.register;
 
+import com.jackvanlightly.rabbittesttool.CmdArguments;
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
+import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
+import com.jackvanlightly.rabbittesttool.model.Violation;
+import com.jackvanlightly.rabbittesttool.model.ViolationType;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 import com.jackvanlightly.rabbittesttool.topology.model.TopologyType;
+import org.postgresql.util.PGobject;
 import org.postgresql.util.PSQLException;
 
 import java.sql.*;
@@ -47,17 +52,25 @@ public class PostgresRegister implements BenchmarkRegister {
 
     @Override
     public void logBenchmarkStart(String benchmarkId,
+                                  int runOrdinal,
                                   String technology,
                                   String version,
                                   InstanceConfiguration instanceConfig,
-                                  Topology topology) {
+                                  Topology topology,
+                                  String arguments,
+                                  String benchmarkTags) {
         String query = "INSERT INTO BENCHMARK(BENCHMARK_ID, " +
                 "NODE, " +
                 "RUN_ID, " +
+                "RUN_ORDINAL, " +
                 "RUN_TAG, " +
                 "CONFIG_TAG, " +
                 "TOPOLOGY_NAME, " +
+                "TOPOLOGY, " +
+                "POLICIES, " +
+                "ARGUMENTS, " +
                 "BENCHMARK_TYPE, " +
+                "TAGS," +
                 "DIMENSIONS," +
                 "DESCRIPTION," +
                 "TECHNOLOGY, " +
@@ -71,17 +84,32 @@ public class PostgresRegister implements BenchmarkRegister {
                 "TENANCY, " +
                 "START_TIME, " +
                 "START_MS)\n" +
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (Connection con = tryGetConnection();
              PreparedStatement pst = con.prepareStatement(query)) {
 
             pst.setObject(1, UUID.fromString(benchmarkId));
             pst.setString(2, node);
             pst.setString(3, runId);
-            pst.setString(4, runTag);
-            pst.setString(5, configTag);
-            pst.setString(6, topology.getTopologyName());
-            pst.setString(7, topology.getBenchmarkType().toString());
+            pst.setInt(4, runOrdinal);
+            pst.setString(5, runTag);
+            pst.setString(6, configTag);
+            pst.setString(7, topology.getTopologyName());
+
+            PGobject topologyJsonCol = new PGobject();
+            topologyJsonCol.setType("json");
+            topologyJsonCol.setValue(topology.getTopologyJson());
+            pst.setObject(8, topologyJsonCol);
+
+            PGobject policiesJsonCol = new PGobject();
+            policiesJsonCol.setType("json");
+            policiesJsonCol.setValue(topology.getPoliciesJson());
+            pst.setObject(9, policiesJsonCol);
+
+            pst.setString(10, arguments);
+
+            pst.setString(11, topology.getBenchmarkType().toString());
+            pst.setString(12, benchmarkTags);
 
             String dimensions = null;
             if(topology.getTopologyType() == TopologyType.Fixed) {
@@ -94,20 +122,20 @@ public class PostgresRegister implements BenchmarkRegister {
                 dimensions = topology.getTopologyType() + ": [" + String.join(",", Arrays.stream(topology.getVariableConfig().getMultiDimensions()).map(x -> x.toString()).collect(Collectors.toList())) + "]";
             }
 
-            pst.setString(8, dimensions);
-            pst.setString(9, topology.getDescription());
+            pst.setString(13, dimensions);
+            pst.setString(14, topology.getDescription());
 
-            pst.setString(10, technology);
-            pst.setString(11, version);
-            pst.setString(12, instanceConfig.getHosting());
-            pst.setString(13, instanceConfig.getInstanceType());
-            pst.setString(14, instanceConfig.getVolume());
-            pst.setString(15, instanceConfig.getFileSystem());
-            pst.setShort(16, instanceConfig.getCoreCount());
-            pst.setShort(17, instanceConfig.getThreadsPerCore());
-            pst.setString(18, instanceConfig.getTenancy());
-            pst.setTimestamp(19, toTimestamp(Instant.now()));
-            pst.setLong(20, Instant.now().getEpochSecond()*1000);
+            pst.setString(15, technology);
+            pst.setString(16, version);
+            pst.setString(17, instanceConfig.getHosting());
+            pst.setString(18, instanceConfig.getInstanceType());
+            pst.setString(19, instanceConfig.getVolume());
+            pst.setString(20, instanceConfig.getFileSystem());
+            pst.setShort(21, instanceConfig.getCoreCount());
+            pst.setShort(22, instanceConfig.getThreadsPerCore());
+            pst.setString(23, instanceConfig.getTenancy());
+            pst.setTimestamp(24, toTimestamp(Instant.now()));
+            pst.setLong(25, Instant.now().getEpochSecond()*1000);
 
             pst.executeUpdate();
 
@@ -285,11 +313,10 @@ public class PostgresRegister implements BenchmarkRegister {
                 "     ,B.BENCHMARK_TYPE\n" +
                 "     ,B.START_MS\n" +
                 "     ,B.END_MS\n" +
+                "     ,B.RUN_ORDINAL\n" +
                 "     ,S.STEP\n" +
                 "     ,S.STEP_VALUE\n" +
                 "     ,S.benchmark_id\n" +
-                "     ,S.step\n" +
-                "     ,S.step_value\n" +
                 "     ,S.duration_seconds\n" +
                 "     ,S.recording_seconds\n" +
                 "     ,S.sent_count\n" +
@@ -367,6 +394,7 @@ public class PostgresRegister implements BenchmarkRegister {
                 sStats.setEndMs(rs.getLong("step_end_ms"));
                 sStats.setStep(rs.getShort("step"));
                 sStats.setStepValue(rs.getString("step_value"));
+                sStats.setRunOrdinal(rs.getShort("run_ordinal"));
                 sStats.setRecordingSeconds(rs.getInt("recording_seconds"));
                 sStats.setSentCount(rs.getLong("sent_count"));
                 sStats.setSentBytesCount(rs.getLong("sent_bytes_count"));
@@ -478,6 +506,78 @@ public class PostgresRegister implements BenchmarkRegister {
         }
 
         return null;
+    }
+
+    @Override
+    public void logViolations(String benchmarkId, List<Violation> violations) {
+        if(!violations.isEmpty()) {
+            for (Violation violation : violations) {
+                if(violation.getViolationType() == ViolationType.Ordering) {
+                    String query = "INSERT INTO VIOLATIONS(BENCHMARK_ID, VIOLATION_TYPE, STREAM, SEQ_NO, TS, PRIOR_STREAM, PRIOR_SEQ_NO, PRIOR_TS)\n" +
+                            "VALUES(?,?,?,?,?,?,?,?)";
+                    try (Connection con = tryGetConnection();
+                         PreparedStatement pst = con.prepareStatement(query)) {
+
+                        pst.setObject(1, UUID.fromString(benchmarkId));
+                        pst.setString(2, violation.getViolationType().toString());
+                        pst.setInt(3, violation.getMessagePayload().getStream());
+                        pst.setInt(4, violation.getMessagePayload().getSequenceNumber());
+                        pst.setLong(5, violation.getMessagePayload().getTimestamp());
+                        pst.setInt(6, violation.getPriorMessagePayload().getStream());
+                        pst.setInt(7, violation.getPriorMessagePayload().getSequenceNumber());
+                        pst.setLong(8, violation.getPriorMessagePayload().getTimestamp());
+
+                        pst.executeUpdate();
+
+                    } catch (SQLException e) {
+                        throw new RuntimeException("Failed logging benchmark start", e);
+                    }
+                }
+                else {
+                    String query = "INSERT INTO VIOLATIONS(BENCHMARK_ID, VIOLATION_TYPE, STREAM, SEQ_NO, TS)\n" +
+                            "VALUES(?,?,?,?,?)";
+                    try (Connection con = tryGetConnection();
+                         PreparedStatement pst = con.prepareStatement(query)) {
+
+                        pst.setObject(1, UUID.fromString(benchmarkId));
+                        pst.setString(2, violation.getViolationType().toString());
+                        pst.setInt(3, violation.getMessagePayload().getStream());
+                        pst.setInt(4, violation.getMessagePayload().getSequenceNumber());
+                        pst.setLong(5, violation.getMessagePayload().getTimestamp());
+
+                        pst.executeUpdate();
+
+                    } catch (SQLException e) {
+                        throw new RuntimeException("Failed writing invariant violations", e);
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals) {
+        for(ConsumeInterval interval : consumeIntervals) {
+            String query = "INSERT INTO CONSUME_INTERVALS(BENCHMARK_ID, CONSUMER_ID, VHOST, QUEUE, START_TIME, START_MS, END_TIME, END_MS)\n" +
+                    "VALUES(?,?,?,?,?,?,?,?)";
+            try (Connection con = tryGetConnection();
+                 PreparedStatement pst = con.prepareStatement(query)) {
+
+                pst.setObject(1, UUID.fromString(benchmarkId));
+                pst.setString(2, interval.getStartMessage().getConsumerId());
+                pst.setString(3, interval.getStartMessage().getVhost());
+                pst.setString(4, interval.getStartMessage().getQueue());
+                pst.setTimestamp(5, toTimestamp(Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp())));
+                pst.setLong(6, interval.getStartMessage().getReceiveTimestamp());
+                pst.setTimestamp(7, toTimestamp(Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp())));
+                pst.setLong(8, interval.getEndMessage().getReceiveTimestamp());
+
+                pst.executeUpdate();
+
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed writing consume intervals", e);
+            }
+        }
     }
 
     public java.sql.Timestamp toTimestamp(Instant instant) {

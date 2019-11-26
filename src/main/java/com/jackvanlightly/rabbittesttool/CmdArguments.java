@@ -9,10 +9,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class CmdArguments {
 
@@ -141,11 +139,6 @@ public class CmdArguments {
         printStream.println("TODO - WIP");
     }
 
-    public static void printRecoveryTimeHelp(PrintStream printStream) {
-
-        printStream.println("TODO - WIP");
-    }
-
     private Map<String,String> arguments;
     private boolean helpRequested;
 
@@ -243,15 +236,19 @@ public class CmdArguments {
     }
 
     public void printArguments() {
+        LOGGER.info("Arguments: \n" + getArgsStr("\n"));
+    }
+
+    public String getArgsStr(String separator) {
         StringBuilder sb = new StringBuilder();
-        for(Map.Entry<String,String> entry : arguments.entrySet()) {
+        for(Map.Entry<String,String> entry : arguments.entrySet().stream().sorted(Map.Entry.comparingByKey()).collect(Collectors.toList())) {
             if(entry.getKey().contains("pwd") || entry.getKey().contains("password"))
-                sb.append(entry.getKey() + " = *****\n");
+                sb.append(entry.getKey() + " = *****" + separator);
             else
-                sb.append(entry.getKey() + " = " + entry.getValue() + "\n");
+                sb.append(entry.getKey() + " = " + entry.getValue() + separator);
         }
 
-        LOGGER.info("Arguments: \n" + sb.toString());
+        return sb.toString();
     }
 
     public boolean hasRegisterStore() {
@@ -260,6 +257,34 @@ public class CmdArguments {
 
     public boolean hasMetrics() {
         return hasKey("--metrics-influx-uri");
+    }
+
+    public Map<String,String> getTopologyVariables() {
+        Map<String,String> vars = new HashMap<>();
+
+        for(Map.Entry<String,String> entry : arguments.entrySet()) {
+            if(entry.getKey().startsWith("--tvar.")) {
+                vars.put(
+                        entry.getKey().replace("--tvar.", ""),
+                        entry.getValue());
+            }
+        }
+
+        return vars;
+    }
+
+    public Map<String,String> getPolicyVariables() {
+        Map<String,String> vars = new HashMap<>();
+
+        for(Map.Entry<String,String> entry : arguments.entrySet()) {
+            if(entry.getKey().startsWith("--pvar.")) {
+                vars.put(
+                        entry.getKey().replace("--pvar.", ""),
+                        entry.getValue());
+            }
+        }
+
+        return vars;
     }
 
     private JSONObject loadJson(String configFilePath) {

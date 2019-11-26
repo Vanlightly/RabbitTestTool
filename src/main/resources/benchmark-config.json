@@ -9,7 +9,7 @@
   "broker-user": "guest",
   "broker-password": "guest",
   "broker-vhost": "benchmark",
-  "postgres-jdbc-url": "jdbc:postgresql://localhost:5432/amqpbenchmarks",
+  "postgres-jdbc-url": "jdbc:postgresql://localhost:5432/postgres",
   "postgres-user": "postgres",
-  "postgres-pwd": "docker"
+  "postgres-pwd": "postgres"
 }

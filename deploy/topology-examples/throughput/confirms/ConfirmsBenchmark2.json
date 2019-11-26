@@ -1,0 +1,58 @@
+{
+    "topologyName": "TP_ConfirmsBenchmark2",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "throughput",
+    "description": "Increasing in-flight-limit, 1 pub, fanout, 10 queues,cons",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "exchanges": [
+                {
+                    "name": "ex1",
+                    "type": "fanout"
+                }
+            ],
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 10,
+                    "bindings": [
+                        { "from": "ex1" }
+                    ]
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 1,
+                    "publishMode": {
+                        "useConfirms": true,
+                        "inFlightLimit": 1
+                    },
+                    "sendToExchange": {
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
+                    },
+                    "deliveryMode": "Persistent"
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 10,
+                    "queueGroup": "q1"
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "InFlightLimit",
+            "values": [1, 5, 10, 50, 100, 500, 1000, 5000],
+            "stepDurationSeconds": 60,
+            "rampUpSeconds": 10,
+            "applyToGroup": "p1"
+        }
+    }
+}

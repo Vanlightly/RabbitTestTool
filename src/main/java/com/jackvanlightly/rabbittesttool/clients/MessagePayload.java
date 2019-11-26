@@ -66,4 +66,13 @@ public class MessagePayload {
     public int hashCode() {
         return Objects.hash(stream, sequenceNumber, timestamp);
     }
+
+    @Override
+    public String toString() {
+        return "MessagePayload{" +
+                "stream=" + stream +
+                ", sequenceNumber=" + sequenceNumber +
+                ", timestamp=" + timestamp +
+                '}';
+    }
 }

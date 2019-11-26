@@ -1,0 +1,55 @@
+{
+    "topologyName": "TP_PeakyLoadBenchmark1",
+    "topologyType": "SingleDimension",
+    "benchmarkType": "throughput",
+    "description": "1kb msgs. 20 publishers. Confirms (1000) and manual acks (500/1). Peaky pub rate",
+    "vhosts": [
+        {
+            "name": "benchmark",
+            "scale": 1,
+            "queueGroups": [
+                {
+                    "group": "q1",
+                    "scale": 1
+                }
+            ],
+            "publisherGroups": [
+                {
+                    "group": "p1",
+                    "scale": 20,
+                    "publishMode": {
+                        "useConfirms": true,
+                        "inFlightLimit": 1000
+                    },
+                    "sendToQueueGroup": {
+                        "queueGroup": "q1",
+                        "mode": "random"
+                    },
+                    "deliveryMode": "Persistent",
+                    "messageSize": 1024,
+                    "msgsPerSecondPerPublisher": 10
+                }
+            ],
+            "consumerGroups": [
+                {
+                    "group": "c1",
+                    "scale": 1,
+                    "queueGroup": "q1",
+                    "ackMode": {
+                        "manualAcks": true,
+                        "consumerPrefetch": 500,
+                        "ackInterval": 1
+                    }
+                }
+            ]
+        }
+    ],
+    "dimensions" : {
+        "singleDimension": {
+            "dimension": "PublisherRate",
+            "values": [25, 1000, 1000, 25, 25, 25, 25, 25, 25],
+            "stepDurationSeconds": 120,
+            "rampUpSeconds": 10
+        }
+    }
+}

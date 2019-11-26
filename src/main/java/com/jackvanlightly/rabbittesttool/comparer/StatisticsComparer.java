@@ -144,7 +144,7 @@ public class StatisticsComparer {
         return comparisons.entrySet()
                 .stream()
                 .map(x -> x.getValue())
-                .sorted(Comparator.comparing(StepComparison::getTopology).thenComparing(StepComparison::getStep))
+                .sorted(Comparator.comparing(StepComparison::getRunOrdinal).thenComparing(StepComparison::getStep))
                 .collect(Collectors.toList());
     }
 
@@ -152,13 +152,14 @@ public class StatisticsComparer {
         for(int i=0; i<stepStatistics.size(); i++) {
             StepStatistics sStats = stepStatistics.get(i);
 
-            String comparisonKey = getComparisonKey(sStats.getTopology(), sStats.getStep());
+            String comparisonKey = getComparisonKey(sStats.getTopology(), sStats.getRunOrdinal(), sStats.getStep());
             if(!comparisons.containsKey(comparisonKey))
                 comparisons.put(comparisonKey, new StepComparison(sStats.getTopology(),
                         sStats.getTopologyDescription(),
                         sStats.getDimensions(),
                         sStats.getStep(),
                         sStats.getStepValue(),
+                        sStats.getRunOrdinal(),
                         sStats.getRecordingSeconds(),
                         sStats.getBenchmarkType()));
 
@@ -194,9 +195,13 @@ public class StatisticsComparer {
         comparison.getReceiveRateAvg().addMeasurementValue(measurement, sStats.getReceiveRates()[1]);
         comparison.getReceiveRateStdDev().addMeasurementValue(measurement, sStats.getReceiveRates()[3]);
         comparison.getReceiveRateMax().addMeasurementValue(measurement, sStats.getReceiveRates()[4]);
+        comparison.getSendVsReceiveDiffMin().addMeasurementValue(measurement, sStats.getSendRates()[0]-sStats.getReceiveRates()[0]);
+        comparison.getSendVsReceiveDiffAvg().addMeasurementValue(measurement, sStats.getSendRates()[1]-sStats.getReceiveRates()[1]);
+        comparison.getSendVsReceiveDiffStdDev().addMeasurementValue(measurement, sStats.getSendRates()[3]-sStats.getReceiveRates()[3]);
+        comparison.getSendVsReceiveDiffMax().addMeasurementValue(measurement, sStats.getSendRates()[4]-sStats.getReceiveRates()[4]);
     }
 
-    private String getComparisonKey(String topology, int step) {
-        return topology + "-" + step;
+    private String getComparisonKey(String topology, int runOrdinal, int step) {
+        return topology + "-" + runOrdinal + "-" + step;
     }
 }

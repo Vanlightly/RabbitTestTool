@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 
 public class PublisherGroup {
-    private static final Logger LOGGER = LoggerFactory.getLogger(PublisherGroup.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("PUBLISHER_GROUP");
     private List<Publisher> publishers;
     private List<String> currentQueuesInGroup;
     private ConnectionSettings connectionSettings;
@@ -28,7 +28,6 @@ public class PublisherGroup {
     private ExecutorService executorService;
     private int publisherCounter;
     private Stats stats;
-    private int maxScale;
 
     public PublisherGroup(ConnectionSettings connectionSettings,
                           PublisherConfig publisherConfig,
@@ -41,11 +40,11 @@ public class PublisherGroup {
         this.stats = stats;
         this.messageModel = messageModel;
         this.publishers = new ArrayList<>();
-        this.maxScale = maxScale;
 
         this.publisherCounter = 0;
         this.executorService = Executors.newFixedThreadPool(maxScale, new NamedThreadFactory(getExecutorId()));
         this.publishers = new ArrayList<>();
+
 
         if(publisherConfig.getSendToMode() == SendToMode.QueueGroup) {
             for (QueueConfig queueConfig : vhost.getQueues()) {
@@ -60,9 +59,32 @@ public class PublisherGroup {
     }
 
     public void createInitialPublishers() {
-
         for(int i = 0; i < this.publisherConfig.getScale(); i++)
             addPublisher();
+    }
+
+    public boolean performInitialPublish() {
+        ExecutorService publishExecutor = Executors.newFixedThreadPool(this.publishers.size(), new NamedThreadFactory(getInitialPublishExecutorId()));
+        for(Publisher publisher : this.publishers) {
+            publishExecutor.submit(() -> publisher.performInitialSend());
+        }
+
+        LOGGER.info("Waiting for initial publish to complete");
+        publishExecutor.shutdown();
+
+        try {
+            if (!publishExecutor.awaitTermination(3600, TimeUnit.SECONDS)) {
+                LOGGER.info("Timed out waiting for initial publish to complete. Forcing shutdown of initial publish");
+                publishExecutor.shutdownNow();
+                return false;
+            }
+        } catch (InterruptedException ex) {
+            publishExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        LOGGER.info("Initial publish complete.");
+        return true;
     }
 
     public void startInitialPublishers() {
@@ -91,7 +113,8 @@ public class PublisherGroup {
                     publisherConfig.getMessageSize(),
                     publisherConfig.getDeliveryMode(),
                     publisherConfig.getFrameMax(),
-                    publisherConfig.getMessageLimit());
+                    publisherConfig.getMessageLimit(),
+                    publisherConfig.getInitialPublish());
         }
         else {
             settings = new PublisherSettings(publisherConfig.getSendToQueueGroup(),
@@ -100,7 +123,8 @@ public class PublisherGroup {
                     publisherConfig.getMessageSize(),
                     publisherConfig.getDeliveryMode(),
                     publisherConfig.getFrameMax(),
-                    publisherConfig.getMessageLimit());
+                    publisherConfig.getMessageLimit(),
+                    publisherConfig.getInitialPublish());
         }
 
         settings.setPublishRatePerSecond(publisherConfig.getPublishRatePerSecond());
@@ -216,4 +240,7 @@ public class PublisherGroup {
         return "PublisherGroup_" + this.connectionSettings.getVhost() + "_" + this.publisherConfig.getGroup();
     }
 
+    private String getInitialPublishExecutorId() {
+        return "InitialPublish_" + this.connectionSettings.getVhost() + "_" + this.publisherConfig.getGroup();
+    }
 }

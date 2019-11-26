@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool;
 
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
+import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.consumers.ConsumerGroup;
 import com.jackvanlightly.rabbittesttool.clients.publishers.PublisherGroup;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
@@ -24,12 +25,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Orchestrator {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Orchestrator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("ORCHESTRATOR");
     private BenchmarkRegister benchmarkRegister;
     private TopologyGenerator topologyGenerator;
     private ConnectionSettings connectionSettingsTemplate;
     private Stats stats;
     private MessageModel messageModel;
+    private String mode;
 
     private List<QueueGroup> queueGroups;
     private List<PublisherGroup> publisherGroups;
@@ -39,11 +41,13 @@ public class Orchestrator {
                         BenchmarkRegister benchmarkRegister,
                         ConnectionSettings connectionSettings,
                         Stats stats,
-                        MessageModel messageModel) {
+                        MessageModel messageModel,
+                        String mode) {
         this.benchmarkRegister = benchmarkRegister;
         this.topologyGenerator = topologyGenerator;
         this.connectionSettingsTemplate = connectionSettings;
         this.stats = stats;
+        this.mode = mode;
 
         this.messageModel = messageModel;
         queueGroups = new ArrayList<>();
@@ -239,14 +243,14 @@ public class Orchestrator {
                                        Duration gracePeriod) {
         FixedConfig fixedConfig = topology.getFixedConfig();
         setCountStats();
+        startAllClients();
+        executeFixedStep(runId, fixedConfig, topology);
+        initiateCleanStop(gracePeriod);
+    }
 
-        // start the publishers and consumers
-        for(ConsumerGroup consumerGroup : consumerGroups)
-            consumerGroup.startInitialConsumers();
-
-        for(PublisherGroup publisherGroup : publisherGroups)
-            publisherGroup.startInitialPublishers();
-
+    private void executeFixedStep(String runId,
+                             FixedConfig fixedConfig,
+                             Topology topology) {
         int step = 1;
         while(step <= fixedConfig.getStepRepeat()) {
             // wait for the ramp up time before recording and timing the run
@@ -262,6 +266,9 @@ public class Orchestrator {
 
             // wait for the duration second to pass
             while (sw.getTime(TimeUnit.SECONDS) < fixedConfig.getDurationSeconds()) {
+                if(reachedStopCondition())
+                    break;
+
                 waitFor(1000);
                 StepStatistics liveStepStats = stats.readCurrentStepStatistics(fixedConfig.getDurationSeconds());
                 benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
@@ -272,9 +279,10 @@ public class Orchestrator {
             benchmarkRegister.logStepEnd(runId, step, stats.getStepStatistics(fixedConfig.getDurationSeconds()));
 
             step++;
-        }
 
-        initiateCleanStop(gracePeriod);
+            if(reachedStopCondition())
+                return;
+        }
     }
 
     private void performSingleVariableBenchmark(String runId,
@@ -285,15 +293,17 @@ public class Orchestrator {
         // initialize dimenion values as step 1 values. Acts as an extra ramp up.
         if(variableConfig.getValueType() == ValueType.Value)
             setSingleDimensionStepValue(variableConfig, variableConfig.getDimension(), variableConfig.getValues().get(0));
+
+        resetMessageSentCounts();
         setCountStats();
+        startAllClients();
+        executeSingleVariableSteps(runId, variableConfig, topology);
+        initiateCleanStop(gracePeriod);
+    }
 
-        // start the publishers and consumers
-        for(ConsumerGroup consumerGroup : consumerGroups)
-            consumerGroup.startInitialConsumers();
-
-        for(PublisherGroup publisherGroup : publisherGroups)
-            publisherGroup.startInitialPublishers();
-
+    private void executeSingleVariableSteps(String runId,
+                                            VariableConfig variableConfig,
+                                            Topology topology) throws IOException {
         int step = 1;
 
         // execute each step
@@ -317,6 +327,9 @@ public class Orchestrator {
 
                 // wait for step duration seconds to pass
                 while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds()) {
+                    if(reachedStopCondition())
+                        break;
+
                     waitFor(1000);
                     StepStatistics liveStepStats = stats.readCurrentStepStatistics(variableConfig.getStepDurationSeconds());
                     benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
@@ -327,10 +340,11 @@ public class Orchestrator {
 
                 step++;
                 counter++;
+
+                if(reachedStopCondition())
+                    return;
             }
         }
-
-        initiateCleanStop(gracePeriod);
     }
 
     private void performMultiVariableBenchmark(String runId,
@@ -349,14 +363,14 @@ public class Orchestrator {
 
         resetMessageSentCounts();
         setCountStats();
+        startAllClients();
+        executeMultiVariableSteps(runId, variableConfig, topology);
+        initiateCleanStop(gracePeriod);
+    }
 
-        // start the publishers and consumers
-        for(ConsumerGroup consumerGroup : consumerGroups)
-            consumerGroup.startInitialConsumers();
-
-        for(PublisherGroup publisherGroup : publisherGroups)
-            publisherGroup.startInitialPublishers();
-
+    private void executeMultiVariableSteps(String runId,
+                                           VariableConfig variableConfig,
+                                           Topology topology) throws IOException {
         int step = 1;
         // execute each step
         for(int i=0; i< variableConfig.getStepCount(); i++) {
@@ -386,6 +400,9 @@ public class Orchestrator {
 
                 // wait for step duration seconds to pass
                 while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds()) {
+                    if(reachedStopCondition())
+                        break;
+
                     waitFor(1000);
                     StepStatistics liveStepStats = stats.readCurrentStepStatistics(variableConfig.getStepDurationSeconds());
                     benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
@@ -396,25 +413,56 @@ public class Orchestrator {
 
                 step++;
                 counter++;
+
+                if(reachedStopCondition())
+                    return;
             }
         }
-
-        initiateCleanStop(gracePeriod);
     }
 
-    private void initiateCleanStop(Duration gracePeriod) {
+    private void startAllClients() {
+        for(PublisherGroup publisherGroup : publisherGroups)
+            publisherGroup.performInitialPublish();
+
+        for(ConsumerGroup consumerGroup : consumerGroups)
+            consumerGroup.startInitialConsumers();
+
+        for(PublisherGroup publisherGroup : publisherGroups)
+            publisherGroup.startInitialPublishers();
+    }
+
+    private void initiateCleanStop(Duration rollingGracePeriod) {
         LOGGER.info("Signalling publishers to stop");
         for(PublisherGroup publisherGroup : publisherGroups)
             publisherGroup.stopAllPublishers();
 
-        if(!gracePeriod.equals(Duration.ZERO)) {
-            LOGGER.info("Started grace period of " + gracePeriod.getSeconds() + " seconds for consumers to catch up");
-            Instant starts = Instant.now();
+        messageModel.sendComplete();
 
-            while(Duration.between(starts, Instant.now()).getSeconds() < gracePeriod.getSeconds()) {
-                waitFor(1000);
-                if(messageModel.allMessagesReceived())
+        if(!rollingGracePeriod.equals(Duration.ZERO)) {
+            LOGGER.info("Started grace period of " + rollingGracePeriod.getSeconds() + " seconds for consumers to catch up");
+
+            int waitCounter = 0;
+            while(messageModel.durationSinceLastReceipt().getSeconds() < rollingGracePeriod.getSeconds()) {
+                waitFor(5000);
+                Set<MessagePayload> missing = messageModel.getReceivedMissing();
+                if(missing.isEmpty()) {
+                    LOGGER.info("All messages received");
                     break;
+                }
+                else {
+                    LOGGER.info("Waiting for " + missing.size() + " messages to be received");
+                    if(waitCounter % 12 == 0) {
+                        LOGGER.info("First (up to) 10 missing:");
+                        List<String> sample = missing.stream()
+                                .sorted((mp, t1) -> mp.getSequenceNumber())
+                                .map(x -> x.toString())
+                                .limit(10)
+                                .collect(Collectors.toList());
+                        for (String missingSample : sample)
+                            LOGGER.info(missingSample);
+                    }
+                }
+                waitCounter++;
             }
             LOGGER.info("Grace period complete");
         }
@@ -422,6 +470,15 @@ public class Orchestrator {
         LOGGER.info("Signalling consumers to stop");
         for(ConsumerGroup consumerGroup : consumerGroups)
             consumerGroup.stopAllConsumers();
+    }
+
+    private boolean reachedStopCondition() {
+        if(mode.equals(Modes.Model)) {
+            return messageModel.allMessagesReceived();
+        }
+        else {
+            return false;
+        }
     }
 
     private void setSingleDimensionStepValue(VariableConfig variableConfig, VariableDimension dimension, double value) throws IOException {

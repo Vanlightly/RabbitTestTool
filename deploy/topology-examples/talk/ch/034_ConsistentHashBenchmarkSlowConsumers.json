@@ -1,0 +1,56 @@
+{
+  "topologyName": "FastConsistentHash",
+  "topologyType": "fixed",
+  "benchmarkType": "throughput",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": 1,
+      "exchanges": [
+        {
+          "name": "ex1",
+          "type": "consistenthash"
+        }
+      ],
+      "queueGroups": [
+        {
+          "group": "q1",
+          "scale": 100,
+          "bindings": [
+            {
+              "from": "ex1",
+              "bindingKey": "1"
+            }
+          ]
+        }
+      ],
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": 1,
+          "sendToExchange": {
+            "exchange": "ex1",
+            "routingKeyMode": "random"
+          },
+          "deliveryMode": "Persistent",
+          "messageSize": 1024,
+          "msgsPerSecondPerPublisher": 10000
+        }
+      ],
+      "consumerGroups": [
+        {
+          "group": "c1",
+          "scale": 100,
+          "queueGroup": "q1",
+          "processingMs": 5
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": 600,
+      "rampUpSeconds": 10
+    }
+  }
+}

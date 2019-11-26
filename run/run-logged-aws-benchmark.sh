@@ -29,7 +29,7 @@ echo "Will connect to load gen server at ip $LOADGEN_IP"
 echo "Will connect to $3 at ipS $BROKER_IPs"
 
 ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@$LOADGEN_IP java -Xms1024m -Xmx8192m -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
---mode logged-benchmark \
+--mode "${31}" \
 --topology "./topologies/${14}" \
 --policies "./policies/${24}" \
 --run-id "${15}" \
@@ -62,4 +62,7 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --override-step-seconds "${25}" \
 --override-step-repeat "${26}" \
 --override-step-msg-limit "${28}" \
---try-connect-local "${30}"
+--try-connect-local "${30}" \
+--grace-period-sec "${32}" \
+--run-ordinal "${33}" \
+--benchmark-tags "${34}" "${35}" "${36}"

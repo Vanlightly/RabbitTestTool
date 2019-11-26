@@ -11,27 +11,40 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TopologyLoader {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TopologyLoader.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("TOPOLOGY_LOADER");
+    private Set<String> intFields = new HashSet<>(Arrays.asList("scale", "inFlightLimit", "consumerPrefetch", "ackInterval",
+            "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize"));
+    private Set<String> boolFields = new HashSet<>(Arrays.asList("useConfirms", "manualAcks"));
 
-    public Topology loadTopology(String topologyPath, String policyPath, StepOverride stepOverride) {
+    public Topology loadTopology(String topologyPath,
+                                 String policyPath,
+                                 StepOverride stepOverride,
+                                 Map<String,String> suppliedTopologyVariables,
+                                 Map<String,String> suppliedPolicyVariables) {
         LOGGER.info("Loading topology from: " + topologyPath);
         JSONObject topologyJson = loadJson(topologyPath);
+        Map<String,String> topologyVariableDefaults = getVariableDefaults(topologyJson);
+        makeVariableReplacements(topologyJson, suppliedTopologyVariables, topologyVariableDefaults);
+
         Topology topology = new Topology();
+        topology.setTopologyJson(topologyJson.toString());
 
         topology.setTopologyName(getMandatoryStrValue(topologyJson, "topologyName"));
         topology.setBenchmarkType(getBenchmarkType(getMandatoryStrValue(topologyJson, "benchmarkType")));
         topology.setTopologyType(getTopologyType(getMandatoryStrValue(topologyJson, "topologyType")));
-        topology.setDescription(getOptionalStrValue(topologyJson, "description", "No description"));
+        topology.setDescription(getDescription(suppliedTopologyVariables, topologyVariableDefaults));
 
-        topology.setVirtualHosts(loadAllVirtualHosts(topologyJson.getJSONArray("vhosts"), topology.getBenchmarkType(), stepOverride));
+        topology.setVirtualHosts(loadAllVirtualHosts(topologyJson.getJSONArray("vhosts"),
+                topology.getBenchmarkType(),
+                stepOverride));
 
         if(!topologyJson.has("dimensions"))
             throw new TopologyException("No 'dimensions' object defined");
@@ -60,21 +73,24 @@ public class TopologyLoader {
 
         if(!policyPath.endsWith("none")) {
             JSONObject policiesJson = loadJson(policyPath);
+            Map<String,String> policyVariableDefaults = getVariableDefaults(policiesJson);
+            makeVariableReplacements(policiesJson, suppliedPolicyVariables, policyVariableDefaults);
+            topology.setPoliciesJson(policiesJson.toString());
 
-            // temporary hack!
             List<Policy> policies = getPolicies(policiesJson.getJSONArray("policies"));
             List<Policy> finalPolicies = new ArrayList<>();
             for(Policy policy : policies) {
-                if(policy.getProperties().stream().anyMatch(x -> x.getKey().equals("x-quorum-initial-group-size"))) {
-                    for(VirtualHost vhost : topology.getVirtualHosts()) {
-                        for(QueueConfig qc : vhost.getQueues()) {
-                            for(Property prop : policy.getProperties()) {
-                                qc.getProperties().add(prop);
-                            }
-                        }
+                List<Property> finalProps = new ArrayList<>();
+                for(Property prop : policy.getProperties()) {
+                    if(isQuorumQueueProperty(prop)) {
+                        addPropertyToQueue(topology, prop, policy.getPattern());
+                    }
+                    else {
+                        finalProps.add(prop);
                     }
                 }
-                else {
+                if(!finalProps.isEmpty()) {
+                    policy.setProperties(finalProps);
                     finalPolicies.add(policy);
                 }
             }
@@ -84,6 +100,28 @@ public class TopologyLoader {
         return topology;
     }
 
+    private boolean isQuorumQueueProperty(Property prop) {
+        if(prop.getKey().equals("x-queue-type") && prop.getValue().equals("quorum"))
+            return true;
+        else if(prop.getKey().equals("x-quorum-initial-group-size"))
+            return true;
+        else if(prop.getKey().equals("x-max-in-memory-length"))
+            return true;
+        else if(prop.getKey().equals("x-max-in-memory-bytes"))
+            return true;
+
+        return false;
+    }
+
+    private void addPropertyToQueue(Topology topology, Property prop, String pattern) {
+        for(VirtualHost vhost : topology.getVirtualHosts()) {
+            for(QueueConfig qc : vhost.getQueues()) {
+                if(pattern.equals("") || qc.getGroup().matches(pattern))
+                    qc.getProperties().add(prop);
+            }
+        }
+    }
+
     private JSONObject loadJson(String path) {
         try {
 
@@ -91,7 +129,6 @@ public class TopologyLoader {
             if (f.exists()) {
                 try(InputStream is = new FileInputStream(path)) {
                     String jsonTxt = IOUtils.toString(is, "UTF-8");
-
                     return new JSONObject(jsonTxt);
                 }
             }
@@ -104,7 +141,9 @@ public class TopologyLoader {
         }
     }
 
-    private List<VirtualHost> loadAllVirtualHosts(JSONArray vhostsArray, BenchmarkType benchmarkType, StepOverride stepOverride) {
+    private List<VirtualHost> loadAllVirtualHosts(JSONArray vhostsArray,
+                                                  BenchmarkType benchmarkType,
+                                                  StepOverride stepOverride) {
         List<VirtualHost> virtualHosts = new ArrayList<>();
 
         for(int i=0; i<vhostsArray.length(); i++) {
@@ -115,7 +154,9 @@ public class TopologyLoader {
         return virtualHosts;
     }
 
-    private List<VirtualHost> loadVirtualHosts(JSONObject vhostJson, BenchmarkType benchmarkType, StepOverride stepOverride) {
+    private List<VirtualHost> loadVirtualHosts(JSONObject vhostJson,
+                                               BenchmarkType benchmarkType,
+                                               StepOverride stepOverride) {
         List<VirtualHost> virtualHosts = new ArrayList<>();
         int scale = getOptionalIntValue(vhostJson, "scale", 1);
 
@@ -177,6 +218,7 @@ public class TopologyLoader {
             pgConfig.setHeadersPerMessage(getOptionalIntValue(pgJson, "headersPerMessage", 0));
             pgConfig.setFrameMax(getOptionalIntValue(pgJson, "frameMax", 0));
             pgConfig.setMessageLimit(stepOverride.getMessageLimit());
+            pgConfig.setInitialPublish((getOptionalIntValue(pgJson, "initialPublish", 0)));
 
             if (pgJson.has("availableHeaders")) {
                 JSONArray headersArr = pgJson.getJSONArray("availableHeaders");
@@ -276,7 +318,9 @@ public class TopologyLoader {
         return headers;
     }
 
-    public List<ConsumerConfig> loadConsumerGroupConfigs(String vhostName, JSONArray cgJsonArr, List<QueueConfig> queueConfigs) {
+    public List<ConsumerConfig> loadConsumerGroupConfigs(String vhostName,
+                                                         JSONArray cgJsonArr,
+                                                         List<QueueConfig> queueConfigs) {
         List<ConsumerConfig> cgConfigs = new ArrayList<>();
 
         for (int i = 0; i < cgJsonArr.length(); i++) {
@@ -298,6 +342,9 @@ public class TopologyLoader {
                             getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
                             getMandatoryIntValue(ackModeJson, "ackInterval")
                     ));
+                }
+                else {
+                    cgConfig.setAckMode(AckMode.withNoAck());
                 }
             } else {
                 cgConfig.setAckMode(AckMode.withNoAck());
@@ -410,55 +457,43 @@ public class TopologyLoader {
     }
 
     private String getMandatoryStrValue(JSONObject json, String jsonPath) {
-        if(json.has(jsonPath))
-            return json.getString(jsonPath);
+        if(json.has(jsonPath)) {
+            return getStrValue(json, jsonPath);
+        }
 
         throw new TopologyException("Missing required field: " + jsonPath);
     }
 
+    private String getStrValue(JSONObject json, String jsonPath) {
+        return json.getString(jsonPath);
+    }
+
     private String getOptionalStrValue(JSONObject json, String jsonPath, String defaultValue) {
         if(json.has(jsonPath))
-            return json.getString(jsonPath);
+            return getStrValue(json, jsonPath);
         else
             return defaultValue;
     }
 
     private int getMandatoryIntValue(JSONObject json, String jsonPath) {
-        if(json.has(jsonPath))
+        if(json.has(jsonPath)) {
             return json.getInt(jsonPath);
+        }
 
         throw new TopologyException("Missing required field: " + jsonPath);
     }
 
     private int getOptionalIntValue(JSONObject json, String jsonPath, int defaultValue) {
-        if(json.has(jsonPath))
+        if(json.has(jsonPath)) {
             return json.getInt(jsonPath);
-        else
-            return defaultValue;
-    }
-
-    private long getOptionalLongValue(JSONObject json, String jsonPath, long defaultValue) {
-        if(json.has(jsonPath))
-            return json.getLong(jsonPath);
+        }
         else
             return defaultValue;
     }
 
     private boolean getMandatoryBoolValue(JSONObject json, String jsonPath) {
-        if(json.has(jsonPath))
-            return json.getBoolean(jsonPath);
-
-        throw new TopologyException("Missing required field: " + jsonPath);
-    }
-
-    private List<Integer> getMandatoryIntArray(JSONObject json, String jsonPath) {
         if(json.has(jsonPath)) {
-            List<Integer> intList = new ArrayList<>();
-            JSONArray arr = json.getJSONArray(jsonPath);
-            for(int i=0; i<arr.length(); i++)
-                intList.add(arr.getInt(i));
-
-            return intList;
+            return json.getBoolean(jsonPath);
         }
 
         throw new TopologyException("Missing required field: " + jsonPath);
@@ -660,5 +695,118 @@ public class TopologyLoader {
                 getMandatoryStrValue(policyJson, "applyTo"),
                 getMandatoryIntValue(policyJson, "priority"),
                 properties);
+    }
+
+    private Map<String, String> getVariableDefaults(JSONObject json) {
+        Map<String, String> vd = new HashMap<>();
+
+        if(json.has("variables")) {
+            JSONArray variables = json.getJSONArray("variables");
+            for(int i=0; i<variables.length(); i++) {
+                JSONObject varJson = variables.getJSONObject(i);
+                vd.put(varJson.getString("name"), varJson.getString("default"));
+            }
+        }
+
+        return vd;
+    }
+
+    private String getDescription(Map<String, String> suppliedTopologyVariables, Map<String, String> defaultsTopologyVariables) {
+        StringBuilder sb = new StringBuilder();
+
+        for(Map.Entry<String,String> entry : defaultsTopologyVariables.entrySet()) {
+            if(suppliedTopologyVariables.containsKey(entry.getKey()))
+                sb.append(entry.getKey() + "=" + suppliedTopologyVariables.get(entry.getKey())+",");
+            else
+                sb.append(entry.getKey() + "=" + entry.getValue()+",");
+        }
+
+        return sb.toString();
+    }
+
+    private JSONObject makeVariableReplacements(JSONObject json, Map<String, String> variables, Map<String,String> variableDefaults) {
+        json.keys().forEachRemaining(key -> {
+            handleField(json, key, variables, variableDefaults);
+        });
+
+        return json;
+    }
+
+    public void handleField(JSONObject json, String key, Map<String, String> variables, Map<String,String> variableDefaults) {
+        Object fieldValue = json.get(key);
+        if (fieldValue instanceof JSONArray) {
+            handleJSONArray((JSONArray) fieldValue, variables, variableDefaults);
+        } else if (fieldValue instanceof JSONObject) {
+            handleJSONObject((JSONObject) fieldValue, variables, variableDefaults);
+        } else {
+            replaceValue(json, key, variables, variableDefaults);
+        }
+    }
+
+    public void handleJSONObject(JSONObject jsonObject, Map<String, String> variables, Map<String,String> variableDefaults) {
+        Iterator<String> jsonObjectIterator = jsonObject.keys();
+        jsonObjectIterator.forEachRemaining(key -> {
+            handleField(jsonObject, key, variables, variableDefaults);
+        });
+    }
+
+    public void handleJSONArray(JSONArray jsonArray, Map<String, String> variables, Map<String,String> variableDefaults) {
+        Iterator<Object> jsonArrayIterator = jsonArray.iterator();
+        jsonArrayIterator.forEachRemaining(element -> {
+            if(element instanceof JSONObject)
+                handleJSONObject((JSONObject) element, variables, variableDefaults);
+            else if(element instanceof JSONArray)
+                handleJSONArray((JSONArray) element, variables, variableDefaults);
+        });
+    }
+
+    public void replaceValue(JSONObject json, String key, Map<String, String> variables, Map<String,String> variableDefaults) {
+        if(intFields.contains(key)) {
+            int value = getIntValue(json, key, variables, variableDefaults);
+            json.put(key, value);
+        }
+        else if(boolFields.contains(key)) {
+            boolean value = getBoolValue(json, key, variables, variableDefaults);
+            json.put(key, value);
+        }
+        else {
+            String value = getVariableValue(json.getString(key), variables, variableDefaults);
+            json.put(key, value);
+        }
+    }
+
+    private String getVariableValue(String value, Map<String, String> variables, Map<String,String> variableDefaults) {
+        if(value.trim().startsWith("{{ var.")) {
+            String name = value.trim().replace("{{ var.", "").replace(" }}", "");
+            if (variables.containsKey(name)) {
+                return variables.get(name);
+            } else if (variableDefaults.containsKey(name)) {
+                return variableDefaults.get(name);
+            } else
+                throw new TopologyException("Variable " + name + " was not supplied and has no default value");
+        }
+        else {
+            return value;
+        }
+    }
+
+    private int getIntValue(JSONObject json, String jsonPath, Map<String, String> variables, Map<String,String> variableDefaults) {
+        Object jsonObj = json.get(jsonPath);
+        if(jsonObj instanceof Integer) {
+            return json.getInt(jsonPath);
+        }
+        else {
+            return Integer.valueOf(getVariableValue(json.getString(jsonPath), variables, variableDefaults));
+        }
+    }
+
+    private boolean getBoolValue(JSONObject json, String jsonPath, Map<String, String> variables, Map<String,String> variableDefaults) {
+        Object jsonObj = json.get(jsonPath);
+        if(jsonObj instanceof Boolean) {
+            return json.getBoolean(jsonPath);
+        }
+        else {
+            return Boolean.valueOf(getVariableValue(json.getString(jsonPath), variables, variableDefaults));
+        }
     }
 }

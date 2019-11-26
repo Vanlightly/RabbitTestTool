@@ -3,12 +3,24 @@ package com.jackvanlightly.rabbittesttool.model;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 
 public class ReceivedMessage {
+    private String consumerId;
+    private String vhost;
+    private String queue;
     private MessagePayload messagePayload;
     private long receiveTimestamp;
     private long lag;
     private boolean redelivered;
 
-    public ReceivedMessage(MessagePayload messagePayload, boolean redelivered, long lag, long receiveTimestamp) {
+    public ReceivedMessage(String consumerId,
+                           String vhost,
+                           String queue,
+                           MessagePayload messagePayload,
+                           boolean redelivered,
+                           long lag,
+                           long receiveTimestamp) {
+        this.consumerId = consumerId;
+        this.vhost = vhost;
+        this.queue = queue;
         this.messagePayload = messagePayload;
         this.redelivered = redelivered;
         this.lag = lag;
@@ -45,5 +57,29 @@ public class ReceivedMessage {
 
     public void setReceiveTimestamp(long receiveTimestamp) {
         this.receiveTimestamp = receiveTimestamp;
+    }
+
+    public String getConsumerId() {
+        return consumerId;
+    }
+
+    public void setConsumerId(String consumerId) {
+        this.consumerId = consumerId;
+    }
+
+    public String getVhost() {
+        return vhost;
+    }
+
+    public void setVhost(String vhost) {
+        this.vhost = vhost;
+    }
+
+    public String getQueue() {
+        return queue;
+    }
+
+    public void setQueue(String queue) {
+        this.queue = queue;
     }
 }
