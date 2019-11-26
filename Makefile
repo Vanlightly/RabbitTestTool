@@ -43,7 +43,7 @@ build: $(DOCKER) ## b  | Build JAR
 	  --volume $(CURDIR):/workspace \
 	  --volume rabbittesttool-maven-cache:/root/.m2 \
 	  maven:3.6-jdk-8 \
-	  mvn package
+	  mvn clean package
 .PHONY: b
 b: build
 
