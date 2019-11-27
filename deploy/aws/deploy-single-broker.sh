@@ -18,25 +18,27 @@ LG_INSTANCE="$7"
 echo "LG_INSTANCE=$LG_INSTANCE"
 LG_SG="$8"
 echo "LG_SG=$LG_SG"
-NODE_NUMBER="$9"
+LOG_LEVEL="$9"
+echo "LOG_LEVEL=$LOG_LEVEL"
+NODE_NUMBER="${10}"
 echo "NODE_NUMBER=$NODE_NUMBER"
-RUN_TAG="${10}"
+RUN_TAG="${11}"
 echo "RUN_TAG=$RUN_TAG"
-SG="${11}"
+SG="${12}"
 echo "SG=$SG"
-SN="${12}"
+SN="${13}"
 echo "SN=$SN"
-TECHNOLOGY="${13}"
+TECHNOLOGY="${14}"
 echo "TECHNOLOGY=$TECHNOLOGY"
-TENANCY="${14}"
+TENANCY="${15}"
 echo "TENANCY=$TENANCY"
-TPC="${15}"
+TPC="${16}"
 echo "TPC=$TPC"
-VARS_FILE="${16}"
+VARS_FILE="${17}"
 echo "VARS_FILE=$VARS_FILE"
-VOL_SIZE="${17}"
+VOL_SIZE="${18}"
 echo "VOL_SIZE=$VOL_SIZE"
-VOL_TYPE="${18}"
+VOL_TYPE="${19}"
 echo "VOL_TYPE=$VOL_TYPE"
 echo "---------------------------"
 
@@ -98,7 +100,9 @@ do
     --extra-vars "volume_size=$VOL_SIZE" \
     --extra-vars "run_tag=$RUN_TAG" \
     --extra-vars "volume_size_label=$VOLUME_SIZE_LABEL" \
-    --extra-vars "@${VARS_FILE}"
+    --extra-vars "@${VARS_FILE}" \
+    --extra-vars "log_level=${LOG_LEVEL}"
+       
     
     BROKER_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=$TAG" --query "Reservations[*].Instances[*].PublicIpAddress" --output=text)
     echo "Node $NODE_NUMBER: Checking server configured correctly. IP $BROKER_IP"
