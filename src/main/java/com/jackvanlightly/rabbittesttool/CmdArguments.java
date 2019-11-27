@@ -17,11 +17,14 @@ public class CmdArguments {
     private static final Logger LOGGER = LoggerFactory.getLogger(CmdArguments.class);
 
     public static void printTopLevelHelp(PrintStream printStream) {
+        printStream.println("RabbitMQ Test Tool");
+        printStream.println("");
         printStream.println("There are four modes:");
         printStream.println("--mode local-benchmark         When running a single instance of the benchmark locally");
         printStream.println("--mode logged-benchmark        When deploying and running one or more benchmarks with all data sent to Postgres");
         printStream.println("--mode model                   WIP. Model driven property based test");
         printStream.println("--mode comparison              Compares the results of two logged benchmark configurations (by reading data from Postgres)");
+        printStream.println("");
         printStream.println("To see arguments, for mode local-benchmark as an example, use the args: help --mode local-benchmark");
     }
 
