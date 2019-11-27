@@ -630,7 +630,7 @@ public class Stats {
         for(PublisherGroup publisherGroup : publisherGroups) {
             List<Long> sendCounts = publisherGroup.getRecordedSendCounts();
             for(Long count : sendCounts) {
-                if(count == 0)
+                if(count == 0 || recordingSeconds == 0)
                     perPublisherRates.update(0);
                 else
                     perPublisherRates.update(count/recordingSeconds);
@@ -648,7 +648,7 @@ public class Stats {
         for(ConsumerGroup consumerGroup : consumerGroups) {
             List<Long> receiveCounts = consumerGroup.getRecordedReceiveCounts();
             for(Long count : receiveCounts) {
-                if(count == 0)
+                if(count == 0 || recordingSeconds == 0)
                     perConsumerRates.update(0);
                 else
                     perConsumerRates.update(count/recordingSeconds);

@@ -32,6 +32,8 @@ public class Orchestrator {
     private Stats stats;
     private MessageModel messageModel;
     private String mode;
+    private boolean jumpToCleanup;
+    private boolean complete;
 
     private List<QueueGroup> queueGroups;
     private List<PublisherGroup> publisherGroups;
@@ -83,7 +85,16 @@ public class Orchestrator {
             LOGGER.info("Clean up started");
             cleanUp();
             LOGGER.info("Clean up complete");
+            complete = true;
         }
+    }
+
+    public void jumpToCleanup() {
+        jumpToCleanup = true;
+    }
+
+    public boolean isComplete() {
+        return complete;
     }
 
     private void initialSetup(Topology topology, List<String> nodes) {
@@ -252,7 +263,7 @@ public class Orchestrator {
                              FixedConfig fixedConfig,
                              Topology topology) {
         int step = 1;
-        while(step <= fixedConfig.getStepRepeat()) {
+        while(step <= fixedConfig.getStepRepeat() && !jumpToCleanup) {
             // wait for the ramp up time before recording and timing the run
             resetMessageSentCounts();
             waitFor(fixedConfig.getStepRampUpSeconds() * 1000);
@@ -265,7 +276,7 @@ public class Orchestrator {
             sw.start();
 
             // wait for the duration second to pass
-            while (sw.getTime(TimeUnit.SECONDS) < fixedConfig.getDurationSeconds()) {
+            while (sw.getTime(TimeUnit.SECONDS) < fixedConfig.getDurationSeconds() && !jumpToCleanup) {
                 if(reachedStopCondition())
                     break;
 
@@ -309,7 +320,7 @@ public class Orchestrator {
         // execute each step
         for (int i = 0; i < variableConfig.getStepCount(); i++) {
             int counter = 0;
-            while(counter < variableConfig.getStepRepeat()) {
+            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup) {
                 // configure step dimension
                 setSingleDimensionStepValue(variableConfig,
                         variableConfig.getDimension(),
@@ -326,7 +337,7 @@ public class Orchestrator {
                 sw.start();
 
                 // wait for step duration seconds to pass
-                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds()) {
+                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup) {
                     if(reachedStopCondition())
                         break;
 
@@ -376,7 +387,7 @@ public class Orchestrator {
         for(int i=0; i< variableConfig.getStepCount(); i++) {
 
             int counter = 0;
-            while(counter < variableConfig.getStepRepeat()) {
+            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup) {
                 String stepValues = "";
                 for (int vd = 0; vd < variableConfig.getMultiDimensions().length; vd++) {
                     setSingleDimensionStepValue(variableConfig,
@@ -399,7 +410,7 @@ public class Orchestrator {
                 sw.start();
 
                 // wait for step duration seconds to pass
-                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds()) {
+                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup) {
                     if(reachedStopCondition())
                         break;
 

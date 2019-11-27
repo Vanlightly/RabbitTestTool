@@ -147,7 +147,7 @@ public class CmdArguments {
         int startPos = 0;
         this.arguments = new HashMap<>();
         if(args.length % 2 != 0) {
-            if(args[0] == "help") {
+            if(args[0].equals("help")) {
                 startPos = 1;
                 helpRequested = true;
             }

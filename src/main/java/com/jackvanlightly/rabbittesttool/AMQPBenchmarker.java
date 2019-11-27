@@ -178,12 +178,15 @@ public class AMQPBenchmarker {
             List<Violation> violations = messageModel.getViolations();
             List<ConsumeInterval> consumeIntervals = messageModel.getConsumeIntervals();
 
-            LOGGER.info("SUMMARY for Run ID: " + runId + ", BenchmarkId: " + benchmarkId + "-----------------");
-            LOGGER.info("Violations: " + violations.size());
-            LOGGER.info("Consume Intervals: " + consumeIntervals.size());
+            LOGGER.info("-------------------------------------------------------");
+            LOGGER.info("---------- SUMMARY ------------------------------------");
+            LOGGER.info("Run ID: " + runId + ", BenchmarkId: " + benchmarkId);
+            LOGGER.info("Property Violations: " + violations.size());
+            LOGGER.info("Unavailability Periods: " + consumeIntervals.size());
+            LOGGER.info("-------------------------------------------------------");
 
             if(!consumeIntervals.isEmpty()) {
-                LOGGER.info("Max Consume Interval ms: " + consumeIntervals.stream()
+                LOGGER.info("Max Unavailability ms: " + consumeIntervals.stream()
                         .map(x -> x.getEndMessage().getReceiveTimestamp() - x.getStartMessage().getReceiveTimestamp())
                         .max(Long::compareTo)
                         .get());
@@ -360,6 +363,30 @@ public class AMQPBenchmarker {
 
             benchmarkRegister.logBenchmarkStart(benchmarkId, ordinal, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology, argumentsStr, benchmarkTags);
             loggedStart = true;
+
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        if(orchestrator.isComplete()) {
+                            return;
+                        }
+                        else {
+                            orchestrator.jumpToCleanup();
+                            System.out.println("Jumping to cleanup ...");
+                            while (!orchestrator.isComplete())
+                                Thread.sleep(1000);
+
+                            System.out.println("Shutting down in 30 seconds ...");
+                            Thread.sleep(30000);
+                        }
+                    } catch (InterruptedException e) {
+                        System.out.println("INTERRUPTED! ...");
+                        Thread.currentThread().interrupt();
+                        e.printStackTrace();
+                    }
+                }
+            });
+
             orchestrator.runBenchmark(benchmarkId, topology, brokerConfig.getNodes(), gracePeriod);
 
             // ensure all auto-recovering connections can recover before nuking the vhosts

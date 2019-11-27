@@ -135,10 +135,10 @@ public class FileRegister implements BenchmarkRegister {
     @Override
     public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals) {
         if(consumeIntervals.isEmpty()) {
-            printWriter.println("No consumer intervals over 1 minute detected");
+            printWriter.println("No consumer intervals over 30 seconds detected");
         }
         else {
-            printWriter.println("Consumer intervals over 1 minute detected!");
+            printWriter.println("Consumer intervals over 30 seconds detected!");
             for (ConsumeInterval interval : consumeIntervals) {
                 printWriter.println(MessageFormat.format("ConsumerId: {0}, Start Time: {1}, Start Seq No: {2}, End Time {3}, End Seq No {4}",
                         interval.getStartMessage().getConsumerId(),

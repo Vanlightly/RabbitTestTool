@@ -289,7 +289,7 @@ public class Publisher implements Runnable {
                             if (this.sentInPeriod >= this.limitInPeriod) {
                                 long waitNs = this.periodNs - elapsedNs;
                                 if (waitNs > 0)
-                                    waitFor((int) (waitNs / 1000000));
+                                    waitFor((int) (waitNs / 999000));
 
                                 // may need to adjust for drift over time
                                 periodStartNs = System.nanoTime();

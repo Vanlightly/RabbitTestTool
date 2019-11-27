@@ -9,6 +9,7 @@ import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 
 import java.io.PrintStream;
 import java.text.MessageFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -17,6 +18,8 @@ public class ConsoleRegister implements BenchmarkRegister {
 
     private PrintStream out;
     private StepStatistics lastStats;
+    private Instant started;
+    private Instant stopped;
 
     public ConsoleRegister(PrintStream out) {
         this.out = out;
@@ -31,12 +34,14 @@ public class ConsoleRegister implements BenchmarkRegister {
                                   Topology topology,
                                   String arguments,
                                   String benchmarkTag) {
+        started = Instant.now();
         this.out.println(MessageFormat.format("StartTime={0,time} {0,date},RunId={1},Tech={2},Version={3},Hosting={4},Instance={5},Volume={6}, Tenancy={7}",
                 new Date(), runId, technology, version, instanceConfig.getHosting(), instanceConfig.getInstanceType(), instanceConfig.getVolume(), instanceConfig.getTenancy()));
     }
 
     @Override
     public void logBenchmarkEnd(String benchmarkId) {
+        stopped = Instant.now();
         this.out.println(MessageFormat.format("EndTime={0,time} {0,date}", new Date()));
     }
 
@@ -160,6 +165,9 @@ public class ConsoleRegister implements BenchmarkRegister {
 
     @Override
     public void logViolations(String benchmarkId, List<Violation> violations) {
+        this.out.println("");
+        this.out.println("----------------------------------------------------");
+        this.out.println("----------- PROPERTY VIOLATIONS --------------------");
         if(violations.isEmpty()) {
             this.out.println("No property violations detected");
         }
@@ -167,7 +175,7 @@ public class ConsoleRegister implements BenchmarkRegister {
             this.out.println("Property violations detected!");
             for (Violation violation : violations) {
                 if(violation.getViolationType() == ViolationType.Ordering) {
-                    this.out.println(MessageFormat.format("Type: {0}, Stream: {1}, SeqNo: {2}, Timestamp {3}, Prior Seq No {4}, Prior Timestamp {5}",
+                    this.out.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}, Prior Seq No {4,number,#}, Prior Timestamp {5,number,#}",
                             violation.getViolationType(),
                             violation.getMessagePayload().getStream(),
                             violation.getMessagePayload().getSequenceNumber(),
@@ -177,7 +185,7 @@ public class ConsoleRegister implements BenchmarkRegister {
                     ));
                 }
                 else {
-                    this.out.println(MessageFormat.format("Type: {0}, Stream: {1}, SeqNo: {2}, Timestamp {3}",
+                    this.out.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}",
                             violation.getViolationType(),
                             violation.getMessagePayload().getStream(),
                             violation.getMessagePayload().getSequenceNumber(),
@@ -189,19 +197,34 @@ public class ConsoleRegister implements BenchmarkRegister {
 
     @Override
     public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals) {
+        this.out.println("");
+        this.out.println("----------------------------------------------------");
+        this.out.println("----------- UNAVAILABILITY PERIODS -----------------");
         if(consumeIntervals.isEmpty()) {
-            this.out.println("No consumer intervals over 1 minute detected");
+            this.out.println("No unavailability periods over 30 seconds detected");
         }
         else {
-            this.out.println("Consumer intervals over 1 minute detected!");
+            this.out.println("Unavailability periods over 30 seconds minute detected!");
+            long totalSeconds = 0;
             for (ConsumeInterval interval : consumeIntervals) {
-                this.out.println(MessageFormat.format("ConsumerId: {0}, Start Time: {1}, Start Seq No: {2}, End Time {3}, End Seq No {4}",
+                Instant start = Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp());
+                Instant end = Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp());
+                long seconds = Duration.between(start, end).getSeconds();
+                this.out.println(MessageFormat.format("ConsumerId: {0}, Seconds: {1,number,#}, Start Time: {2}, Start Seq No: {3,number,#}, End Time {4}, End Seq No {5,number,#}",
                         interval.getStartMessage().getConsumerId(),
-                        Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp()),
+                        seconds,
+                        start,
                         interval.getStartMessage().getMessagePayload().getSequenceNumber(),
-                        Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp()),
+                        end,
                         interval.getEndMessage().getMessagePayload().getSequenceNumber()));
+
+                totalSeconds += seconds;
             }
+
+            long totalRunTime = Duration.between(started, stopped).getSeconds();
+            double availability = 100.0d - ((double)totalSeconds/(double)totalRunTime);
+            this.out.println(MessageFormat.format("Availability: {0,number,#.##}%", availability));
         }
+        this.out.println("----------------------------------------------------");
     }
 }
