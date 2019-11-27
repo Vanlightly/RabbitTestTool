@@ -39,3 +39,4 @@ class CommonConfiguration:
         self.postgres_pwd = get_mandatory_arg_no_print(args, "--postgres-password", "")
         self.node_counter = int(get_optional_arg(args, "--start-node-num-from", "", "1"))
         self.hosting = "aws"
+        self.log_level = get_optional_arg(args, "--log-level", "", "info")

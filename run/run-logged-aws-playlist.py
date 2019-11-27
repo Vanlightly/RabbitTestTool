@@ -96,6 +96,8 @@ console_out("RUNNER", f"RUN ID = {common_conf.run_id}")
 console_out("RUNNER", "Preparing broker configurations:")
 
 configurations = dict()
+start_node = common_conf.node_counter
+
 for config_number in range(1, common_conf.config_count+1):
     unique_conf_list = list()
     for _ in range(common_conf.parallel_count):
@@ -111,6 +113,8 @@ for config_number in range(1, common_conf.config_count+1):
         common_conf.node_counter += unique_conf.cluster_size
 
     configurations[config_number] = unique_conf_list
+
+end_node = common_conf.node_counter-1
 
 if not os.path.exists(common_conf.playlist_file):
     console_out("RUNNER", "The supplied playlist file does not exist")
@@ -194,7 +198,7 @@ for i in range(common_conf.repeat_count):
                 bt.join()
         except KeyboardInterrupt:
             console_out("RUNNER", "Aborting run...")
-            deployer.teardown_all(configurations, common_conf.run_tag, common_conf.no_destroy)
+            deployer.teardown_all(configurations, common_conf.key_pair, common_conf.run_tag, common_conf.no_destroy)
             exit(1)
         
         # check if any benchmark instance failed and if so then teardown everything unless configured not to
@@ -206,7 +210,7 @@ for i in range(common_conf.repeat_count):
                 status_id1 = unique_conf.technology + unique_conf.node_number
                 if runner.get_benchmark_status(status_id1) != "success":
                     console_out("RUNNER", f"Benchmark failed for node {unique_conf.node_number} and topology {entry.topology}")
-                    deployer.teardown_all(configurations, common_conf.run_tag, common_conf.no_destroy)
+                    deployer.teardown_all(configurations, common_conf.key_pair, common_conf.run_tag, common_conf.no_destroy)
                     exit(1)
 
         # wait for configuration gap seconds
@@ -219,10 +223,10 @@ for i in range(common_conf.repeat_count):
         
 
     if common_conf.new_instance_per_run:
-        deployer.teardown_all(configurations, common_conf.run_tag, common_conf.no_destroy)
+        deployer.teardown_all(configurations, common_conf.key_pair, common_conf.run_tag, common_conf.no_destroy)
 
 if not common_conf.new_instance_per_run:
     for p in range(common_conf.parallel_count):
-        deployer.teardown_all(configurations, common_conf.run_tag, common_conf.no_destroy)
+        deployer.teardown_all(configurations, common_conf.key_pair, common_conf.run_tag, common_conf.no_destroy)
 
 console_out("RUNNER", f"RUN {common_conf.run_id} COMPLETE")

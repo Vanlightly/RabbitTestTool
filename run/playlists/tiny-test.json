@@ -1,7 +1,7 @@
 {
     "playlistEntries": [
         { 
-            "topology": "throughput/point-to-point/point-to-point.json", 
+            "topology": "point-to-point/point-to-point.json", 
             "topologyVariables": { "consumerCount": "10" } 
         }
     ],
