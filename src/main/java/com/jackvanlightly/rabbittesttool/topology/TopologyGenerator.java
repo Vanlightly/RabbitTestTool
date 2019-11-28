@@ -5,20 +5,25 @@ import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TopologyGenerator {
 
@@ -32,7 +37,7 @@ public class TopologyGenerator {
                              BrokerConfiguration brokerConfig) {
         this.connectionSettings = connectionSettings;
         this.brokerConfig = brokerConfig;
-        this.baseUrl = "http://" + connectionSettings.getHostOnly() + ":" + connectionSettings.getManagementPort();
+        this.baseUrl = "http://" + brokerConfig.getHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
         this.rand = new Random();
     }
 
@@ -88,13 +93,13 @@ public class TopologyGenerator {
     }
 
     public void declareQueuesAndBindings(QueueConfig queueConfig) {
-        int nodeIndex = rand.nextInt(brokerConfig.getNodes().size());
+        int nodeIndex = rand.nextInt(brokerConfig.getHosts().size());
         for(int i = 1; i<= queueConfig.getScale(); i++) {
             declareQueue(queueConfig, i, nodeIndex);
             declareQueueBindings(queueConfig, i);
 
             nodeIndex++;
-            if(nodeIndex >= brokerConfig.getNodes().size())
+            if(nodeIndex >= brokerConfig.getHosts().size())
                 nodeIndex = 0;
         }
     }
@@ -124,12 +129,10 @@ public class TopologyGenerator {
         JSONObject queue = new JSONObject();
         queue.put("auto_delete", false);
         queue.put("durable", true);
-        queue.put("node", brokerConfig.getNodes().get(nodeIndex));
+        queue.put("node", brokerConfig.getHosts().get(nodeIndex).getNodeName());
         queue.put("arguments", arguments);
 
-        System.out.println(queue.toString());
         put(getQueueUrl(queueConfig.getVhostName(), queueName), queue.toString());
-        QueueHosts.register(queueConfig.getVhostName(), queueName, connectionSettings.getHostAndPort(nodeIndex));
 
         if(queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("ha-mode"))) {
             JSONObject policyJson = new JSONObject();
@@ -189,6 +192,110 @@ public class TopologyGenerator {
             policyJson.put("definition", definition);
 
             put(getHaQueuesPolicyUrl(policy.getName(), vhostName), policyJson.toString());
+        }
+    }
+
+    public JSONArray getQueues(String vhost) {
+        String url = getQueuesUrl(vhost);
+
+        try {
+            RequestConfig.Builder requestConfig = RequestConfig.custom();
+            requestConfig.setConnectTimeout(60 * 1000);
+            requestConfig.setConnectionRequestTimeout(60 * 1000);
+            requestConfig.setSocketTimeout(60 * 1000);
+
+            CloseableHttpClient client = HttpClients.createDefault();
+            HttpGet httpGet = new HttpGet(url);
+            httpGet.addHeader("accepts", "application/json");
+            httpGet.setConfig(requestConfig.build());
+
+            UsernamePasswordCredentials creds
+                    = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
+            httpGet.addHeader(new BasicScheme().authenticate(creds, httpGet, null));
+
+            CloseableHttpResponse response = client.execute(httpGet);
+            int responseCode = response.getStatusLine().getStatusCode();
+
+            if(responseCode != 200) {
+                throw new TopologyException("Received a non success response code executing GET " + url
+                        + " Code:" + responseCode
+                        + " Response: " + response.toString());
+            }
+
+            String json = EntityUtils.toString(response.getEntity(), "UTF-8");
+            client.close();
+
+            try {
+                return new JSONArray(json);
+            }
+            catch(JSONException je) {
+                System.out.println(json);
+                if(je.getMessage().startsWith("Duplicate key")) {
+                    String pattern = "\\\"(.+)\\\"";
+                    Pattern r = Pattern.compile(pattern);
+                    Matcher m = r.matcher(je.getMessage());
+                    if(m.find()) {
+                        String duplicateKey = m.group(1);
+                        while (json.contains(duplicateKey))
+                            json = json.replaceFirst(duplicateKey, UUID.randomUUID().toString());
+
+                        return new JSONArray(json);
+                    }
+                    else {
+                        throw je;
+                    }
+                }
+                else {
+                    throw je;
+                }
+            }
+        }
+        catch(Exception e) {
+            throw new TopologyException("An exception occurred executing GET " + url, e);
+        }
+    }
+
+    public List<String> getNodeNames() {
+        String url = getNodesUrl();
+
+        try {
+            RequestConfig.Builder requestConfig = RequestConfig.custom();
+            requestConfig.setConnectTimeout(60 * 1000);
+            requestConfig.setConnectionRequestTimeout(60 * 1000);
+            requestConfig.setSocketTimeout(60 * 1000);
+
+            CloseableHttpClient client = HttpClients.createDefault();
+            HttpGet httpGet = new HttpGet(url);
+            httpGet.addHeader("accepts", "application/json");
+            httpGet.setConfig(requestConfig.build());
+
+            UsernamePasswordCredentials creds
+                    = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
+            httpGet.addHeader(new BasicScheme().authenticate(creds, httpGet, null));
+
+            CloseableHttpResponse response = client.execute(httpGet);
+            int responseCode = response.getStatusLine().getStatusCode();
+
+            if(responseCode != 200) {
+                throw new TopologyException("Received a non success response code executing GET " + url
+                        + " Code:" + responseCode
+                        + " Response: " + response.toString());
+            }
+
+            String json = EntityUtils.toString(response.getEntity(), "UTF-8");
+            client.close();
+
+            List<String> nodeNames = new ArrayList<>();
+            JSONArray jsonArray = new JSONArray(json);
+            for(int i=0; i<jsonArray.length(); i++) {
+                JSONObject jsonObj = jsonArray.getJSONObject(i);
+                nodeNames.add(jsonObj.getString("name"));
+            }
+
+            return nodeNames;
+        }
+        catch(Exception e) {
+            throw new TopologyException("An exception occurred executing GET " + url, e);
         }
     }
 
@@ -277,6 +384,10 @@ public class TopologyGenerator {
         return this.baseUrl + "/api/vhosts/" + vhost;
     }
 
+    private String getNodesUrl() {
+        return this.baseUrl + "/api/nodes";
+    }
+
     private String getVHostUserPermissionsUrl(String vhost, String user) {
         return this.baseUrl + "/api/permissions/"+ vhost + "/" + user;
     }
@@ -287,6 +398,10 @@ public class TopologyGenerator {
 
     private String getQueueUrl(String vhost, String queue) {
         return this.baseUrl + "/api/queues/" + vhost + "/" + queue;
+    }
+
+    private String getQueuesUrl(String vhost) {
+        return this.baseUrl + "/api/queues/" + vhost;
     }
 
     private String getExchangeToQueueBindingUrl(String vhost, String from, String to) {

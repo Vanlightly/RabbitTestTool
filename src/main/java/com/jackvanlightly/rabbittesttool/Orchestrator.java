@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool;
 
+import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.consumers.ConsumerGroup;
@@ -9,6 +10,7 @@ import com.jackvanlightly.rabbittesttool.register.BenchmarkRegister;
 import com.jackvanlightly.rabbittesttool.register.StepStatistics;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.QueueGroup;
+import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
 import com.jackvanlightly.rabbittesttool.topology.TopologyGenerator;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
@@ -19,8 +21,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -28,12 +31,14 @@ public class Orchestrator {
     private static final Logger LOGGER = LoggerFactory.getLogger("ORCHESTRATOR");
     private BenchmarkRegister benchmarkRegister;
     private TopologyGenerator topologyGenerator;
+    private QueueHosts queueHosts;
+    private ExecutorService queueHostsExecutor;
     private ConnectionSettings connectionSettingsTemplate;
     private Stats stats;
     private MessageModel messageModel;
     private String mode;
-    private boolean jumpToCleanup;
-    private boolean complete;
+    private Boolean jumpToCleanup;
+    private Boolean complete;
 
     private List<QueueGroup> queueGroups;
     private List<PublisherGroup> publisherGroups;
@@ -44,9 +49,11 @@ public class Orchestrator {
                         ConnectionSettings connectionSettings,
                         Stats stats,
                         MessageModel messageModel,
+                        QueueHosts queueHosts,
                         String mode) {
         this.benchmarkRegister = benchmarkRegister;
         this.topologyGenerator = topologyGenerator;
+        this.queueHosts = queueHosts;
         this.connectionSettingsTemplate = connectionSettings;
         this.stats = stats;
         this.mode = mode;
@@ -55,14 +62,19 @@ public class Orchestrator {
         queueGroups = new ArrayList<>();
         publisherGroups = new ArrayList<>();
         consumerGroups = new ArrayList<>();
+
+        complete = false;
+        jumpToCleanup = false;
+
+        queueHostsExecutor = Executors.newFixedThreadPool(1);
     }
 
     public boolean runBenchmark(String runId,
                                 Topology topology,
-                                List<String> nodes,
+                                BrokerConfiguration brokerConfiguration,
                                 Duration gracePeriod) {
         try {
-            initialSetup(topology, nodes);
+            initialSetup(topology, brokerConfiguration);
             switch(topology.getTopologyType()) {
                 case Fixed:
                     performFixedBenchmark(runId, topology, gracePeriod);
@@ -97,18 +109,23 @@ public class Orchestrator {
         return complete;
     }
 
-    private void initialSetup(Topology topology, List<String> nodes) {
+    private void initialSetup(Topology topology, BrokerConfiguration brokerConfiguration) {
         for(VirtualHost vhost : topology.getVirtualHosts()) {
             if(topology.shouldDeclareArtefacts()) {
                 topologyGenerator.declareVHost(vhost);
                 topologyGenerator.declareExchanges(vhost);
                 topologyGenerator.declarePolicies(vhost.getName(), topology.getPolicies());
             }
-            addQueueGroups(vhost, topology, nodes, topology.shouldDeclareArtefacts());
+            addQueueGroups(vhost, topology, brokerConfiguration.getNodeNames(), topology.shouldDeclareArtefacts());
             addPublisherGroups(vhost, topology);
             addConsumerGroups(vhost, topology);
             stats.addClientGroups(publisherGroups, consumerGroups);
         }
+
+        ClientUtils.waitFor(5000, jumpToCleanup);
+        List<String> vhosts = topology.getVirtualHosts().stream().map(x -> x.getName()).collect(Collectors.toList());
+        queueHosts.updateQueueHosts(vhosts);
+        queueHostsExecutor.submit(() -> queueHosts.monitorQueueHosts(vhosts));
     }
 
     private void addQueueGroups(VirtualHost vhost, Topology topology, List<String> nodes, boolean declareQueues) {
@@ -158,6 +175,7 @@ public class Orchestrator {
                     vhost,
                     stats,
                     messageModel,
+                    queueHosts,
                     (int)publisherMaxScale);
             publisherGroup.createInitialPublishers();
             publisherGroups.add(publisherGroup);
@@ -190,6 +208,7 @@ public class Orchestrator {
                     vhost,
                     stats,
                     messageModel,
+                    queueHosts,
                     (int)consumerMaxScale);
             consumerGroup.createInitialConsumers();
             consumerGroups.add(consumerGroup);
@@ -481,6 +500,9 @@ public class Orchestrator {
         LOGGER.info("Signalling consumers to stop");
         for(ConsumerGroup consumerGroup : consumerGroups)
             consumerGroup.stopAllConsumers();
+
+        queueHosts.stopMonitoring();
+        queueHostsExecutor.shutdown();
     }
 
     private boolean reachedStopCondition() {

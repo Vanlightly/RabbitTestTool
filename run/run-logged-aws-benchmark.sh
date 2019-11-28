@@ -62,7 +62,7 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --override-step-seconds "${25}" \
 --override-step-repeat "${26}" \
 --override-step-msg-limit "${28}" \
---try-connect-local "${30}" \
+--connect-to-node "${30}" \
 --grace-period-sec "${32}" \
 --run-ordinal "${33}" \
 --benchmark-tags "${34}" "${35}" "${36}"

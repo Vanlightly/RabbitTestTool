@@ -3,6 +3,7 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
+import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.PublisherConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.SendToMode;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
@@ -25,6 +26,7 @@ public class PublisherGroup {
     private ConnectionSettings connectionSettings;
     private PublisherConfig publisherConfig;
     private MessageModel messageModel;
+    private QueueHosts queueHosts;
     private ExecutorService executorService;
     private int publisherCounter;
     private Stats stats;
@@ -34,11 +36,13 @@ public class PublisherGroup {
                           VirtualHost vhost,
                           Stats stats,
                           MessageModel messageModel,
+                          QueueHosts queueHosts,
                           int maxScale) {
         this.connectionSettings = connectionSettings;
         this.publisherConfig = publisherConfig;
         this.stats = stats;
         this.messageModel = messageModel;
+        this.queueHosts = queueHosts;
         this.publishers = new ArrayList<>();
 
         this.publisherCounter = 0;
@@ -136,6 +140,7 @@ public class PublisherGroup {
                 messageModel,
                 stats,
                 connectionSettings,
+                queueHosts,
                 settings,
                 currentQueuesInGroup);
 

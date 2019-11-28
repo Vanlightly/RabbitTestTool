@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool;
 
+import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.comparer.StatisticsComparer;
 import com.jackvanlightly.rabbittesttool.metrics.InfluxMetrics;
@@ -10,14 +11,14 @@ import com.jackvanlightly.rabbittesttool.register.BenchmarkRegister;
 import com.jackvanlightly.rabbittesttool.register.ConsoleRegister;
 import com.jackvanlightly.rabbittesttool.register.PostgresRegister;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
-import com.jackvanlightly.rabbittesttool.topology.TopologyGenerator;
-import com.jackvanlightly.rabbittesttool.topology.TopologyLoader;
+import com.jackvanlightly.rabbittesttool.topology.*;
 import com.jackvanlightly.rabbittesttool.topology.model.StepOverride;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.jws.WebParam;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -147,7 +148,7 @@ public class AMQPBenchmarker {
             StepOverride stepOverride = getStepOverride(arguments);
             BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
-            ConnectionSettings connectionSettings = getConnectionSettings(arguments);
+            ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
             MessageModel messageModel = new MessageModel(true);
 
@@ -218,7 +219,7 @@ public class AMQPBenchmarker {
             StepOverride stepOverride = getStepOverride(arguments);
             BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
-            ConnectionSettings connectionSettings = getConnectionSettings(arguments);
+            ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
 
             runBenchmark(Modes.SimpleBenchmark,
                     topologyPath,
@@ -283,7 +284,7 @@ public class AMQPBenchmarker {
                 StepOverride stepOverride = getStepOverride(arguments);
                 BrokerConfiguration brokerConfig = getBrokerConfig(arguments);
                 InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
-                ConnectionSettings connectionSettings = getConnectionSettings(arguments);
+                ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
 
                 runBenchmark(Modes.LoggedBenchmark,
                         topologyPath,
@@ -353,11 +354,15 @@ public class AMQPBenchmarker {
                 stats = new Stats(sampleIntervalMs, brokerConfig);
             }
 
+            QueueHosts queueHosts = new QueueHosts(topologyGenerator);
+            queueHosts.addHosts(brokerConfig);
+
             Orchestrator orchestrator = new Orchestrator(topologyGenerator,
                     benchmarkRegister,
                     connectionSettings,
                     stats,
                     messageModel,
+                    queueHosts,
                     mode);
 
 
@@ -376,18 +381,20 @@ public class AMQPBenchmarker {
                             while (!orchestrator.isComplete())
                                 Thread.sleep(1000);
 
-                            System.out.println("Shutting down in 30 seconds ...");
-                            Thread.sleep(30000);
+                            if(mode.equals("model")) {
+                                LOGGER.info("Shutting down in 30 seconds ...");
+                                Thread.sleep(30000);
+                            }
                         }
                     } catch (InterruptedException e) {
-                        System.out.println("INTERRUPTED! ...");
+                        LOGGER.info("INTERRUPTED! ...");
                         Thread.currentThread().interrupt();
                         e.printStackTrace();
                     }
                 }
             });
 
-            orchestrator.runBenchmark(benchmarkId, topology, brokerConfig.getNodes(), gracePeriod);
+            orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod);
 
             // ensure all auto-recovering connections can recover before nuking the vhosts
             // to prevent unkillable threads
@@ -419,7 +426,7 @@ public class AMQPBenchmarker {
                 LOGGER.error("Unexpected error in main on completion", e);
             }
         }
-        LOGGER.info("Benchmark complete on node " + String.join(",", brokerConfig.getNodes()));
+        LOGGER.info("Benchmark complete on node " + String.join(",", brokerConfig.getNodeNames()));
         //printThreads(node);
 
         return benchmarkId;
@@ -464,13 +471,32 @@ public class AMQPBenchmarker {
     private static BrokerConfiguration getBrokerConfigWithDefaults(CmdArguments arguments) {
         return new BrokerConfiguration(arguments.getStr("--technology", "?"),
                 arguments.getStr("--version", "?"),
-                arguments.getListStr("--nodes", "rabbit@rabbitmq1"));
+                getBrokers(arguments));
     }
 
     private static BrokerConfiguration getBrokerConfig(CmdArguments arguments) {
         return new BrokerConfiguration(arguments.getStr("--technology"),
                 arguments.getStr("--version"),
-                arguments.getListStr("--nodes"));
+                getBrokers(arguments));
+    }
+
+    private static List<Broker> getBrokers(CmdArguments arguments) {
+        List<String> ipAndPorts = arguments.getListStr("--broker-hosts");
+
+        String ip = ipAndPorts.get(0).split(":")[0];
+        NamesGetter ng = new NamesGetter(ip, arguments.getStr("--broker-mgmt-port"), arguments.getStr("--broker-user"), arguments.getStr("--broker-password"));
+        List<String> nodeNames = ng.getNodeNames();
+
+        List<Broker> hosts = new ArrayList<>();
+        for(int i=0; i<ipAndPorts.size(); i++) {
+            Broker b = new Broker(ipAndPorts.get(i).split(":")[0],
+                    ipAndPorts.get(i).split(":")[1],
+                    nodeNames.get(i));
+
+            hosts.add(b);
+        }
+
+        return hosts;
     }
 
     // for debugging when a thread kept the JVM going
@@ -486,16 +512,27 @@ public class AMQPBenchmarker {
         }
     }
 
-    private static ConnectionSettings getConnectionSettings(CmdArguments cmdArguments) {
+    private static ConnectionSettings getConnectionSettings(CmdArguments cmdArguments, BrokerConfiguration brokerConfig) {
         ConnectionSettings connectionSettings = new ConnectionSettings();
-        connectionSettings.setHosts(Arrays.asList(cmdArguments.getStr("--broker-hosts").split(",")));
+        connectionSettings.setHosts(brokerConfig.getHosts());
         connectionSettings.setManagementPort(Integer.valueOf(cmdArguments.getStr("--broker-mgmt-port")));
         connectionSettings.setUser(cmdArguments.getStr("--broker-user"));
         connectionSettings.setPassword(cmdArguments.getStr("--broker-password"));
         connectionSettings.setNoTcpDelay(cmdArguments.getBoolean("--tcp-no-delay", true));
-        connectionSettings.setTryConnectToLocalBroker(cmdArguments.getBoolean("--try-connect-local", false));
+        connectionSettings.setConnectToNode(getConnectToNode(cmdArguments.getStr("--connect-to-node", "roundrobin")));
 
         return connectionSettings;
+    }
+
+    private static ConnectToNode getConnectToNode(String value) {
+        switch (value.toLowerCase()) {
+            case "roundrobin": return ConnectToNode.RoundRobin;
+            case "random": return ConnectToNode.Random;
+            case "local": return ConnectToNode.Local;
+            case "non-local": return ConnectToNode.NonLocal;
+            default:
+                throw new IllegalArgumentException("Only supports connect to node modes of: roundrobin, random, local, non-local");
+        }
     }
 
     private static void waitFor(int ms) {

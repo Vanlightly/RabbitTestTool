@@ -1,11 +1,14 @@
 package com.jackvanlightly.rabbittesttool.clients.consumers;
 
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
+import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
+import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.clients.WithNagleSocketConfigurator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
+import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 import org.slf4j.Logger;
@@ -20,6 +23,7 @@ public class Consumer implements Runnable {
     private String consumerId;
     private ConnectionSettings connectionSettings;
     private ConnectionFactory factory;
+    private QueueHosts queueHosts;
     private ExecutorService executorService;
     private boolean isCancelled;
     private Integer step;
@@ -28,15 +32,18 @@ public class Consumer implements Runnable {
     private ConsumerSettings consumerSettings;
     private EventingConsumer eventingConsumer;
     private ConsumerStats consumerStats;
+    private Broker currentHost;
 
     public Consumer(String consumerId,
                     ConnectionSettings connectionSettings,
+                    QueueHosts queueHosts,
                     ConsumerSettings consumerSettings,
                     Stats stats,
                     MessageModel messageModel) {
 
         this.consumerId = consumerId;
         this.connectionSettings = connectionSettings;
+        this.queueHosts = queueHosts;
         this.isCancelled = isCancelled;
         this.stats = stats;
         this.messageModel = messageModel;
@@ -183,18 +190,25 @@ public class Consumer implements Runnable {
                     consumerSettings.getProcessingMs());
 
             String consumerTag = channel.basicConsume(consumerSettings.getQueue(), noAck, eventingConsumer);
-            LOGGER.info("Consumer " + consumerId + " consuming with tag: " + consumerTag);
+            LOGGER.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());
 
             while (!isCancelled && currentStep.equals(step) && channel.isOpen() && !eventingConsumer.isConsumerCancelled()) {
-                ClientUtils.waitFor(100, this.isCancelled);
+                ClientUtils.waitFor(1000, this.isCancelled);
+
+                if(reconnectToNewHost()) {
+                    exitReason = 3;
+                    break;
+                }
             }
 
-            if(isCancelled)
-                exitReason = 1;
-            else if(!currentStep.equals(step))
-                exitReason = 2;
-            else
-                exitReason = 3;
+            if(exitReason == 0) {
+                if (isCancelled)
+                    exitReason = 1;
+                else if (!currentStep.equals(step))
+                    exitReason = 2;
+                else
+                    exitReason = 3;
+            }
         }
         catch(Exception e) {
             LOGGER.error("Failed setting up a consumer", e);
@@ -204,10 +218,10 @@ public class Consumer implements Runnable {
             if(channel.isOpen()) {
                 try {
                     channel.close();
-                    LOGGER.info("Consumer " + consumerId + " closed channel with exit reason " + exitReason);
+                    LOGGER.info("Consumer " + consumerId + " closed channel to " + currentHost.getNodeName() + " with exit reason " + exitReason);
                 }
                 catch(Exception e) {
-                    LOGGER.error("Consumer " + consumerId + " could not close channel with exit reason " + exitReason, e);
+                    LOGGER.error("Consumer " + consumerId + " could not close channel to " + currentHost.getNodeName() + " with exit reason " + exitReason, e);
                 }
             }
             else {
@@ -226,19 +240,18 @@ public class Consumer implements Runnable {
         factory.setPassword(connectionSettings.getPassword());
         factory.setVirtualHost(connectionSettings.getVhost());
 
-        String host = "";
-        if(connectionSettings.isTryConnectToLocalBroker())
-            host = QueueHosts.getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
-        else
-            host = connectionSettings.getNextHostAndPort();
-
-        factory.setHost(host.split(":")[0]);
-        factory.setPort(Integer.valueOf(host.split(":")[1]));
+        Broker host = getBrokerToConnectTo();
+        factory.setHost(host.getIp());
+        factory.setPort(Integer.valueOf(host.getPort()));
+        currentHost = host;
 
         factory.setConnectionTimeout(5000);
         factory.setAutomaticRecoveryEnabled(false);
         factory.setShutdownTimeout(0);
-        factory.setRequestedFrameMax(consumerSettings.getFrameMax());
+
+        if(consumerSettings.getFrameMax() > 0)
+            factory.setRequestedFrameMax(consumerSettings.getFrameMax());
+
         factory.setRequestedHeartbeat(10);
         factory.setSharedExecutor(this.executorService);
         factory.setThreadFactory(r -> {
@@ -252,6 +265,40 @@ public class Consumer implements Runnable {
 
 
         return factory.newConnection();
+    }
+
+    private Broker getBrokerToConnectTo() {
+        Broker host = null;
+        if(connectionSettings.getConnectToNode().equals(ConnectToNode.RoundRobin))
+            host = queueHosts.getHostRoundRobin();
+        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Random))
+            host = queueHosts.getRandomHost();
+        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Local))
+            host = queueHosts.getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal))
+            host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+        else
+            throw new TopologyException("ConnectToNode value not supported: " + connectionSettings.getConnectToNode());
+
+        return host;
+    }
+
+    private boolean reconnectToNewHost() {
+        if(connectionSettings.getConnectToNode().equals(ConnectToNode.Local)) {
+            Broker host = getBrokerToConnectTo();
+            if (!host.getNodeName().equals(currentHost.getNodeName())) {
+                LOGGER.info("Detected change of queue host. No longer: " + currentHost.getNodeName() + " now: " + host.getNodeName());
+                return true;
+            }
+        }
+        else if(connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal)) {
+            if(queueHosts.isQueueHost(connectionSettings.getVhost(), consumerSettings.getQueue(), currentHost)) {
+                LOGGER.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

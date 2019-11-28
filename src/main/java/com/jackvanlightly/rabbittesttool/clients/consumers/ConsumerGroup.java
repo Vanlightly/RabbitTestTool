@@ -4,6 +4,7 @@ import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
+import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
@@ -25,6 +26,7 @@ public class ConsumerGroup {
     private ConnectionSettings connectionSettings;
     private ConsumerConfig consumerConfig;
     private MessageModel messageModel;
+    private QueueHosts queueHosts;
     private ExecutorService executorService;
     private Map<String, Integer> currentQueues;
     private int consumerCounter;
@@ -35,11 +37,13 @@ public class ConsumerGroup {
                          VirtualHost vhost,
                          Stats stats,
                          MessageModel messageModel,
+                         QueueHosts queueHosts,
                          int maxScale) {
         this.connectionSettings = connectionSettings;
         this.consumerConfig = consumerConfig;
         this.stats = stats;
         this.messageModel = messageModel;
+        this.queueHosts = queueHosts;
         this.consumers = new ArrayList<>();
 
         this.currentQueues = new HashMap<>();
@@ -131,6 +135,7 @@ public class ConsumerGroup {
         Consumer consumer = new Consumer(
                 getConsumerId(consumerCounter),
                 this.connectionSettings,
+                queueHosts,
                 settings,
                 this.stats,
                 messageModel);

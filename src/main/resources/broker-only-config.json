@@ -1,7 +1,8 @@
 {
-  "broker-hosts": "localhost:5672",
+  "broker-hosts": "192.168.233.136:5672,192.168.233.136:5673,192.168.233.136:5674",
   "broker-mgmt-port": "15672",
   "broker-user": "guest",
   "broker-password": "guest",
-  "broker-vhost": "benchmark"
+  "broker-vhost": "benchmark",
+  "nodes": "rabbit@rabbitmq1,rabbit@rabbitmq2,rabbit@rabbitmq3"
 }

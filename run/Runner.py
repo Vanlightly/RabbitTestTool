@@ -62,7 +62,7 @@ class Runner:
                                 nodes, 
                                 str(common_conf.override_step_msg_limit), 
                                 common_conf.override_broker_hosts, 
-                                unique_conf.try_connect_local,
+                                unique_conf.connect_to_node,
                                 common_conf.mode,
                                 str(playlist_entry.grace_period_sec),
                                 str(run_ordinal),

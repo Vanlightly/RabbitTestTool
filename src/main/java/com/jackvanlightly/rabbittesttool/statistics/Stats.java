@@ -292,7 +292,7 @@ public class Stats {
     }
 
     private List<Tag> getTags(BrokerConfiguration brokerConfig, String instance) {
-        String node = brokerConfig.getNodes().stream().min(Comparator.comparing(String::valueOf)).get();
+        String node = brokerConfig.getNodeNames().stream().min(Comparator.comparing(String::valueOf)).get();
         return new ArrayList<>(Arrays.asList(
                 Tag.of("technology", brokerConfig.getTechnology()),
                 Tag.of("version", brokerConfig.getVersion()),

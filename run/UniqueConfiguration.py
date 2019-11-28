@@ -1,4 +1,4 @@
-from command_args import get_args, get_optional_arg, get_mandatory_arg, get_mandatory_arg_no_print, is_true, get_mandatory_arg_validated
+from command_args import get_args, get_optional_arg, get_mandatory_arg, get_mandatory_arg_no_print, is_true, get_mandatory_arg_validated, get_optional_arg_validated
 
 class UniqueConfiguration:
     def __init__(self, args, suffix):
@@ -17,7 +17,7 @@ class UniqueConfiguration:
         self.vars_file = get_optional_arg(args, "--vars-file", self.suffix, f".variables/{self.technology}-vars.yml")
         self.no_tcp_delay = get_optional_arg(args, "--no-tcp-delay", self.suffix, "true")
         self.policies_file = get_optional_arg(args, "--policies-file", self.suffix, "none")
-        self.try_connect_local = get_optional_arg(args, "--try-connect-local", self.suffix, "false")
+        self.connect_to_node = get_optional_arg_validated(args, "--connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.node_number = -1
 
     def set_node_number(self, node_number):

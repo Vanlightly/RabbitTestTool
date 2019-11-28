@@ -3,6 +3,7 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
+import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.*;
 import com.rabbitmq.client.*;
@@ -24,11 +25,14 @@ public class Publisher implements Runnable {
     private Stats stats;
     private ConnectionSettings connectionSettings;
     private ConnectionFactory factory;
+    private QueueHosts queueHosts;
     private ExecutorService executorService;
     private PublisherSettings publisherSettings;
     private boolean isCancelled;
     private int routingKeyIndex;
     private PublisherStats publisherStats;
+    private Broker currentHost;
+    private int checkHostInterval = 100000;
 
     // for stream round robin
     private int maxStream;
@@ -65,6 +69,7 @@ public class Publisher implements Runnable {
                      MessageModel messageModel,
                      Stats stats,
                      ConnectionSettings connectionSettings,
+                     QueueHosts queueHosts,
                      PublisherSettings publisherSettings,
                      List<String> queuesInGroup) {
         this.publisherId = publisherId;
@@ -72,6 +77,7 @@ public class Publisher implements Runnable {
         this.stats = stats;
         this.publisherSettings = publisherSettings;
         this.connectionSettings = connectionSettings;
+        this.queueHosts = queueHosts;
         this.useConfirms = publisherSettings.getPublisherMode().isUseConfirms();
         this.publisherStats = new PublisherStats();
 
@@ -164,6 +170,9 @@ public class Publisher implements Runnable {
     }
 
     public void performInitialSend() {
+        if(publisherSettings.getInitialPublish() == 0)
+            return;
+
         while(!isCancelled) {
             Connection connection = null;
             Channel channel = null;
@@ -230,7 +239,7 @@ public class Publisher implements Runnable {
 
                 connection = getConnection();
                 channel = connection.createChannel();
-                LOGGER.info("Publisher " + publisherId + " opened channel. Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
+                LOGGER.info("Publisher " + publisherId + " opened channel to " + currentHost.getNodeName() + ". Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
 
                 if (this.useConfirms) {
                     channel.confirmSelect();
@@ -300,6 +309,11 @@ public class Publisher implements Runnable {
                             }
                         }
 
+                        if(sentCount % this.checkHostInterval == 0) {
+                            if(reconnectToNewHost()) {
+                                break;
+                            }
+                        }
                     }
                     else {
                         waitFor(10);
@@ -354,6 +368,7 @@ public class Publisher implements Runnable {
         }
 
         this.periodNs = measurementPeriodMs * 1000000;
+        this.checkHostInterval = publisherSettings.getPublishRatePerSecond()*30;
     }
 
     private void waitFor(int milliseconds) {
@@ -407,22 +422,17 @@ public class Publisher implements Runnable {
         factory.setPassword(connectionSettings.getPassword());
         factory.setVirtualHost(connectionSettings.getVhost());
 
-        String host = "";
-        if(connectionSettings.isTryConnectToLocalBroker()
-                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
-                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
-            host = QueueHosts.getHost(connectionSettings.getVhost(), getQueueCounterpart());
-        }
-        else {
-            host = connectionSettings.getNextHostAndPort();
-        }
-
-        factory.setHost(host.split(":")[0]);
-        factory.setPort(Integer.valueOf(host.split(":")[1]));
+        Broker host = getBrokerToConnectTo();
+        factory.setHost(host.getIp());
+        factory.setPort(Integer.valueOf(host.getPort()));
+        currentHost = host;
 
         factory.setConnectionTimeout(5000);
         factory.setAutomaticRecoveryEnabled(false);
-        factory.setRequestedFrameMax(publisherSettings.getFrameMax());
+
+        if(publisherSettings.getFrameMax() > 0)
+            factory.setRequestedFrameMax(publisherSettings.getFrameMax());
+
         factory.setRequestedHeartbeat(10);
         factory.setSharedExecutor(this.executorService);
         factory.setThreadFactory(r -> {
@@ -435,6 +445,48 @@ public class Publisher implements Runnable {
             factory.setSocketConfigurator(new WithNagleSocketConfigurator());
 
         return factory.newConnection();
+    }
+
+    private Broker getBrokerToConnectTo() {
+        Broker host = null;
+        if(connectionSettings.getConnectToNode().equals(ConnectToNode.RoundRobin))
+            host = queueHosts.getHostRoundRobin();
+        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Random))
+            host = queueHosts.getRandomHost();
+        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Local)
+                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
+                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
+            host = queueHosts.getHost(connectionSettings.getVhost(), getQueueCounterpart());
+        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal)
+                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
+                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
+            host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), getQueueCounterpart());
+        else
+            host = queueHosts.getRandomHost();
+
+        return host;
+    }
+
+    private boolean reconnectToNewHost() {
+        if(connectionSettings.getConnectToNode().equals(ConnectToNode.Local)
+                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
+                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
+            Broker host = getBrokerToConnectTo();
+            if (!host.getNodeName().equals(currentHost.getNodeName())) {
+                LOGGER.info("Detected change of queue host. No longer: " + currentHost.getNodeName() + " now: " + host.getNodeName());
+                return true;
+            }
+        }
+        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal)
+                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
+                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
+            if(queueHosts.isQueueHost(connectionSettings.getVhost(), getQueueCounterpart(), currentHost)) {
+                LOGGER.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void initializeRouting() {

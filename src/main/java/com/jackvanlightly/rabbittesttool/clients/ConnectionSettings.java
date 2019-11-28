@@ -1,23 +1,24 @@
 package com.jackvanlightly.rabbittesttool.clients;
 
+import com.jackvanlightly.rabbittesttool.topology.Broker;
+
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ConnectionSettings {
-    private List<String> hosts;
+    private List<Broker> hosts;
     private String user;
     private String password;
     private String vhost;
     private int managementPort;
-    private boolean tryConnectToLocalBroker;
+    private ConnectToNode connectToNode;
     private boolean noTcpDelay;
-    private static AtomicInteger currentHost = new AtomicInteger(0);
 
-    public List<String> getHosts() {
+    public List<Broker> getHosts() {
         return hosts;
     }
 
-    public void setHosts(List<String> hosts) {
+    public void setHosts(List<Broker> hosts) {
         this.hosts = hosts;
     }
 
@@ -61,30 +62,12 @@ public class ConnectionSettings {
         this.noTcpDelay = noTcpDelay;
     }
 
-    public String getNextHostAndPort() {
-        int index = currentHost.addAndGet(1) % hosts.size();
-        return hosts.get(index);
+    public ConnectToNode getConnectToNode() {
+        return connectToNode;
     }
 
-    public String getHostAndPort(int index) {
-        return hosts.get(index);
-    }
-
-    public String getHostOnly() {
-        int index = currentHost.addAndGet(1) % hosts.size();
-        return hosts.get(index).split(":")[0];
-    }
-
-    public String getHostOnly(int index) {
-        return hosts.get(index).split(":")[0];
-    }
-
-    public boolean isTryConnectToLocalBroker() {
-        return tryConnectToLocalBroker;
-    }
-
-    public void setTryConnectToLocalBroker(boolean tryConnectToLocalBroker) {
-        this.tryConnectToLocalBroker = tryConnectToLocalBroker;
+    public void setConnectToNode(ConnectToNode connectToNode) {
+        this.connectToNode = connectToNode;
     }
 
     public ConnectionSettings getClone(String vhostName) {
@@ -95,7 +78,7 @@ public class ConnectionSettings {
         cs.setVhost(vhostName);
         cs.setManagementPort(managementPort);
         cs.setHosts(hosts);
-        cs.setTryConnectToLocalBroker(tryConnectToLocalBroker);
+        cs.setConnectToNode(connectToNode);
 
         return cs;
     }
