@@ -146,22 +146,21 @@ public class QueueHosts {
     }
 
     public Broker getRandomOtherHost(String vhost, String queue) {
-        Set<Broker> hosts = null;
+        List<Broker> hosts = null;
         String queueKey = getQueueKey(vhost, queue);
 
         lock.readLock().lock();
         try {
             String nodeName = queueHosts.get(queueKey).getNodeName();
-            hosts = queueHosts.entrySet().stream()
-                    .filter(x -> !x.getValue().getNodeName().equals(nodeName))
-                    .map(x -> x.getValue())
-                    .collect(Collectors.toSet());
+            hosts = brokers.stream()
+                    .filter(x -> !x.getNodeName().equals(nodeName))
+                    .collect(Collectors.toList());
         }
         finally {
             lock.readLock().unlock();
         }
 
-        return (Broker)hosts.toArray()[rand.nextInt(hosts.size())];
+        return hosts.get(rand.nextInt(hosts.size()));
     }
 
     private String getQueueKey(String vhost, String queueName) {
