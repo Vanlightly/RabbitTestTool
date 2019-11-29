@@ -1,8 +1,9 @@
 ---
-- name: copy RabbitMQ tarball to /tmp
-  copy: 
-    src: "{{ local_tarball_file_dir }}/{{ tarball_name }}.tar.xz"
-    dest: /tmp
+- name: download tarball
+  get_url:
+    url: "{{ generic_unix_url }}"
+    dest: /tmp/rabbit.tar.xz
+    mode: '0755'
 
 - name: Create unpack dir
   file:
@@ -13,19 +14,11 @@
 - name: Extract tarball into /tmp/rabbitmq
   unarchive:
     remote_src: yes
-    src: "/tmp/{{ tarball_name }}.tar.xz"
+    src: /tmp/rabbit.tar.xz
     dest: /tmp/rabbitmq
 
-# - name: make /rabbitmq belong to ubuntu
-#   file:
-#     path: /rabbitmq
-#     state: directory
-#     recurse: yes
-#     owner: ubuntu
-#     group: ubuntu
-
 - name: Move extracted dir to target location
-  shell: "cp -a /tmp/rabbitmq/{{ extracted_dir }}/* /rabbitmq"
+  shell: "cp -a /tmp/rabbitmq/*/* /rabbitmq"
 
 - name: add sbin to path
   lineinfile: >
@@ -34,33 +27,6 @@
    backrefs=yes
    regexp='PATH=(["]*)((?!.*?/{{ sbin_dir }}).*?)(["]*)$'
    line="PATH=\1\2:{{ sbin_dir }}\3"
-
-# - name: create symlink to rabbitmq log directory
-#   file:
-#     src: /rabbitmq/log
-#     dest: /var/log/rabbitmq
-#     owner: ubuntu
-#     group: ubuntu
-#     state: link
-#     force: true
-
-# - name: create symlink to rabbitmq data directory
-#   file:
-#     src: /rabbitmq/data
-#     dest: /var/lib/rabbitmq
-#     owner: ubuntu
-#     group: ubuntu
-#     state: link
-#     force: true
-
-# - name: create symlink to rabbitmq sbin directory
-#   file:
-#     src: /rabbitmq/sbin
-#     dest: /usr/local/sbin
-#     # owner: ubuntu
-#     # group: ubuntu
-#     state: link
-#     force: true
 
 - name: make var/lib/rabbitmq/ directory
   file:
@@ -100,10 +66,6 @@
 - name: Start RabbitMQ
   command: /rabbitmq/sbin/rabbitmq-server start -detached
 
-# - name: Wait 1 minute for RabbitMQ to start
-#   pause:
-#     minutes: 1
-
 - name: Enable RabbitMQ Management plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_management
   retries: 3
@@ -123,14 +85,8 @@
 - name: Enable RabbitMQ Consistent Hash Exchange plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_consistent_hash_exchange
   
-- name: Create benchmark vhost
-  command: "/rabbitmq/sbin/rabbitmqctl add_vhost {{ default_vhost }}"
-
 - name: Create benchmark user
   command: "/rabbitmq/sbin/rabbitmqctl add_user {{ rabbitmq_user.name }} {{ rabbitmq_user.password }}"
 
 - name: Set adminstrator tag
   command: "/rabbitmq/sbin/rabbitmqctl set_user_tags {{ rabbitmq_user.name }} administrator"
-
-- name: Set user permissions
-  command: "/rabbitmq/sbin/rabbitmqctl set_permissions -p {{ default_vhost }} {{ rabbitmq_user.name }} '.*' '.*' '.*'"

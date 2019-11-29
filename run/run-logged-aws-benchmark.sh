@@ -55,7 +55,6 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --broker-mgmt-port 15672 \
 --broker-user "${16}" \
 --broker-password "${17}" \
---broker-vhost benchmark \
 --postgres-jdbc-url "${11}" \
 --postgres-user "${12}" \
 --postgres-pwd "${13}" \

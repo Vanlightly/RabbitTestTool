@@ -4,6 +4,7 @@ class UniqueConfiguration:
     def __init__(self, args, suffix):
         self.suffix = suffix
         self.config_tag  = get_mandatory_arg(args, "--config-tag", self.suffix)
+        self.generic_unix_url  = get_mandatory_arg(args, "--generic-unix-url", self.suffix)
         self.technology = get_mandatory_arg_validated(args, "--technology", self.suffix, ["rabbitmq"])
         self.cluster_size = int(get_optional_arg(args, "--cluster-size", self.suffix, "1"))
         self.broker_version = get_mandatory_arg(args, "--version", self.suffix)
@@ -14,7 +15,7 @@ class UniqueConfiguration:
         self.tenancy = get_mandatory_arg_validated(args, "--tenancy", self.suffix, ["default","dedicated"])
         self.core_count = get_mandatory_arg(args, "--core-count", self.suffix)
         self.threads_per_core = get_mandatory_arg(args, "--threads-per-core", self.suffix)
-        self.vars_file = get_optional_arg(args, "--vars-file", self.suffix, f".variables/{self.technology}-vars.yml")
+        self.vars_file = get_optional_arg(args, "--vars-file", self.suffix, f".variables/{self.technology}-generic-vars.yml")
         self.no_tcp_delay = get_optional_arg(args, "--no-tcp-delay", self.suffix, "true")
         self.policies_file = get_optional_arg(args, "--policies-file", self.suffix, "none")
         self.connect_to_node = get_optional_arg_validated(args, "--connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
