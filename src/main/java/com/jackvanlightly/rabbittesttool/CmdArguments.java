@@ -46,12 +46,11 @@ public class CmdArguments {
         printStream.println("--topology         The absolute filepath to the topology file of the benchmark");
         printStream.println("");
         printStream.println("Broker connection:");
-        printStream.println("--broker-host      The broker hostname or IP");
+        printStream.println("--broker-hosts      The broker hostname or IP");
         printStream.println("--broker-mgmt-port The broker management plugin port");
         printStream.println("--broker-port      The broker amqp port");
         printStream.println("--broker-user      The broker user");
         printStream.println("--broker-password  The broker password");
-        printStream.println("--broker-vhost     The broker virtual host");
         printStream.println("");
         printStream.println("InfluxDB connection (optional):");
         printStream.println("--metrics-influx-uri       The url of the influxdb server");
@@ -86,12 +85,11 @@ public class CmdArguments {
         printStream.println("--topology         The absolute filepath to the topology file of the benchmark");
         printStream.println("");
         printStream.println("Broker connection:");
-        printStream.println("--broker-host      The broker hostname or IP");
+        printStream.println("--broker-hosts      The broker hostname or IP");
         printStream.println("--broker-mgmt-port The broker management plugin port");
         printStream.println("--broker-port      The broker amqp port");
         printStream.println("--broker-user      The broker user");
         printStream.println("--broker-password  The broker password");
-        printStream.println("--broker-vhost     The broker virtual host");
         printStream.println("");
         printStream.println("Postgres connection:");
         printStream.println("--postgres-jdbc-url    The postgres connection url");
