@@ -4,7 +4,6 @@ import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
