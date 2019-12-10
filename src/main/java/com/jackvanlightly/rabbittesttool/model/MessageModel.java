@@ -22,6 +22,7 @@ public class MessageModel {
     private boolean isCancelled;
     private boolean monitoringStopped;
     private boolean enabled;
+    private int unavailabilityThresholdMs;
     private Instant lastReceivedTime;
     private Instant lastReceivedPrinted = Instant.MIN;
     private Instant lastSentPrinted = Instant.MIN;
@@ -29,6 +30,10 @@ public class MessageModel {
     private final ReadWriteLock expLock;
 
     public MessageModel(boolean enabled) {
+        this(enabled, 30);
+    }
+
+    public MessageModel(boolean enabled, int unavailabilityThresholdSeconds) {
         this.enabled = enabled;
         receiveQueue = new LinkedBlockingQueue<>();
         expectsToReceive = new HashSet<>();
@@ -39,6 +44,7 @@ public class MessageModel {
         actLock = new ReentrantReadWriteLock();
         expLock = new ReentrantReadWriteLock();
         lastReceivedTime = Instant.now();
+        this.unavailabilityThresholdMs = unavailabilityThresholdSeconds * 1000;
     }
 
     public void stopMonitoring() {
@@ -127,7 +133,7 @@ public class MessageModel {
                 // check consume interval
                 if(consumerMessages.containsKey(msg.getConsumerId())) {
                     ReceivedMessage lastConsumerMsg = consumerMessages.get(msg.getConsumerId());
-                    if(msg.getReceiveTimestamp()-lastConsumerMsg.getReceiveTimestamp() > 30000) {
+                    if(msg.getReceiveTimestamp()-lastConsumerMsg.getReceiveTimestamp() > unavailabilityThresholdMs) {
                         consumeIntervals.add(new ConsumeInterval(lastConsumerMsg, msg));
                     }
                 }
@@ -153,7 +159,7 @@ public class MessageModel {
     }
 
     public Duration durationSinceLastReceipt() {
-        return Duration.between(Instant.now(), lastReceivedTime);
+        return Duration.between(lastReceivedTime, Instant.now());
     }
 
     public List<ConsumeInterval> getConsumeIntervals() {

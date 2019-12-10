@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool;
 
+import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.comparer.StatisticsComparer;
@@ -149,7 +150,7 @@ public class AMQPBenchmarker {
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
-            MessageModel messageModel = new MessageModel(true);
+            MessageModel messageModel = new MessageModel(true, arguments.getInt("--unavailability-sec"));
 
             ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
             modelExecutor.execute(() -> messageModel.monitorProperties());

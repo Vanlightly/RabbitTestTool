@@ -3,6 +3,5 @@
   "broker-mgmt-port": "15672",
   "broker-user": "guest",
   "broker-password": "guest",
-  "broker-vhost": "benchmark",
-  "nodes": "rabbit@rabbitmq1,rabbit@rabbitmq2,rabbit@rabbitmq3"
+  "broker-vhost": "benchmark"
 }
