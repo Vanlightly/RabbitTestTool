@@ -5,6 +5,7 @@ import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
+import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.*;
 import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
@@ -448,27 +449,37 @@ public class Publisher implements Runnable {
     }
 
     private Broker getBrokerToConnectTo() {
-        Broker host = null;
-        if(connectionSettings.getConnectToNode().equals(ConnectToNode.RoundRobin))
-            host = queueHosts.getHostRoundRobin();
-        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Random))
-            host = queueHosts.getRandomHost();
-        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Local)
-                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
-                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
-            host = queueHosts.getHost(connectionSettings.getVhost(), getQueueCounterpart());
-        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal)
-                && publisherSettings.getSendToMode() == SendToMode.QueueGroup
-                && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
-            host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), getQueueCounterpart());
-        else
-            host = queueHosts.getRandomHost();
+        while(!isCancelled) {
+            Broker host = null;
+            if(connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.RoundRobin))
+                host = queueHosts.getHostRoundRobin();
+            else if (connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.Random))
+                host = queueHosts.getRandomHost();
+            else if (connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.Local)
+                    && publisherSettings.getSendToMode() == SendToMode.QueueGroup
+                    && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
+                host = queueHosts.getHost(connectionSettings.getVhost(), getQueueCounterpart());
+            else if (connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.NonLocal)
+                    && publisherSettings.getSendToMode() == SendToMode.QueueGroup
+                    && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
+                host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), getQueueCounterpart());
+            else
+                host = queueHosts.getRandomHost();
 
-        return host;
+
+            if(host != null) {
+                return host;
+            }
+            else {
+                ClientUtils.waitFor(1000, isCancelled);
+            }
+        }
+
+        throw new TopologyException("Could not identify a broker to connect to");
     }
 
     private boolean reconnectToNewHost() {
-        if(connectionSettings.getConnectToNode().equals(ConnectToNode.Local)
+        if(connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.Local)
                 && publisherSettings.getSendToMode() == SendToMode.QueueGroup
                 && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
             Broker host = getBrokerToConnectTo();
@@ -477,7 +488,7 @@ public class Publisher implements Runnable {
                 return true;
             }
         }
-        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal)
+        else if (connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.NonLocal)
                 && publisherSettings.getSendToMode() == SendToMode.QueueGroup
                 && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
             if(queueHosts.isQueueHost(connectionSettings.getVhost(), getQueueCounterpart(), currentHost)) {

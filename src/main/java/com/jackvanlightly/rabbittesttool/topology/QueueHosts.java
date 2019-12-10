@@ -48,11 +48,12 @@ public class QueueHosts {
         try {
             for (String vhost : vhosts) {
                 JSONArray queues = topologyGenerator.getQueues(vhost);
+
                 for (int i = 0; i < queues.length(); i++) {
                     JSONObject queue = queues.getJSONObject(i);
                     String queueName = queue.getString("name");
                     String nodeName = "";
-                    if (queue.has("leader"))
+                    if (queue.has("leader") && !queue.isNull("leader"))
                         nodeName = queue.getString("leader");
                     else if (queue.has("node"))
                         nodeName = queue.getString("node");
@@ -102,6 +103,9 @@ public class QueueHosts {
 
         lock.readLock().lock();
         try {
+            if(queueHosts.isEmpty())
+                return false;
+
             if(queueHosts.containsKey(queueKey))
                 return queueHosts.get(queueKey).getNodeName().equals(broker.getNodeName());
         }
@@ -116,6 +120,9 @@ public class QueueHosts {
         int index = currentIndex.getAndIncrement();
         lock.readLock().lock();
         try {
+            if(queueHosts.isEmpty())
+                return null;
+
             String key = (String)queueHosts.keySet().toArray()[index % queueHosts.size()];
             return queueHosts.get(key);
         }
@@ -127,6 +134,9 @@ public class QueueHosts {
     public Broker getRandomHost() {
         lock.readLock().lock();
         try {
+            if(queueHosts.isEmpty())
+                return null;
+
             String key = (String)queueHosts.keySet().toArray()[rand.nextInt(queueHosts.size())];
             return queueHosts.get(key);
         }
@@ -138,6 +148,9 @@ public class QueueHosts {
     public Broker getHost(String vhost, String queue) {
         lock.readLock().lock();
         try {
+            if(queueHosts.isEmpty())
+                return null;
+
             return queueHosts.get(getQueueKey(vhost, queue));
         }
         finally {
@@ -151,6 +164,9 @@ public class QueueHosts {
 
         lock.readLock().lock();
         try {
+            if(queueHosts.isEmpty())
+                return null;
+
             String nodeName = queueHosts.get(queueKey).getNodeName();
             hosts = brokers.stream()
                     .filter(x -> !x.getNodeName().equals(nodeName))

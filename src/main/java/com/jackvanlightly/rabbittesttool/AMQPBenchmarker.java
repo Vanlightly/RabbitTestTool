@@ -18,7 +18,6 @@ import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebParam;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -486,6 +485,8 @@ public class AMQPBenchmarker {
         String ip = ipAndPorts.get(0).split(":")[0];
         NamesGetter ng = new NamesGetter(ip, arguments.getStr("--broker-mgmt-port"), arguments.getStr("--broker-user"), arguments.getStr("--broker-password"));
         List<String> nodeNames = ng.getNodeNames();
+        if(nodeNames.size() < ipAndPorts.size())
+            throw new TopologyException("Less nodes are online than indicated by command line arguments");
 
         List<Broker> hosts = new ArrayList<>();
         for(int i=0; i<ipAndPorts.size(); i++) {
@@ -519,7 +520,8 @@ public class AMQPBenchmarker {
         connectionSettings.setUser(cmdArguments.getStr("--broker-user"));
         connectionSettings.setPassword(cmdArguments.getStr("--broker-password"));
         connectionSettings.setNoTcpDelay(cmdArguments.getBoolean("--tcp-no-delay", true));
-        connectionSettings.setConnectToNode(getConnectToNode(cmdArguments.getStr("--connect-to-node", "roundrobin")));
+        connectionSettings.setPublisherConnectToNode(getConnectToNode(cmdArguments.getStr("--pub-connect-to-node", "roundrobin")));
+        connectionSettings.setConsumerConnectToNode(getConnectToNode(cmdArguments.getStr("--con-connect-to-node", "roundrobin")));
 
         return connectionSettings;
     }

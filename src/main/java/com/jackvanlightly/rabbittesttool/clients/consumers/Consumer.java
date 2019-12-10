@@ -268,30 +268,37 @@ public class Consumer implements Runnable {
     }
 
     private Broker getBrokerToConnectTo() {
-        Broker host = null;
-        if(connectionSettings.getConnectToNode().equals(ConnectToNode.RoundRobin))
-            host = queueHosts.getHostRoundRobin();
-        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Random))
-            host = queueHosts.getRandomHost();
-        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.Local))
-            host = queueHosts.getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
-        else if (connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal))
-            host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), consumerSettings.getQueue());
-        else
-            throw new TopologyException("ConnectToNode value not supported: " + connectionSettings.getConnectToNode());
+        while(!isCancelled) {
+            Broker host = null;
+            if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.RoundRobin))
+                host = queueHosts.getHostRoundRobin();
+            else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Random))
+                host = queueHosts.getRandomHost();
+            else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Local))
+                host = queueHosts.getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+            else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.NonLocal))
+                host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+            else
+                throw new TopologyException("ConnectToNode value not supported: " + connectionSettings.getConsumerConnectToNode());
 
-        return host;
+            if(host != null)
+                return host;
+            else
+                ClientUtils.waitFor(1000, isCancelled);
+        }
+
+        throw new TopologyException("Could not identify a broker to connect to");
     }
 
     private boolean reconnectToNewHost() {
-        if(connectionSettings.getConnectToNode().equals(ConnectToNode.Local)) {
+        if(connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Local)) {
             Broker host = getBrokerToConnectTo();
             if (!host.getNodeName().equals(currentHost.getNodeName())) {
                 LOGGER.info("Detected change of queue host. No longer: " + currentHost.getNodeName() + " now: " + host.getNodeName());
                 return true;
             }
         }
-        else if(connectionSettings.getConnectToNode().equals(ConnectToNode.NonLocal)) {
+        else if(connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.NonLocal)) {
             if(queueHosts.isQueueHost(connectionSettings.getVhost(), consumerSettings.getQueue(), currentHost)) {
                 LOGGER.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
                 return true;

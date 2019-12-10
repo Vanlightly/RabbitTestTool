@@ -85,6 +85,9 @@ public class TopologyLoader {
                     if(isQuorumQueueProperty(prop)) {
                         addPropertyToQueue(topology, prop, policy.getPattern());
                     }
+                    else if(isStreamQueueProperty(prop)) {
+                        addPropertyToQueue(topology, prop, policy.getPattern());
+                    }
                     else {
                         finalProps.add(prop);
                     }
@@ -108,6 +111,13 @@ public class TopologyLoader {
         else if(prop.getKey().equals("x-max-in-memory-length"))
             return true;
         else if(prop.getKey().equals("x-max-in-memory-bytes"))
+            return true;
+
+        return false;
+    }
+
+    private boolean isStreamQueueProperty(Property prop) {
+        if(prop.getKey().equals("x-queue-type") && prop.getValue().equals("stream"))
             return true;
 
         return false;

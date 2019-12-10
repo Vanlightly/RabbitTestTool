@@ -3,7 +3,6 @@ package com.jackvanlightly.rabbittesttool.clients;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ConnectionSettings {
     private List<Broker> hosts;
@@ -11,7 +10,8 @@ public class ConnectionSettings {
     private String password;
     private String vhost;
     private int managementPort;
-    private ConnectToNode connectToNode;
+    private ConnectToNode publisherConnectToNode;
+    private ConnectToNode consumerConnectToNode;
     private boolean noTcpDelay;
 
     public List<Broker> getHosts() {
@@ -62,12 +62,20 @@ public class ConnectionSettings {
         this.noTcpDelay = noTcpDelay;
     }
 
-    public ConnectToNode getConnectToNode() {
-        return connectToNode;
+    public ConnectToNode getPublisherConnectToNode() {
+        return publisherConnectToNode;
     }
 
-    public void setConnectToNode(ConnectToNode connectToNode) {
-        this.connectToNode = connectToNode;
+    public void setPublisherConnectToNode(ConnectToNode publisherConnectToNode) {
+        this.publisherConnectToNode = publisherConnectToNode;
+    }
+
+    public ConnectToNode getConsumerConnectToNode() {
+        return consumerConnectToNode;
+    }
+
+    public void setConsumerConnectToNode(ConnectToNode consumerConnectToNode) {
+        this.consumerConnectToNode = consumerConnectToNode;
     }
 
     public ConnectionSettings getClone(String vhostName) {
@@ -78,7 +86,8 @@ public class ConnectionSettings {
         cs.setVhost(vhostName);
         cs.setManagementPort(managementPort);
         cs.setHosts(hosts);
-        cs.setConnectToNode(connectToNode);
+        cs.setPublisherConnectToNode(publisherConnectToNode);
+        cs.setConsumerConnectToNode(consumerConnectToNode);
 
         return cs;
     }
