@@ -1,9 +1,12 @@
 ---
+# - name: download tarball
+#   get_url:
+#     url: "{{ generic_unix_url }}"
+#     dest: /tmp/rabbit.tar.xz
+#     mode: '0755'
+
 - name: download tarball
-  get_url:
-    url: "{{ generic_unix_url }}"
-    dest: /tmp/rabbit.tar.xz
-    mode: '0755'
+  command: "wget -O /tmp/rabbit.tar.xz {{ generic_unix_url }} "
 
 - name: Create unpack dir
   file:
@@ -11,11 +14,14 @@
     state: directory
     mode: '0755'
 
+# - name: Extract tarball into /tmp/rabbitmq
+#   unarchive:
+#     remote_src: yes
+#     src: /tmp/rabbit.tar.xz
+#     dest: /tmp/rabbitmq
+
 - name: Extract tarball into /tmp/rabbitmq
-  unarchive:
-    remote_src: yes
-    src: /tmp/rabbit.tar.xz
-    dest: /tmp/rabbitmq
+  command: tar xvf /tmp/rabbit.tar.xz -C /tmp/rabbitmq
 
 - name: Move extracted dir to target location
   shell: "cp -a /tmp/rabbitmq/*/* /rabbitmq"
@@ -57,11 +63,19 @@
     group: ubuntu
     mode: 0400
 
-- name: Set configuration
+- name: Set default configuration
   template:
     src: rabbitmq.conf.j2
     dest: /rabbitmq/etc/rabbitmq/rabbitmq.conf
     mode: 0400
+  when: use_config == 'default' 
+
+- name: Set Raft configuration
+  template:
+    src: rabbitmq_raft.conf.j2
+    dest: /rabbitmq/etc/rabbitmq/rabbitmq.conf
+    mode: 0400
+  when: use_config == 'raft' 
 
 - name: Start RabbitMQ
   command: /rabbitmq/sbin/rabbitmq-server start -detached
@@ -75,15 +89,31 @@
 
 - name: Enable RabbitMQ top plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_top
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
 
 - name: Enable RabbitMQ prometheus plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_prometheus
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
 
 - name: Enable RabbitMQ Sharding plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_sharding
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
 
 - name: Enable RabbitMQ Consistent Hash Exchange plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_consistent_hash_exchange
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
   
 - name: Create benchmark user
   command: "/rabbitmq/sbin/rabbitmqctl add_user {{ rabbitmq_user.name }} {{ rabbitmq_user.password }}"

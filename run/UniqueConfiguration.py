@@ -18,7 +18,8 @@ class UniqueConfiguration:
         self.vars_file = get_optional_arg(args, "--vars-file", self.suffix, f".variables/{self.technology}-generic-vars.yml")
         self.no_tcp_delay = get_optional_arg(args, "--no-tcp-delay", self.suffix, "true")
         self.policies_file = get_optional_arg(args, "--policies-file", self.suffix, "none")
-        self.connect_to_node = get_optional_arg_validated(args, "--connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
+        self.pub_connect_to_node = get_optional_arg_validated(args, "--pub-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
+        self.con_connect_to_node = get_optional_arg_validated(args, "--con-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.node_number = -1
 
     def set_node_number(self, node_number):

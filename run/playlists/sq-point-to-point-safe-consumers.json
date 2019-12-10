@@ -1,0 +1,26 @@
+{
+    "playlistEntries": [
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "10" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "20" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "30" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "40" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "50" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "60" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "70" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "80" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "90" } },
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "100" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" 
+        },
+        "policy": "stream-queue.json"
+    }
+}

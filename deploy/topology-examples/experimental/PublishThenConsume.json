@@ -26,7 +26,8 @@
                         "mode": "Counterpart"
                     },
                     "deliveryMode": "Persistent",
-                    "messageSize": 32000
+                    "messageSize": 32000,
+                    "initialPublish": 10000
                 }
             ],
             "consumerGroups": [

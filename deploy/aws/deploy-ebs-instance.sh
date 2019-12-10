@@ -38,6 +38,9 @@ echo "------------------------------"
 
 
 IOPS=$(($VOL_SIZE * 50))
+WAL_VOLUME_SIZE=$(($VOL_SIZE / 2))
+WAL_IOPS=$(($WAL_VOLUME_SIZE * 50))
+LOGS_VOLUME_SIZE=$(($VOL_SIZE / 5))
 echo "Node $NODE_NUMBER: Deploying EBS backed $INSTANCE EC2 instance"
 TAG=benchmarking_${TECHNOLOGY}${NODE_NUMBER}_${RUN_TAG}
 
@@ -51,7 +54,7 @@ if [[ $VOL_TYPE == "io1" ]];then
     --security-group-ids "$SG" \
     --subnet-id "$SN" \
     --placement "Tenancy=$TENANCY" \
-    --block-device-mappings "DeviceName=/dev/sdb,Ebs={VolumeType=io1,Iops=$IOPS,VolumeSize=$VOL_SIZE,DeleteOnTermination=true}" \
+    --block-device-mappings "DeviceName=/dev/sdb,Ebs={VolumeType=io1,Iops=$IOPS,VolumeSize=$VOL_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdc,Ebs={VolumeType=gp2,VolumeSize=$LOGS_VOLUME_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdd,Ebs={VolumeType=io1,Iops=$WAL_IOPS,VolumeSize=$WAL_VOLUME_SIZE,DeleteOnTermination=true}" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" \
     --cpu-options "CoreCount=${CORE_COUNT},ThreadsPerCore=${TPC}"
 else
@@ -63,7 +66,7 @@ else
     --security-group-ids "$SG" \
     --subnet-id "$SN" \
     --placement "Tenancy=$TENANCY" \
-    --block-device-mappings "DeviceName=/dev/sdb,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL_SIZE,DeleteOnTermination=true}" \
+    --block-device-mappings "DeviceName=/dev/sdb,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdc,Ebs={VolumeType=gp2,VolumeSize=$LOGS_VOLUME_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdd,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$WAL_VOLUME_SIZE,DeleteOnTermination=true}" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" \
     --cpu-options "CoreCount=${CORE_COUNT},ThreadsPerCore=${TPC}"
 fi

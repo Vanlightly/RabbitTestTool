@@ -20,6 +20,6 @@ mkdir "$TARGET_DIR"
 for NODE in $(seq $NODE_NUMBER_START $NODE_NUMBER_END)
 do
     BROKER_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=benchmarking_${TECHNOLOGY}${NODE}_${RUN_TAG}" --query "Reservations[*].Instances[*].PublicIpAddress" --output=text)
-    ssh -i "~/.ssh/$KEY_PAIR.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@${BROKER_IP} tar -zcvf rabbitmq${NODE}.tar.gz /rabbitmq/var/log/rabbitmq
+    ssh -i "~/.ssh/$KEY_PAIR.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@${BROKER_IP} tar -zcvf rabbitmq${NODE}.tar.gz /rabbitmq/logs/rabbitmq
     scp -i "~/.ssh/$KEY_PAIR.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@${BROKER_IP}:rabbitmq${NODE}.tar.gz $TARGET_DIR/rabbitmq${NODE}.tar.gz
 done

@@ -37,6 +37,48 @@
 - name: set as default locale
   command: update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
+- name: create rabbitmq directory
+  file: 
+    path: /rabbitmq 
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create rabbitmq logs directory
+  file: 
+    path: /logs
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create rabbitmq data directory
+  file: 
+    path: /data
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create rabbitmq WAL directory
+  file: 
+    path: /wal
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: Add RabbitMQ directories to /etc/environment
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: "RABBITMQ_MNESIA_DIR", value: "/data" }
+    - { key: "RABBITMQ_LOG_BASE", value: "/logs" }
+
 - name: Reboot the machine with all defaults
   reboot:
     
@@ -47,61 +89,90 @@
     update_cache: yes
     force_apt_get: true
 
-# - name: Install Python
-#   apt:
-#     name: python
-#     update_cache: yes
-#     install_recommends: yes
-#     state: present
-    
-- name: get name of second volume
-  shell: "lsblk | grep {{ volume_size_label }} | cut -d' ' -f1"
-  register: volume_name
+- name: Get name of data volume
+  shell: "lsblk | grep {{ data_volume_size_label }} | cut -d' ' -f1"
+  register: data_volume_name
 
-- name: Create a filesystem on extra EBS volume
+- name: Create a filesystem on EBS data volume
   filesystem:
     fstype: "{{ filesystem }}"
-    dev: "/dev/{{ volume_name.stdout }}"
+    dev: "/dev/{{ data_volume_name.stdout }}"
 
-- name: create rabbitmq directory
-  file: 
-    path: /rabbitmq 
-    state: directory 
-    owner: ubuntu 
-    group: ubuntu
-  become: true
-
-- name: Mount EBS volume for rabbitmq directory
+- name: Mount EBS data volume
   mount:
-    path: /rabbitmq
-    src: "/dev/{{ volume_name.stdout }}"
+    path: /data
+    src: "/dev/{{ data_volume_name.stdout }}"
     fstype: "{{ filesystem }}"
     state: mounted
 
-- name: get UUID of RabbitMQ mount volume
-  shell: blkid -s UUID -o value $( df /rabbitmq )
-  register: rabbitmq_uuid
+- name: Get UUID of data volume
+  shell: blkid -s UUID -o value $( df /data )
+  register: data_uuid
   become: true
 
-- name: Convert fstab device name to UUID format
+- name: Convert fstab device name to UUID format for data volume
   replace:
     dest=/etc/fstab
-    regexp="/dev/{{ volume_name.stdout }}"
-    replace="UUID={{rabbitmq_uuid.stdout}}"
+    regexp="/dev/{{ data_volume_name.stdout }}"
+    replace="UUID={{data_uuid.stdout}}"
     backup=yes
 
-- name: create rabbitmq log directory
-  file: 
-    path: /rabbitmq/log
-    state: directory 
-    owner: ubuntu 
-    group: ubuntu
+
+
+- name: Get name of logs volume
+  shell: "lsblk | grep {{ logs_volume_size_label }} | cut -d' ' -f1"
+  register: logs_volume_name
+
+- name: Create a filesystem on EBS logs volume
+  filesystem:
+    fstype: "{{ filesystem }}"
+    dev: "/dev/{{ logs_volume_name.stdout }}"
+
+- name: Mount EBS logs volume
+  mount:
+    path: /logs
+    src: "/dev/{{ logs_volume_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
+
+- name: Get UUID of logs volume
+  shell: blkid -s UUID -o value $( df /logs )
+  register: logs_uuid
   become: true
 
-- name: create rabbitmq data directory
-  file: 
-    path: /rabbitmq/data
-    state: directory 
-    owner: ubuntu 
-    group: ubuntu
+- name: Convert fstab device name to UUID format for logs volume
+  replace:
+    dest=/etc/fstab
+    regexp="/dev/{{ logs_volume_name.stdout }}"
+    replace="UUID={{logs_uuid.stdout}}"
+    backup=yes
+  
+
+
+- name: Get name of WAL volume
+  shell: "lsblk | grep {{ wal_volume_size_label }} | cut -d' ' -f1"
+  register: wal_volume_name
+
+- name: Create a filesystem on EBS WAL volume
+  filesystem:
+    fstype: "{{ filesystem }}"
+    dev: "/dev/{{ wal_volume_name.stdout }}"
+
+- name: Mount EBS WAL volume
+  mount:
+    path: /wal
+    src: "/dev/{{ wal_volume_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
+
+- name: Get UUID of WAL volume
+  shell: blkid -s UUID -o value $( df /wal )
+  register: wal_uuid
   become: true
+
+- name: Convert fstab device name to UUID format for WAL volume
+  replace:
+    dest=/etc/fstab
+    regexp="/dev/{{ wal_volume_name.stdout }}"
+    replace="UUID={{wal_uuid.stdout}}"
+    backup=yes
