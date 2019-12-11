@@ -338,6 +338,13 @@ public class AMQPBenchmarker {
             TopologyLoader topologyLoader = new TopologyLoader();
             Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables);
 
+            boolean unsafe = topology.getVirtualHosts().stream().anyMatch(x ->
+                                    x.getPublishers().stream().anyMatch(p -> !p.getPublisherMode().isUseConfirms())
+                                    || x.getConsumers().stream().anyMatch(c -> !c.getAckMode().isManualAcks()));
+
+            if(unsafe && mode == "model")
+                LOGGER.warn("!!!WARNING!!! Model mode with unsafe clients detected. There are publishers and/or consumers without confirms/acks. Model mode may report data loss");
+
             TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings, brokerConfig);
 
             int sampleIntervalMs = 10000;

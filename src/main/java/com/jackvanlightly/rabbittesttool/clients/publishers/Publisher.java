@@ -270,18 +270,27 @@ public class Publisher implements Runnable {
 
                 int currentInFlightLimit = publisherSettings.getPublisherMode().getInFlightLimit();
                 int currentStream = 0;
-                while (!isCancelled) {
+                boolean reconnect = false;
+                while (!isCancelled && !reconnect) {
                     if (this.useConfirms) {
+                        // is this is a multi-step benchmark with increasing in flight limit, might need to add more slots to the semaphore
                         if(this.inFlightLimit != currentInFlightLimit) {
                             int diff = this.inFlightLimit - currentInFlightLimit;
                             if(diff > 0)
                                 inflightSemaphore.release(diff);
                             currentInFlightLimit = this.inFlightLimit;
                         }
-                        inflightSemaphore.acquire();
+
+                        // keep trying to acquire until the cancelation or connection dies
+                        while(!isCancelled && !inflightSemaphore.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
+                            if (!channel.isOpen()) {
+                                reconnect = true;
+                                break;
+                            }
+                        }
                     }
 
-                    boolean send = sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit);
+                    boolean send = (sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit)) && !reconnect && !isCancelled;
 
                     if(send) {
                         publish(channel, currentStream, pendingConfirms, false);
