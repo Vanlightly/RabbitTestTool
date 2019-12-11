@@ -32,5 +32,5 @@ public interface BenchmarkRegister {
                                                    String version,
                                                    String configTag);
     void logViolations(String benchmarkId, List<Violation> violations);
-    void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals);
+    void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds);
 }

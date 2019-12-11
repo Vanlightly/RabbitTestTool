@@ -150,7 +150,8 @@ public class AMQPBenchmarker {
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
-            MessageModel messageModel = new MessageModel(true, arguments.getInt("--unavailability-sec"));
+            int unavailabilitySeconds = arguments.getInt("--unavailability-sec");
+            MessageModel messageModel = new MessageModel(true, unavailabilitySeconds);
 
             ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
             modelExecutor.execute(() -> messageModel.monitorProperties());
@@ -193,7 +194,7 @@ public class AMQPBenchmarker {
                         .get());
             }
             benchmarkRegister.logViolations(benchmarkId, violations);
-            benchmarkRegister.logConsumeIntervals(benchmarkId, consumeIntervals);
+            benchmarkRegister.logConsumeIntervals(benchmarkId, consumeIntervals, unavailabilitySeconds);
         }
         catch(Exception e) {
             LOGGER.error("Failed during model driven test", e);
@@ -342,7 +343,7 @@ public class AMQPBenchmarker {
                                     x.getPublishers().stream().anyMatch(p -> !p.getPublisherMode().isUseConfirms())
                                     || x.getConsumers().stream().anyMatch(c -> !c.getAckMode().isManualAcks()));
 
-            if(unsafe && mode == "model")
+            if(unsafe && mode.equals("model"))
                 LOGGER.warn("!!!WARNING!!! Model mode with unsafe clients detected. There are publishers and/or consumers without confirms/acks. Model mode may report data loss");
 
             TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings, brokerConfig);

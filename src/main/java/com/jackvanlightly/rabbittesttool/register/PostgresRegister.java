@@ -556,7 +556,7 @@ public class PostgresRegister implements BenchmarkRegister {
     }
 
     @Override
-    public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals) {
+    public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds) {
         for(ConsumeInterval interval : consumeIntervals) {
             String query = "INSERT INTO CONSUME_INTERVALS(BENCHMARK_ID, CONSUMER_ID, VHOST, QUEUE, START_TIME, START_MS, END_TIME, END_MS)\n" +
                     "VALUES(?,?,?,?,?,?,?,?)";
