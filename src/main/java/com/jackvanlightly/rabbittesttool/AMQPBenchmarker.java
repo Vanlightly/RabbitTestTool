@@ -198,6 +198,7 @@ public class AMQPBenchmarker {
         }
         catch(Exception e) {
             LOGGER.error("Failed during model driven test", e);
+            System.exit(1);
         }
     }
 
