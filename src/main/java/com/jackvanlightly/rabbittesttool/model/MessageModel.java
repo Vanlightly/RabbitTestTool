@@ -28,6 +28,10 @@ public class MessageModel {
     private Instant lastSentPrinted = Instant.MIN;
     private final ReadWriteLock actLock;
     private final ReadWriteLock expLock;
+    private Instant monitorStart;
+    private Instant monitorStop;
+    private double availability;
+    private long publishedCount;
 
     public MessageModel(boolean enabled) {
         this(enabled, 30);
@@ -59,7 +63,7 @@ public class MessageModel {
             receiveQueue.add(messagePayload);
             lastReceivedTime = Instant.now();
             if(lastReceivedTime.getEpochSecond()-lastReceivedPrinted.getEpochSecond() > 10) {
-                System.out.println("Received " + messagePayload.getMessagePayload().getSequenceNumber());
+                //System.out.println("Received " + messagePayload.getMessagePayload().getSequenceNumber());
                 lastReceivedPrinted = lastReceivedTime;
             }
         }
@@ -75,7 +79,7 @@ public class MessageModel {
                 expLock.writeLock().unlock();
             }
             if(Instant.now().getEpochSecond()-lastSentPrinted.getEpochSecond() > 10) {
-                System.out.println("Sent " + messagePayload.getSequenceNumber());
+                //System.out.println("Sent " + messagePayload.getSequenceNumber());
                 lastSentPrinted = Instant.now();
             }
         }
@@ -93,7 +97,7 @@ public class MessageModel {
     }
 
     public void monitorProperties() {
-
+        monitorStart = Instant.now();
         Map<Integer, ReceivedMessage> streamMessages = new HashMap<>();
 
         // detect ordering and duplication in real-time
@@ -148,6 +152,19 @@ public class MessageModel {
             violations.add(new Violation(ViolationType.Missing, mp));
 
         monitoringStopped = true;
+        monitorStop = Instant.now();
+
+        // calculate availability based on streams. Assumed that one stream is one queue.
+        int streams = streamMessages.keySet().size();
+        long totalRunTime = Duration.between(monitorStart, monitorStop).getSeconds() * streams;
+        long totalSeconds = 0;
+        for (ConsumeInterval interval : consumeIntervals) {
+            Instant start = Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp());
+            Instant end = Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp());
+            long seconds = Duration.between(start, end).getSeconds();
+            totalSeconds += seconds;
+        }
+        availability = 100.0d - (100.0d * ((double)totalSeconds/(double)totalRunTime));
     }
 
     public List<Violation> getViolations() {
@@ -195,4 +212,15 @@ public class MessageModel {
         return expectedCopy;
     }
 
+    public double getAvailability() {
+        return availability;
+    }
+
+    public long getPublishedCount() {
+        return expectsToReceive.size();
+    }
+
+    public long getConsumedCount() {
+        return actualReceived.size();
+    }
 }

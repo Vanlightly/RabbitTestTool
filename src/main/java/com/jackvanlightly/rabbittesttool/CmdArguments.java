@@ -157,7 +157,7 @@ public class CmdArguments {
                 for(String arg : args)
                     sb.append(arg + " ");
                 LOGGER.info(sb.toString());
-                throw new RuntimeException("You have supplied an odd number of arguments. Arguments are expected in --key value format. Use the help argument for more information.");
+                throw new CmdArgumentException("You have supplied an odd number of arguments. Arguments are expected in --key value format. Use the help argument for more information.");
             }
         }
 
@@ -190,7 +190,7 @@ public class CmdArguments {
         if(arguments.containsKey(key))
             return arguments.get(key);
 
-        throw new RuntimeException("No such argument" + key);
+        throw new CmdArgumentException("No such argument: " + key);
     }
 
     public String getStr(String key, String defaultValue) {
@@ -201,7 +201,7 @@ public class CmdArguments {
         if(arguments.containsKey(key))
             return Arrays.asList(arguments.get(key).split(","));
 
-        throw new RuntimeException("No such argument" + key);
+        throw new CmdArgumentException("No such argument: " + key);
     }
 
     public List<String> getListStr(String key, String defaultValue) {
@@ -212,7 +212,7 @@ public class CmdArguments {
         if(arguments.containsKey(key))
             return Integer.valueOf(arguments.get(key));
 
-        throw new RuntimeException("No such argument" + key);
+        throw new CmdArgumentException("No such argument: " + key);
     }
 
     public Integer getInt(String key, Integer defaultValue) {
@@ -226,7 +226,7 @@ public class CmdArguments {
         if(arguments.containsKey(key))
             return Boolean.valueOf(arguments.get(key));
 
-        throw new RuntimeException("No such argument" + key);
+        throw new CmdArgumentException("No such argument: " + key);
     }
 
     public Boolean getBoolean(String key, Boolean defaultValue) {
@@ -300,11 +300,11 @@ public class CmdArguments {
                 }
             }
             else {
-                throw new RuntimeException("Could not find the requested config file");
+                throw new CmdArgumentException("Could not find the requested config file");
             }
         }
         catch(Exception e) {
-            throw new RuntimeException("Failed loading the requested config file", e);
+            throw new CmdArgumentException("Failed loading the requested config file", e);
         }
     }
 

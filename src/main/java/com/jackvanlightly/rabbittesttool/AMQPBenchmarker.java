@@ -8,6 +8,7 @@ import com.jackvanlightly.rabbittesttool.metrics.InfluxMetrics;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.model.Violation;
+import com.jackvanlightly.rabbittesttool.model.ViolationType;
 import com.jackvanlightly.rabbittesttool.register.BenchmarkRegister;
 import com.jackvanlightly.rabbittesttool.register.ConsoleRegister;
 import com.jackvanlightly.rabbittesttool.register.PostgresRegister;
@@ -58,7 +59,10 @@ public class AMQPBenchmarker {
                 break;
             default:
                 System.out.println("Invalid mode. Modes are: " + Modes.getModes());
+                System.exit(1);
         }
+
+        System.exit(0);
     }
 
     private static void printHelp(CmdArguments arguments) {
@@ -87,20 +91,20 @@ public class AMQPBenchmarker {
     }
 
     private static void runComparison(CmdArguments arguments) {
-        BenchmarkRegister benchmarkRegister = null;
-        if(arguments.hasKey("--postgres-jdbc-url")) {
-            benchmarkRegister = new PostgresRegister(
-                    arguments.getStr("--postgres-jdbc-url"),
-                    arguments.getStr("--postgres-user"),
-                    arguments.getStr("--postgres-pwd"));
-        }
-        else {
-            LOGGER.info("To compare results, you must pass postgres connection arguments");
-        }
-
-        StatisticsComparer comparer = new StatisticsComparer(benchmarkRegister);
-
         try {
+            BenchmarkRegister benchmarkRegister = null;
+            if (arguments.hasKey("--postgres-jdbc-url")) {
+                benchmarkRegister = new PostgresRegister(
+                        arguments.getStr("--postgres-jdbc-url"),
+                        arguments.getStr("--postgres-user"),
+                        arguments.getStr("--postgres-pwd"));
+            } else {
+                LOGGER.info("To compare results, you must pass postgres connection arguments");
+                System.exit(2);
+            }
+
+            StatisticsComparer comparer = new StatisticsComparer(benchmarkRegister);
+
             comparer.generateReport(arguments.getStr("--report-dir"),
                     arguments.getStr("--run-id1"),
                     arguments.getStr("--technology1"),
@@ -111,8 +115,13 @@ public class AMQPBenchmarker {
                     arguments.getStr("--version2"),
                     arguments.getStr("--config-tag2"));
         }
+        catch(CmdArgumentException e) {
+            LOGGER.error(e.getMessage());
+            System.exit(1);
+        }
         catch(Exception e) {
-            LOGGER.error("Failed generating a comparison report", e);
+            LOGGER.error("Exited due to error.", e);
+            System.exit(2);
         }
     }
 
@@ -183,6 +192,8 @@ public class AMQPBenchmarker {
             LOGGER.info("-------------------------------------------------------");
             LOGGER.info("---------- SUMMARY ------------------------------------");
             LOGGER.info("Run ID: " + runId + ", BenchmarkId: " + benchmarkId);
+            LOGGER.info("Published Count: " + messageModel.getPublishedCount());
+            LOGGER.info("Consumed Count: " + messageModel.getConsumedCount());
             LOGGER.info("Property Violations: " + violations.size());
             LOGGER.info("Unavailability Periods: " + consumeIntervals.size());
             LOGGER.info("-------------------------------------------------------");
@@ -194,10 +205,27 @@ public class AMQPBenchmarker {
                         .get());
             }
             benchmarkRegister.logViolations(benchmarkId, violations);
-            benchmarkRegister.logConsumeIntervals(benchmarkId, consumeIntervals, unavailabilitySeconds);
+            benchmarkRegister.logConsumeIntervals(benchmarkId, consumeIntervals, unavailabilitySeconds, messageModel.getAvailability());
+
+            long dataLossViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.Missing).count();
+            if(messageModel.getPublishedCount() == 0 || messageModel.getConsumedCount() == 0)
+                System.exit(3);
+            else if(dataLossViolations == 0 && consumeIntervals.isEmpty())
+                System.exit(0);
+            else if(dataLossViolations > 0)
+                System.exit(4);
+            else if(consumeIntervals.isEmpty())
+                System.exit(5);
+            else
+                System.exit(6);
+        }
+        catch(CmdArgumentException e) {
+            LOGGER.error(e.getMessage());
+            System.exit(1);
         }
         catch(Exception e) {
-            LOGGER.error("Failed during model driven test", e);
+            LOGGER.error("Exited due to error.", e);
+            System.exit(2);
         }
     }
 
@@ -240,8 +268,13 @@ public class AMQPBenchmarker {
                     arguments.getArgsStr(","),
                     benchmarkTags);
         }
+        catch(CmdArgumentException e) {
+            LOGGER.error(e.getMessage());
+            System.exit(1);
+        }
         catch(Exception e) {
-            LOGGER.error("Failed preparing local benchmark", e);
+            LOGGER.error("Exited due to error.", e);
+            System.exit(2);
         }
     }
 
@@ -306,10 +339,16 @@ public class AMQPBenchmarker {
                         benchmarkTags);
             } else {
                 LOGGER.error("No Postgres connection details were provided, a logged benchmark require postgres");
+                System.exit(1);
             }
         }
+        catch(CmdArgumentException e) {
+            LOGGER.error(e.getMessage());
+            System.exit(1);
+        }
         catch(Exception e) {
-            LOGGER.error("Failed preparing logged benchmark", e);
+            LOGGER.error("Exited due to error.", e);
+            System.exit(2);
         }
     }
 
@@ -379,33 +418,12 @@ public class AMQPBenchmarker {
 
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 public void run() {
-                    try {
-                        if(orchestrator.isComplete()) {
-                            return;
-                        }
-                        else {
-                            orchestrator.jumpToCleanup();
-                            System.out.println("Jumping to cleanup ...");
-                            while (!orchestrator.isComplete())
-                                Thread.sleep(1000);
-
-                            if(mode.equals("model")) {
-                                LOGGER.info("Shutting down in 30 seconds ...");
-                                Thread.sleep(30000);
-                            }
-                        }
-                    } catch (InterruptedException e) {
-                        LOGGER.info("INTERRUPTED! ...");
-                        Thread.currentThread().interrupt();
-                        e.printStackTrace();
-                    }
+                    skipToCleanUp(orchestrator, mode);
                 }
             });
 
             orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod);
 
-            // ensure all auto-recovering connections can recover before nuking the vhosts
-            // to prevent unkillable threads
             waitFor(10000);
 
             if(topology.shouldDeclareArtefacts()) {
@@ -415,24 +433,14 @@ public class AMQPBenchmarker {
                 }
             }
         }
-        catch(Exception e) {
-            LOGGER.error("Unexpected error in main", e);
-            if(loggedStart)
-                benchmarkRegister.logException(benchmarkId, e);
-        }
         finally {
-            try {
-                if(loggedStart)
-                    benchmarkRegister.logBenchmarkEnd(benchmarkId);
+            if(loggedStart)
+                benchmarkRegister.logBenchmarkEnd(benchmarkId);
 
-                metrics.close();
+            metrics.close();
 
-                if(stats != null)
-                    stats.close();
-            }
-            catch(Exception e) {
-                LOGGER.error("Unexpected error in main on completion", e);
-            }
+            if(stats != null)
+                stats.close();
         }
         LOGGER.info("Benchmark complete on node " + String.join(",", brokerConfig.getNodeNames()));
         //printThreads(node);
@@ -542,7 +550,30 @@ public class AMQPBenchmarker {
             case "local": return ConnectToNode.Local;
             case "non-local": return ConnectToNode.NonLocal;
             default:
-                throw new IllegalArgumentException("Only supports connect to node modes of: roundrobin, random, local, non-local");
+                throw new CmdArgumentException("Only supports connect to node modes of: roundrobin, random, local, non-local");
+        }
+    }
+
+    private static void skipToCleanUp(Orchestrator orchestrator, String mode) {
+        try {
+            if(orchestrator.isComplete()) {
+                return;
+            }
+            else {
+                orchestrator.jumpToCleanup();
+                System.out.println("Jumping to cleanup ...");
+                while (!orchestrator.isComplete())
+                    Thread.sleep(1000);
+
+                if(mode.equals("model")) {
+                    LOGGER.info("Shutting down in 30 seconds ...");
+                    Thread.sleep(30000);
+                }
+            }
+        } catch (InterruptedException e) {
+            LOGGER.info("INTERRUPTED! ...");
+            Thread.currentThread().interrupt();
+            e.printStackTrace();
         }
     }
 

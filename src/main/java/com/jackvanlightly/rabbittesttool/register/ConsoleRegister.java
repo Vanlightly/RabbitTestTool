@@ -196,7 +196,7 @@ public class ConsoleRegister implements BenchmarkRegister {
     }
 
     @Override
-    public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds) {
+    public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds, double availability) {
         this.out.println("");
         this.out.println("----------------------------------------------------");
         this.out.println("----------- UNAVAILABILITY PERIODS -----------------");
@@ -205,7 +205,7 @@ public class ConsoleRegister implements BenchmarkRegister {
         }
         else {
             this.out.println("Unavailability periods over " + unavailabilityThresholdSeconds + " seconds minute detected!");
-            long totalSeconds = 0;
+
             for (ConsumeInterval interval : consumeIntervals) {
                 Instant start = Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp());
                 Instant end = Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp());
@@ -217,12 +217,8 @@ public class ConsoleRegister implements BenchmarkRegister {
                         interval.getStartMessage().getMessagePayload().getSequenceNumber(),
                         end,
                         interval.getEndMessage().getMessagePayload().getSequenceNumber()));
-
-                totalSeconds += seconds;
             }
 
-            long totalRunTime = Duration.between(started, stopped).getSeconds();
-            double availability = 100.0d - (100.0d * ((double)totalSeconds/(double)totalRunTime));
             this.out.println(MessageFormat.format("Availability: {0,number,#.##}%", availability));
         }
         this.out.println("----------------------------------------------------");

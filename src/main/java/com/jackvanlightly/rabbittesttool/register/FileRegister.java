@@ -133,7 +133,7 @@ public class FileRegister implements BenchmarkRegister {
     }
 
     @Override
-    public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds) {
+    public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds, double availability) {
         if(consumeIntervals.isEmpty()) {
             printWriter.println("No consumer intervals over " + unavailabilityThresholdSeconds + " seconds detected");
         }
