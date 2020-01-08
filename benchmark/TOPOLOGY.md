@@ -1,4 +1,4 @@
-# Topology Guide
+# Topology File Guide
 
 A topology file defines the virtual hosts, exchanges, queues, publishers and consumers of a benchmark. It can optionally also define one or more scaling dimensions. Topology files do not reference any particular AMQP technology or connection details.
 
