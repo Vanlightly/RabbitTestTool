@@ -1,5 +1,5 @@
 {
-    "playlistEntries": [
+    "benchmarks": [
         { "topologyValues": "200000,1", "triggerAt": 200010 },
         { "topologyValues": "400000,1", "triggerAt": 400010 },
         { "topologyValues": "600000,1", "triggerAt": 600010 },

@@ -61,7 +61,7 @@ def get_playlist_entries(playlist_file):
     playlist_entries = list()
 
     # load topologies to run and check topology and policy files exist
-    for playlist_entry in playlist_json['playlistEntries']:
+    for playlist_entry in playlist_json['benchmarks']:
         entry = PlaylistEntry()
         entry.topology = get_entry_mandatory_field(playlist_entry, common_attr, "topology")
         entry.topology_variables = get_variables(playlist_entry, common_attr, "topologyVariables")

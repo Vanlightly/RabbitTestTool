@@ -1,5 +1,5 @@
 {
-    "playlistEntries": [
+    "benchmarks": [
         { "topology": "throughput/delivery-mode/DeliveryModeBenchmark1.json" },
         { "topology": "throughput/delivery-mode/DeliveryModeBenchmark2.json" },
         { "topology": "throughput/clients/ClientsBenchmark1.json" },

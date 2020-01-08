@@ -1,5 +1,5 @@
 {
-    "playlistEntries": [
+    "benchmarks": [
         { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
         { "topologyVariables": { "publisherCount": "2", "queueCount": "2", "consumerCount": "2" } },
         { "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4" } },
