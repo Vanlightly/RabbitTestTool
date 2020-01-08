@@ -28,8 +28,8 @@ An example topology file with one publisher, one exchange, one queue and one con
                     "group": "p1",
                     "scale": 1,
                     "sendToExchange": {
-                    "exchange": "ex1",
-                    "routingKeyMode": "none"
+                        "exchange": "ex1",
+                        "routingKeyMode": "none"
                     },
                     "deliveryMode": "Persistent"
                 }
@@ -49,6 +49,89 @@ An example topology file with one publisher, one exchange, one queue and one con
             "rampUpSeconds": 10
         }
     }
+}
+```
+
+## Templated Topology Files
+
+You can define variables in topology files to avoid the need for many similar variants of a given topology. Each variable is defined with a default value.
+
+The variables are defined in an array and placed in the topology using the "{{ var.variable_name }}" syntax.
+
+```json
+{
+  "topologyName": "fanout_exchange",
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "vhostCount", "default": "1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "16" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "false" },
+    { "name": "inflightLimit", "default": "0" },
+    { "name": "manualAcks", "default": "false" },
+    { "name": "consumerPrefetch", "default": "0" },
+    { "name": "ackInterval", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" }
+  ],
+  "description": "Fanout",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.vhostCount }}",
+      "exchanges": [ { "name": "ex1", "type": "fanout" }],
+      "queueGroups": [ 
+        { "group": "q1", 
+          "scale": "{{ var.queueCount }}", 
+          "bindings": [{ "from": "ex1" }],
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        } 
+      ],
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToExchange": {
+            "exchange": "ex1",
+            "routingKeyMode": "none"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        }
+      ],
+      "consumerGroups": [ 
+        { 
+          "group": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queueGroup": "q1",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}"
+          }
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
 }
 ```
 
@@ -97,15 +180,18 @@ Exchanges is a JSON array of exchange objects.
 | Field | Mandatory | Default | Description  |
 | --- | --- | --- | --- |
 | name | yes | - | The name of the exchange |
-| type | yes | - | Fanout, Direct, Topic, Headers or ConsistentHash |
+| type | yes | - | Fanout, Direct, Topic, Headers, ConsistentHash, ModulusHash |
 | bindings | no | - | An array of bindings. See Binding Fields |
 
-Example of two exchanges.
+Example of five different exchanges.
 
 ```json
 "exchanges": [
     { "name": "ex1", "type": "fanout" },
-    { "name": "ex2", "type": "topic" }
+    { "name": "ex2", "type": "topic" },
+    { "name": "ex3", "type": "headers" },
+    { "name": "ex4", "type": "consistenthash" },
+    { "name": "ex5", "type": "modulushash" },
 ]
 ```
 
@@ -153,9 +239,24 @@ An example of two queue groups.
 
 ```json
 "queueGroups": [
-    {|"group": "q1", "scale": 1, "bindings": [ { "from": "ex1" } ]},
-    {|"group": "q2", "scale": 10, "bindings": [ { "from": "ex2" } ]}
+    {"group": "q1", "scale": 1, "bindings": [ { "from": "ex1" } ]},
+    {"group": "q2", "scale": 10, "bindings": [ { "from": "ex2" } ]}
 ]
+```
+
+Example of 10 lazy queues bound to a single exchange.
+
+```json
+"queueGroups": [
+    {
+        "group": "q1", 
+        "scale": 10, 
+        "bindings": [ { "from": "ex1" } ],
+        "properties": [
+            { "key": "x-queue-mode", "value": "lazy", "type": "string" }
+        ]
+    }
+]    
 ```
 
 #### Publisher Group Fields
@@ -376,6 +477,7 @@ When using confirms.
 | scale | yes | - | The number of consumers in the group |
 | frameMax | no | 0 | The frameMax setting for each consumer |
 | ackMode | no | - | Settings related to acknowledgements. See AckMode Fields. When not specified, uses NoAck mode. |
+| processingMs | no | 0 | The number of milliseconds a consumer takes to process a single message |
 
 An example of a consumer group of 5 consumers, consuming from queue group q1. Using NoAck mode and no prefetch.
 
@@ -389,7 +491,7 @@ An example of a consumer group of 5 consumers, consuming from queue group q1. Us
 ]
 ```
 
-An example of a consumer group with one consumer that uses manual acks with a prefetch and acks with multiple flag every 5th message.
+An example of a consumer group with one consumer that uses manual acks with a prefetch, acks with multiple flag every 5th message and takes 10ms to process each message.
 
 ```json
 "consumerGroups": [
@@ -401,7 +503,8 @@ An example of a consumer group with one consumer that uses manual acks with a pr
             "manualAcks": true,
             "consumerPrefetch": 10,
             "ackInterval": 5
-        }
+        },
+        "processingMs": 10
     }
 ]
 ```

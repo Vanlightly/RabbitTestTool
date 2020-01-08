@@ -40,7 +40,7 @@ build: $(DOCKER) ## b  | Build JAR
 	  --rm \
 	  --interactive --tty \
 	  --workdir /workspace \
-	  --volume $(CURDIR):/workspace \
+	  --volume $(CURDIR)/benchmark:/workspace \
 	  --volume rabbittesttool-maven-cache:/root/.m2 \
 	  maven:3.6-jdk-8 \
 	  mvn clean package

@@ -45,11 +45,8 @@ public class AMQPBenchmarker {
 
         String mode = arguments.getStr("--mode");
         switch (mode) {
-            case Modes.SimpleBenchmark:
-                runSimpleBenchmark(arguments);
-                break;
-            case Modes.LoggedBenchmark:
-                runLoggedBenchmark(arguments);
+            case Modes.Benchmark:
+                runBenchmark(arguments);
                 break;
             case Modes.Model:
                 runModelDrivenTest(arguments);
@@ -69,10 +66,7 @@ public class AMQPBenchmarker {
         if(arguments.hasKey("--mode")) {
             String mode = arguments.getStr("--mode");
             switch (mode) {
-                case Modes.SimpleBenchmark:
-                    CmdArguments.printLocalBenchmarkHelp(System.out);
-                    break;
-                case Modes.LoggedBenchmark:
+                case Modes.Benchmark:
                     CmdArguments.printLoggedBenchmarkHelp(System.out);
                     break;
                 case Modes.Model:
@@ -128,6 +122,7 @@ public class AMQPBenchmarker {
     private static void runModelDrivenTest(CmdArguments arguments) {
         try {
             String runId = arguments.getStr("--run-id", UUID.randomUUID().toString());
+            BrokerConfiguration brokerConfig = getBrokerConfig(arguments);
             BenchmarkRegister benchmarkRegister = null;
             InfluxMetrics metrics = new InfluxMetrics();
 
@@ -139,7 +134,7 @@ public class AMQPBenchmarker {
                         arguments.getStr("--postgres-jdbc-url"),
                         arguments.getStr("--postgres-user"),
                         arguments.getStr("--postgres-pwd"),
-                        arguments.getListStr("--nodes").get(0),
+                        brokerConfig.getNodeNames().get(0),
                         runId,
                         arguments.getStr("--run-tag", "?"),
                         arguments.getStr("--config-tag", "?"));
@@ -155,7 +150,6 @@ public class AMQPBenchmarker {
             int ordinal = arguments.getInt("--run-ordinal", 1);
             String benchmarkTags = arguments.getStr("--benchmark-tags", "");
             StepOverride stepOverride = getStepOverride(arguments);
-            BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
@@ -165,7 +159,7 @@ public class AMQPBenchmarker {
             ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
             modelExecutor.execute(() -> messageModel.monitorProperties());
 
-            String benchmarkId = runBenchmark(Modes.Model,
+            String benchmarkId = performRun(Modes.Model,
                     topologyPath,
                     topologyVariables,
                     policiesPath,
@@ -229,28 +223,53 @@ public class AMQPBenchmarker {
         }
     }
 
-    private static void runSimpleBenchmark(CmdArguments arguments) {
+    private static StepOverride getStepOverride(CmdArguments cmdArguments) {
+
+        StepOverride stepOverride = new StepOverride();
+        stepOverride.setStepSeconds(cmdArguments.getInt("--override-step-seconds", 0));
+        stepOverride.setStepRepeat(cmdArguments.getInt("--override-step-repeat", 0));
+        stepOverride.setMessageSize(cmdArguments.getInt("--override-step-msg-size", 0));
+        stepOverride.setMessageLimit(cmdArguments.getInt("--override-step-msg-limit", 0));
+        stepOverride.setMsgsPerSecondPerPublisher(cmdArguments.getInt("--override-step-pub-rate", -1));
+
+        return stepOverride;
+    }
+
+    private static void runBenchmark(CmdArguments arguments) {
         try {
             BenchmarkRegister benchmarkRegister = null;
             InfluxMetrics metrics = new InfluxMetrics();
 
+            BrokerConfiguration brokerConfig = getBrokerConfig(arguments);
+
             if(arguments.hasMetrics())
                 metrics.configure(arguments);
 
-            benchmarkRegister = new ConsoleRegister(System.out);
+            if (arguments.hasRegisterStore()) {
+                benchmarkRegister = new PostgresRegister(
+                        arguments.getStr("--postgres-jdbc-url"),
+                        arguments.getStr("--postgres-user"),
+                        arguments.getStr("--postgres-pwd"),
+                        brokerConfig.getNodeNames().get(0),
+                        arguments.getStr("--run-id"),
+                        arguments.getStr("--run-tag"),
+                        arguments.getStr("--config-tag"));
+            }
+            else {
+                benchmarkRegister = new ConsoleRegister(System.out);
+            }
 
+            String benchmarkTags = arguments.getStr("--benchmark-tags","");
             String topologyPath = arguments.getStr("--topology");
+            int ordinal = arguments.getInt("--run-ordinal", 1);
             Map<String,String> topologyVariables = arguments.getTopologyVariables();
             String policiesPath = arguments.getStr("--policies", "none");
             Map<String,String> policyVariables = arguments.getPolicyVariables();
-            int ordinal = arguments.getInt("--run-ordinal", 1);
-            String benchmarkTags = arguments.getStr("--benchmark-tags", "");
             StepOverride stepOverride = getStepOverride(arguments);
-            BrokerConfiguration brokerConfig = getBrokerConfigWithDefaults(arguments);
-            InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
+            InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
 
-            runBenchmark(Modes.SimpleBenchmark,
+            performRun(Modes.Benchmark,
                     topologyPath,
                     topologyVariables,
                     policiesPath,
@@ -278,81 +297,7 @@ public class AMQPBenchmarker {
         }
     }
 
-    private static StepOverride getStepOverride(CmdArguments cmdArguments) {
-
-        StepOverride stepOverride = new StepOverride();
-        stepOverride.setStepSeconds(cmdArguments.getInt("--override-step-seconds", 0));
-        stepOverride.setStepRepeat(cmdArguments.getInt("--override-step-repeat", 0));
-        stepOverride.setMessageSize(cmdArguments.getInt("--override-step-msg-size", 0));
-        stepOverride.setMessageLimit(cmdArguments.getInt("--override-step-msg-limit", 0));
-        stepOverride.setMsgsPerSecondPerPublisher(cmdArguments.getInt("--override-step-pub-rate", -1));
-
-        return stepOverride;
-    }
-
-    private static void runLoggedBenchmark(CmdArguments arguments) {
-        try {
-            BenchmarkRegister benchmarkRegister = null;
-            InfluxMetrics metrics = new InfluxMetrics();
-
-            if(arguments.hasMetrics())
-                metrics.configure(arguments);
-
-            if (arguments.hasRegisterStore()) {
-                benchmarkRegister = new PostgresRegister(
-                        arguments.getStr("--postgres-jdbc-url"),
-                        arguments.getStr("--postgres-user"),
-                        arguments.getStr("--postgres-pwd"),
-                        arguments.getListStr("--nodes").get(0),
-                        arguments.getStr("--run-id"),
-                        arguments.getStr("--run-tag"),
-                        arguments.getStr("--config-tag"));
-
-
-                String benchmarkTags = arguments.getStr("--benchmark-tags","");
-                String topologyPath = arguments.getStr("--topology");
-                int ordinal = arguments.getInt("--run-ordinal", 1);
-                Map<String,String> topologyVariables = arguments.getTopologyVariables();
-                String policiesPath = arguments.getStr("--policies", "none");
-                Map<String,String> policyVariables = arguments.getPolicyVariables();
-                StepOverride stepOverride = getStepOverride(arguments);
-                BrokerConfiguration brokerConfig = getBrokerConfig(arguments);
-                InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
-                ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
-
-                runBenchmark(Modes.LoggedBenchmark,
-                        topologyPath,
-                        topologyVariables,
-                        policiesPath,
-                        policyVariables,
-                        ordinal,
-                        stepOverride,
-                        benchmarkRegister,
-                        metrics,
-                        brokerConfig,
-                        instanceConfig,
-                        connectionSettings,
-                        arguments.hasMetrics(),
-                        new MessageModel(false),
-                        Duration.ZERO,
-                        arguments.getArgsStr(","),
-                        benchmarkTags);
-            } else {
-                LOGGER.error("No Postgres connection details were provided, a logged benchmark require postgres");
-                System.exit(1);
-            }
-        }
-        catch(CmdArgumentException e) {
-            LOGGER.error(e.getMessage());
-            System.exit(1);
-        }
-        catch(Exception e) {
-            LOGGER.error("Exited due to error.", e);
-            System.exit(2);
-        }
-    }
-
-    private static String runBenchmark(String mode,
+    private static String performRun(String mode,
                                        String topologyPath,
                                        Map<String,String> topologyVariables,
                                        String policyPath,
@@ -485,7 +430,7 @@ public class AMQPBenchmarker {
     }
 
     private static BrokerConfiguration getBrokerConfigWithDefaults(CmdArguments arguments) {
-        return new BrokerConfiguration(arguments.getStr("--technology", "?"),
+        return new BrokerConfiguration(arguments.getStr("--technology", "RabbitMQ"),
                 arguments.getStr("--version", "?"),
                 getBrokers(arguments));
     }

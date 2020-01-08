@@ -28,44 +28,6 @@ public class CmdArguments {
         printStream.println("To see arguments, for mode local-benchmark as an example, use the args: help --mode local-benchmark");
     }
 
-    public static void printLocalBenchmarkHelp(PrintStream printStream) {
-        printStream.println("Local benchmark arguments are categorized as either:");
-        printStream.println(" + Determining behaviour of a benchmark run (mandatory)");
-        printStream.println(" + Broker connection details (mandatory)");
-        printStream.println(" + InfluxDB connection details (optional). Sending of metrics to InfluxDB is not required but can add a lot of value.");
-        printStream.println(" + Used in logging and tagging of results and metrics (mandatory only if including InfluxDB)");
-        printStream.println("");
-        printStream.println("Arguments can be passed via the command line and/or a JSON configuration file. Command line arguments take precedence over configuration file arguments when they exist in both.");
-        printStream.println("To include a JSON configuration file, use the arg:");
-        printStream.println("--config-file      /path/to/config/file");
-        printStream.println("The fields in the JSON file must be the same as the command line but without --. For example: {\"broker-host\": \"localhost\"}");
-        printStream.println("");
-        printStream.println("All arguments listed below are in the command line format: --arg-name");
-        printStream.println("");
-        printStream.println("Behaviour arguments:");
-        printStream.println("--topology         The absolute filepath to the topology file of the benchmark");
-        printStream.println("");
-        printStream.println("Broker connection:");
-        printStream.println("--broker-hosts      The broker hostname or IP");
-        printStream.println("--broker-mgmt-port The broker management plugin port");
-        printStream.println("--broker-port      The broker amqp port");
-        printStream.println("--broker-user      The broker user");
-        printStream.println("--broker-password  The broker password");
-        printStream.println("");
-        printStream.println("InfluxDB connection (optional):");
-        printStream.println("--metrics-influx-uri       The url of the influxdb server");
-        printStream.println("--metrics-influx-user      The influxdb user");
-        printStream.println("--metrics-influx-password  The influxdb password");
-        printStream.println("--metrics-influx-database  The influxdb database");
-        printStream.println("--metrics-influx-interval  The interval (seconds) to post metrics to influx. 10 is a good value.");
-        printStream.println("");
-        printStream.println("Logging and tagging arguments (Mandatory when including InfluxDB):");
-        printStream.println("--technology       The broker under test, for example: rabbitmq");
-        printStream.println("--version          The broker version, for example: 3.7.15");
-        printStream.println("--node             The numerical suffix of the logged broker, for example, if the target broker is rabbitmq1, then this arg value would be: 1");
-        printStream.println("--instance         Details of the broker server. If in the cloud, the instance type, like c5.large");
-    }
-
     public static void printLoggedBenchmarkHelp(PrintStream printStream) {
         printStream.println("Logged benchmark arguments are categorized as either:");
         printStream.println(" + Determining behaviour of a benchmark run (mandatory)");

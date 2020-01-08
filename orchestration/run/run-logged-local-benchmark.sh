@@ -1,5 +1,5 @@
 java -jar ../target/rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
---mode logged-benchmark \
+--mode benchmark \
 --topology "$1" \
 --policies "$6" \
 --technology "$2"  \

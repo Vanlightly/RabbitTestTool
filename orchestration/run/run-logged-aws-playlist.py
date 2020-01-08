@@ -76,11 +76,11 @@ def get_playlist_entries(playlist_file):
 
         entry.grace_period_sec = get_entry_optional_field(playlist_entry, common_attr, "gracePeriodSec", 0)
         
-        if not os.path.exists("../deploy/topologies/" + entry.topology):
+        if not os.path.exists("../benchmark/topologies/" + entry.topology):
             console_out("RUNNER", f"The topology file {entry.topology} does not exist")
             exit(1)
         
-        if len(entry.policy) > 0 and not os.path.exists("../deploy/policies/" + entry.policy):
+        if len(entry.policy) > 0 and not os.path.exists("../benchmark/policies/" + entry.policy):
             console_out("RUNNER", f"The policy file {entry.policy} does not exist")
             exit(1)
 

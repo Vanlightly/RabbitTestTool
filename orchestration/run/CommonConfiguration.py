@@ -6,7 +6,7 @@ class CommonConfiguration:
     def __init__(self, args):
         self.run_id = str(uuid.uuid4())
         self.tags = get_mandatory_arg(args, "--tags", "")
-        self.mode = get_optional_arg_validated(args, "--mode", "", ["logged-benchmark","model"], "logged-benchmark")
+        self.mode = get_optional_arg_validated(args, "--mode", "", ["benchmark","model"], "benchmark")
         self.config_count = int(get_optional_arg(args, "--config-count", "", "1"))
         self.new_instance_per_run = is_true(get_optional_arg(args, "--new-instance-per-run", "", "false"))
         self.no_destroy = is_true(get_optional_arg(args, "--no-destroy", "", "false"))

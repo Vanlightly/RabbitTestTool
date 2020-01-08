@@ -35,7 +35,7 @@ do
     fi
 done
 
-scp -i "~/.ssh/${KEY_PAIR}.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" "../../target/rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar" ubuntu@$LOADGEN_IP:.
-scp -i "~/.ssh/${KEY_PAIR}.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" -r "../topologies" ubuntu@$LOADGEN_IP:.
-scp -i "~/.ssh/${KEY_PAIR}.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" -r "../policies" ubuntu@$LOADGEN_IP:.
+scp -i "~/.ssh/${KEY_PAIR}.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" "../../../benchmark/target/rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar" ubuntu@$LOADGEN_IP:.
+scp -i "~/.ssh/${KEY_PAIR}.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" -r "../../../benchmark/topologies" ubuntu@$LOADGEN_IP:.
+scp -i "~/.ssh/${KEY_PAIR}.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" -r "../../../benchmark/policies" ubuntu@$LOADGEN_IP:.
 echo "Loadgen Node $NODE_NUMBER: Copying complete"
