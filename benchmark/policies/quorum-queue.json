@@ -8,7 +8,7 @@
     ],
     "policies": [
         {
-            "name": "{{ var.pattern }}",
+            "name": "{{ var.name }}",
             "applyTo": "queues",
             "pattern": "{{ var.pattern }}",
             "priority": "{{ var.priority }}",
