@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -72,35 +74,51 @@ public class TopologyLoader {
         }
 
         if(!policyPath.endsWith("none")) {
-            JSONObject policiesJson = loadJson(policyPath);
-            Map<String,String> policyVariableDefaults = getVariableDefaults(policiesJson);
-            makeVariableReplacements(policiesJson, suppliedPolicyVariables, policyVariableDefaults);
-            topology.setPoliciesJson(policiesJson.toString());
-
-            List<Policy> policies = getPolicies(policiesJson.getJSONArray("policies"));
-            List<Policy> finalPolicies = new ArrayList<>();
-            for(Policy policy : policies) {
-                List<Property> finalProps = new ArrayList<>();
-                for(Property prop : policy.getProperties()) {
-                    if(isQuorumQueueProperty(prop)) {
-                        addPropertyToQueue(topology, prop, policy.getPattern());
-                    }
-                    else if(isStreamQueueProperty(prop)) {
-                        addPropertyToQueue(topology, prop, policy.getPattern());
-                    }
-                    else {
-                        finalProps.add(prop);
-                    }
-                }
-                if(!finalProps.isEmpty()) {
-                    policy.setProperties(finalProps);
-                    finalPolicies.add(policy);
-                }
-            }
-            topology.setPolicies(finalPolicies);
+            addPolicies(topology, policyPath, suppliedPolicyVariables);
         }
 
         return topology;
+    }
+
+    private void addPolicies(Topology topology, String policyPath, Map<String,String> suppliedPolicyVariables) {
+        JSONObject policiesJson = loadJson(policyPath);
+        Map<String,String> policyVariableDefaults = getVariableDefaults(policiesJson);
+        makeVariableReplacements(policiesJson, suppliedPolicyVariables, policyVariableDefaults);
+        topology.setPoliciesJson(policiesJson.toString());
+
+        List<Policy> policies = getPolicies(policiesJson.getJSONArray("policies"));
+        List<Policy> finalPolicies = new ArrayList<>();
+        for(Policy policy : policies) {
+            List<Property> finalProps = new ArrayList<>();
+            List<Property> props = removeIncompatibleProps(policy.getProperties());
+            for(Property prop : props) {
+                if(isQuorumQueueProperty(prop)) {
+                    addPropertyToQueue(topology, prop, policy.getPattern());
+                }
+                else if(isStreamQueueProperty(prop)) {
+                    addPropertyToQueue(topology, prop, policy.getPattern());
+                }
+                else {
+                    finalProps.add(prop);
+                }
+            }
+            if(!finalProps.isEmpty()) {
+                policy.setProperties(finalProps);
+                finalPolicies.add(policy);
+            }
+        }
+
+        topology.setPolicies(finalPolicies);
+    }
+
+    private List<Property> removeIncompatibleProps(List<Property> properties) {
+        if(properties.stream().anyMatch(x -> x.getKey().equals("ha-mode") && x.getValue().equals("all"))) {
+            properties = properties.stream()
+                    .filter(x -> !x.getKey().equals("ha-params"))
+                    .collect(Collectors.toList());
+        }
+
+        return properties;
     }
 
     private boolean isQuorumQueueProperty(Property prop) {

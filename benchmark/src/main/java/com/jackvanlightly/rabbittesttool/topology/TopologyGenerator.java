@@ -24,6 +24,8 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TopologyGenerator {
 
@@ -194,6 +196,8 @@ public class TopologyGenerator {
             put(getHaQueuesPolicyUrl(policy.getName(), vhostName), policyJson.toString());
         }
     }
+
+
 
     public JSONArray getQueues(String vhost) {
         String url = getQueuesUrl(vhost);
