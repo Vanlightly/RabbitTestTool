@@ -88,6 +88,7 @@ public class ConsumerGroup {
     }
 
     public void setProcessingMs(int processingMs) {
+        consumerConfig.setProcessingMs(processingMs);
         for(Consumer consumer : this.consumers) {
             consumer.setProcessingMs(processingMs);
         }

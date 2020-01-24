@@ -466,6 +466,10 @@ public class Orchestrator {
         for(PublisherGroup publisherGroup : publisherGroups)
             publisherGroup.stopAllPublishers();
 
+        // remove the brakes from the consumers
+        for(ConsumerGroup consumerGroup : consumerGroups)
+            consumerGroup.setProcessingMs(0);
+
         messageModel.sendComplete();
 
         if(!rollingGracePeriod.equals(Duration.ZERO)) {

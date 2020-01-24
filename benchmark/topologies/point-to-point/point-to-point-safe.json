@@ -16,6 +16,7 @@
     { "name": "manualAcks", "default": "true" },
     { "name": "consumerPrefetch", "default": "1000" },
     { "name": "ackInterval", "default": "100" },
+    { "name": "processingMs", "default": "0" },
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" }
   ],
@@ -59,7 +60,8 @@
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",
             "ackInterval": "{{ var.ackInterval }}"
-          }
+          },
+          "processingMs": "{{ var.processingMs }}"
         } 
       ]
     }
