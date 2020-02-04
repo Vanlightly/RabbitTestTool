@@ -1,6 +1,8 @@
 create table benchmark
 (
-	benchmark_id uuid not null constraint benchmark_pk1 primary key,
+	benchmark_id uuid not null
+		constraint benchmark_pk1
+			primary key,
 	run_id varchar(100) not null,
 	topology_name varchar(200) not null,
 	benchmark_type varchar(20) not null,
@@ -9,7 +11,7 @@ create table benchmark
 	run_tag varchar(10) not null,
 	config_tag varchar(50) not null,
 	node varchar(50) not null,
-    technology varchar(100) not null,
+	technology varchar(100) not null,
 	broker_version varchar(50) not null,
 	instance varchar(100) not null,
 	volume varchar(100) not null,
@@ -21,7 +23,12 @@ create table benchmark
 	start_time timestamp not null,
 	start_ms bigint not null,
 	end_time timestamp,
-	end_ms bigint
+	end_ms bigint,
+	topology json,
+	run_ordinal integer,
+	policies json,
+	tags varchar(1000),
+	arguments varchar
 );
 
 CREATE TABLE STEP (
@@ -77,4 +84,30 @@ CREATE TABLE STEP (
     END_TIME TIMESTAMP NULL,
     END_MS BIGINT NULL,
     PRIMARY KEY(BENCHMARK_ID, STEP)
+);
+
+CREATE TABLE VIOLATIONS (
+    BENCHMARK_ID UUID NOT NULL,
+    VIOLATION_ID SERIAL,
+    VIOLATION_TYPE VARCHAR(100) NOT NULL,
+    STREAM INT NOT NULL,
+    SEQ_NO BIGINT NOT NULL,
+    TS BIGINT NOT NULL,
+    PRIOR_STREAM INT NULL,
+    PRIOR_SEQ_NO BIGINT NULL,
+    PRIOR_TS BIGINT NULL,
+    PRIMARY KEY(BENCHMARK_ID, VIOLATION_ID)
+);
+
+CREATE TABLE CONSUME_INTERVALS (
+    BENCHMARK_ID UUID NOT NULL,
+    INTERVAL_ID SERIAL,
+    CONSUMER_ID varchar(100),
+    VHOST varchar(100) not null,
+    QUEUE varchar(100) not null,
+    START_TIME timestamp not null,
+	START_MS bigint not null,
+	END_TIME timestamp null,
+	END_MS bigint null,
+	PRIMARY KEY(BENCHMARK_ID, INTERVAL_ID)
 );
