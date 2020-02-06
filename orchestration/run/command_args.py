@@ -7,7 +7,7 @@ def get_args(args):
     # read arguments from json file first
     while index < len(args):
         key = args[index]
-        if key == "--aws-config-file":
+        if key == "--aws-config-file" or key == "--gcp-config-file":
             config_file = args[index+1]
             with open(config_file, encoding='utf-8-sig') as json_file:
                 text = json_file.read()

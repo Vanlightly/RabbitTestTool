@@ -26,17 +26,10 @@ class CommonConfiguration:
         self.override_step_msg_limit = int(get_optional_arg(args, "--override-step-msg-limit", "", "0"))
         self.override_broker_hosts = get_optional_arg(args, "--override-broker-hosts", "", "")
 
-        self.ami = get_mandatory_arg(args, "--ami", "")
-        self.broker_sg = get_mandatory_arg(args, "--broker-sg", "")
-        self.loadgen_sg = get_mandatory_arg(args, "--loadgen-sg", "")
-        self.loadgen_instance = get_mandatory_arg(args, "--loadgen-instance", "")
-        self.subnet = get_mandatory_arg(args, "--subnet", "")
-        self.key_pair = get_mandatory_arg(args, "--keypair", "")
         self.username = "benchmark"
         self.password = get_mandatory_arg(args, "--password", "")
         self.postgres_url = get_mandatory_arg(args, "--postgres-jdbc-url", "")
         self.postgres_user = get_mandatory_arg(args, "--postgres-user", "")
         self.postgres_pwd = get_mandatory_arg_no_print(args, "--postgres-password", "")
         self.node_counter = int(get_optional_arg(args, "--start-node-num-from", "", "1"))
-        self.hosting = "aws"
         self.log_level = get_optional_arg(args, "--log-level", "", "info")

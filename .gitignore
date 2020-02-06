@@ -32,6 +32,9 @@ hs_err_pid*
 *.iml
 *.iws
 
+# VSCode
+.vscode/
+
 # Mac
 .DS_Store
 
