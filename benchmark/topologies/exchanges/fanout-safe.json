@@ -1,5 +1,5 @@
 {
-  "topologyName": "direct_exchange",
+  "topologyName": "fanout_exchange",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
@@ -11,24 +11,24 @@
     { "name": "deliveryMode", "default": "persistent" },
     { "name": "messageSize", "default": "16" },
     { "name": "publishRate", "default": "0"},
-    { "name": "useConfirms", "default": "false" },
-    { "name": "inflightLimit", "default": "0" },
-    { "name": "manualAcks", "default": "false" },
-    { "name": "consumerPrefetch", "default": "0" },
-    { "name": "ackInterval", "default": "0" },
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "100" },
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" }
   ],
+  "description": "Fanout",
   "vhosts": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostCount }}",
-      "exchanges": [ { "name": "ex1", "type": "direct" }],
+      "exchanges": [ { "name": "ex1", "type": "fanout" }],
       "queueGroups": [ 
-        { 
-          "group": "q1", 
+        { "group": "q1", 
           "scale": "{{ var.queueCount }}", 
-          "bindings": [{ "from": "ex1", "bindingKey": "rk1"}],
+          "bindings": [{ "from": "ex1" }],
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
           ]
@@ -44,8 +44,7 @@
           },
           "sendToExchange": {
             "exchange": "ex1",
-            "routingKeyMode": "FixedValue",
-            "routingKey": "rk1"
+            "routingKeyMode": "none"
           },
           "deliveryMode": "{{ var.deliveryMode }}",
           "messageSize": "{{ var.messageSize }}",
