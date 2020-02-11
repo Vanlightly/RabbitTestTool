@@ -30,13 +30,15 @@ public class TopologyLoader {
                                  String policyPath,
                                  StepOverride stepOverride,
                                  Map<String,String> suppliedTopologyVariables,
-                                 Map<String,String> suppliedPolicyVariables) {
+                                 Map<String,String> suppliedPolicyVariables,
+                                 boolean declareArtefacts) {
         LOGGER.info("Loading topology from: " + topologyPath);
         JSONObject topologyJson = loadJson(topologyPath);
         Map<String,String> topologyVariableDefaults = getVariableDefaults(topologyJson);
         makeVariableReplacements(topologyJson, suppliedTopologyVariables, topologyVariableDefaults);
 
         Topology topology = new Topology();
+        topology.setDeclareArtefacts(declareArtefacts);
         topology.setTopologyJson(topologyJson.toString());
 
         topology.setTopologyName(getMandatoryStrValue(topologyJson, "topologyName"));
@@ -189,7 +191,12 @@ public class TopologyLoader {
         int scale = getOptionalIntValue(vhostJson, "scale", 1);
 
         for(int i=1; i<=scale; i++) {
-            String vhostName = getMandatoryStrValue(vhostJson, "name") + StringUtils.leftPad(String.valueOf(i), 5, "0");
+            String vhostName = "";
+            if(scale > 1)
+                vhostName = getMandatoryStrValue(vhostJson, "name") + StringUtils.leftPad(String.valueOf(i), 5, "0");
+            else
+                vhostName = getMandatoryStrValue(vhostJson, "name");
+
             if(vhostName.contains("_"))
                 throw new TopologyException("Virtual host names cannot contain an underscore");
 
@@ -237,90 +244,93 @@ public class TopologyLoader {
 
         for (int i = 0; i < pgJsonArr.length(); i++) {
             JSONObject pgJson = pgJsonArr.getJSONObject(i);
+            int scale = getMandatoryIntValue(pgJson, "scale");
 
-            PublisherConfig pgConfig = new PublisherConfig();
-            pgConfig.setGroup(getMandatoryStrValue(pgJson, "group"));
-            pgConfig.setVhostName(vhostName);
-            pgConfig.setScale(getMandatoryIntValue(pgJson, "scale"));
-            pgConfig.setDeliveryMode(getDeliveryMode(getMandatoryStrValue(pgJson, "deliveryMode")));
-            pgConfig.setHeadersPerMessage(getOptionalIntValue(pgJson, "headersPerMessage", 0));
-            pgConfig.setFrameMax(getOptionalIntValue(pgJson, "frameMax", 0));
-            pgConfig.setMessageLimit(stepOverride.getMessageLimit());
-            pgConfig.setInitialPublish((getOptionalIntValue(pgJson, "initialPublish", 0)));
+            if(scale > 0) {
+                PublisherConfig pgConfig = new PublisherConfig();
+                pgConfig.setGroup(getMandatoryStrValue(pgJson, "group"));
+                pgConfig.setVhostName(vhostName);
+                pgConfig.setScale(scale);
+                pgConfig.setDeliveryMode(getDeliveryMode(getMandatoryStrValue(pgJson, "deliveryMode")));
+                pgConfig.setHeadersPerMessage(getOptionalIntValue(pgJson, "headersPerMessage", 0));
+                pgConfig.setFrameMax(getOptionalIntValue(pgJson, "frameMax", 0));
+                pgConfig.setMessageLimit(stepOverride.getMessageLimit());
+                pgConfig.setInitialPublish((getOptionalIntValue(pgJson, "initialPublish", 0)));
 
-            if (pgJson.has("availableHeaders")) {
-                JSONArray headersArr = pgJson.getJSONArray("availableHeaders");
-                pgConfig.setAvailableHeaders(getMessageHeaders(headersArr));
-            }
-
-            if (pgConfig.getHeadersPerMessage() > pgConfig.getAvailableHeaders().size())
-                throw new TopologyException("headersPerMessage value higher than number of availableHeaders");
-            else if (pgConfig.getHeadersPerMessage() > 0 && pgConfig.getAvailableHeaders().isEmpty())
-                throw new TopologyException("headersPerMessage greater than 0 but no availableHeaders have been specified");
-
-            pgConfig.setStreams(getOptionalIntValue(pgJson, "streams", 1));
-
-            if(stepOverride.hasMessageSize())
-                pgConfig.setMessageSize(stepOverride.getMessageSize());
-            else
-                pgConfig.setMessageSize(getOptionalIntValue(pgJson, "messageSize", 16));
-
-            if(stepOverride.hasMsgsPerSecondPerPublisher())
-                pgConfig.setPublishRatePerSecond(stepOverride.getMsgsPerSecondPerPublisher());
-            else
-                pgConfig.setPublishRatePerSecond(getOptionalIntValue(pgJson, "msgsPerSecondPerPublisher", 0));
-
-            if (benchmarkType == BenchmarkType.Latency && pgConfig.getPublishRatePerSecond() == 0)
-                throw new TopologyException("You must set a msgsPerSecondPerPublisher value when defining a latency based test");
-
-            if (pgJson.has("sendToQueueGroup")) {
-                JSONObject scgJson = pgJson.getJSONObject("sendToQueueGroup");
-                SendToQueueGroup scg = SendToQueueGroup.withGroup(
-                        getMandatoryStrValue(scgJson, "queueGroup"),
-                        getQueueGroupMode(getMandatoryStrValue(scgJson, "mode")),
-                        queueConfigs);
-                pgConfig.setSendToQueueGroup(scg);
-            } else if (pgJson.has("sendToExchange")) {
-                JSONObject steJson = pgJson.getJSONObject("sendToExchange");
-                RoutingKeyMode rkm = getRoutingKeyMode(getMandatoryStrValue(steJson, "routingKeyMode"));
-                String exchange = getMandatoryStrValue(steJson, "exchange");
-
-                switch (rkm) {
-                    case FixedValue:
-                        pgConfig.setSendToExchange(SendToExchange.withRoutingKey(exchange, getMandatoryStrValue(steJson, "routingKey")));
-                        break;
-                    case MultiValue:
-                        pgConfig.setSendToExchange(SendToExchange.withRoutingKeys(exchange, getMandatoryStrArray(steJson, "routingKeys")));
-                        break;
-                    case None:
-                        pgConfig.setSendToExchange(SendToExchange.withNoRoutingKey(exchange));
-                        break;
-                    case StreamKey:
-                        pgConfig.setSendToExchange(SendToExchange.withStreamRoutingKey(exchange));
-                        break;
-                    case Random:
-                        pgConfig.setSendToExchange(SendToExchange.withRandomRoutingKey(exchange));
-                        break;
-                    case RoutingKeyIndex:
-                        pgConfig.setSendToExchange(SendToExchange.withRoutingKeyIndex(exchange, getMandatoryStrArray(steJson, "routingKeys")));
-                        break;
-                    default:
-                        throw new TopologyException("RoutingKeyMode " + rkm + " not currently supported");
+                if (pgJson.has("availableHeaders")) {
+                    JSONArray headersArr = pgJson.getJSONArray("availableHeaders");
+                    pgConfig.setAvailableHeaders(getMessageHeaders(headersArr));
                 }
 
+                if (pgConfig.getHeadersPerMessage() > pgConfig.getAvailableHeaders().size())
+                    throw new TopologyException("headersPerMessage value higher than number of availableHeaders");
+                else if (pgConfig.getHeadersPerMessage() > 0 && pgConfig.getAvailableHeaders().isEmpty())
+                    throw new TopologyException("headersPerMessage greater than 0 but no availableHeaders have been specified");
+
+                pgConfig.setStreams(getOptionalIntValue(pgJson, "streams", 1));
+
+                if (stepOverride.hasMessageSize())
+                    pgConfig.setMessageSize(stepOverride.getMessageSize());
+                else
+                    pgConfig.setMessageSize(getOptionalIntValue(pgJson, "messageSize", 16));
+
+                if (stepOverride.hasMsgsPerSecondPerPublisher())
+                    pgConfig.setPublishRatePerSecond(stepOverride.getMsgsPerSecondPerPublisher());
+                else
+                    pgConfig.setPublishRatePerSecond(getOptionalIntValue(pgJson, "msgsPerSecondPerPublisher", 0));
+
+                if (benchmarkType == BenchmarkType.Latency && pgConfig.getPublishRatePerSecond() == 0)
+                    throw new TopologyException("You must set a msgsPerSecondPerPublisher value when defining a latency based test");
+
+                if (pgJson.has("sendToQueueGroup")) {
+                    JSONObject scgJson = pgJson.getJSONObject("sendToQueueGroup");
+                    SendToQueueGroup scg = SendToQueueGroup.withGroup(
+                            getMandatoryStrValue(scgJson, "queueGroup"),
+                            getQueueGroupMode(getMandatoryStrValue(scgJson, "mode")),
+                            queueConfigs);
+                    pgConfig.setSendToQueueGroup(scg);
+                } else if (pgJson.has("sendToExchange")) {
+                    JSONObject steJson = pgJson.getJSONObject("sendToExchange");
+                    RoutingKeyMode rkm = getRoutingKeyMode(getMandatoryStrValue(steJson, "routingKeyMode"));
+                    String exchange = getMandatoryStrValue(steJson, "exchange");
+
+                    switch (rkm) {
+                        case FixedValue:
+                            pgConfig.setSendToExchange(SendToExchange.withRoutingKey(exchange, getMandatoryStrValue(steJson, "routingKey")));
+                            break;
+                        case MultiValue:
+                            pgConfig.setSendToExchange(SendToExchange.withRoutingKeys(exchange, getMandatoryStrArray(steJson, "routingKeys")));
+                            break;
+                        case None:
+                            pgConfig.setSendToExchange(SendToExchange.withNoRoutingKey(exchange));
+                            break;
+                        case StreamKey:
+                            pgConfig.setSendToExchange(SendToExchange.withStreamRoutingKey(exchange));
+                            break;
+                        case Random:
+                            pgConfig.setSendToExchange(SendToExchange.withRandomRoutingKey(exchange));
+                            break;
+                        case RoutingKeyIndex:
+                            pgConfig.setSendToExchange(SendToExchange.withRoutingKeyIndex(exchange, getMandatoryStrArray(steJson, "routingKeys")));
+                            break;
+                        default:
+                            throw new TopologyException("RoutingKeyMode " + rkm + " not currently supported");
+                    }
+
+                }
+
+                PublisherMode pm = new PublisherMode();
+                if (pgJson.has("publishMode")) {
+                    JSONObject pmJson = pgJson.getJSONObject("publishMode");
+                    pm.setUseConfirms(getMandatoryBoolValue(pmJson, "useConfirms"));
+
+                    if (pm.isUseConfirms())
+                        pm.setInFlightLimit(getMandatoryIntValue(pmJson, "inFlightLimit"));
+                }
+                pgConfig.setPublisherMode(pm);
+
+                pgConfigs.add(pgConfig);
             }
-
-            PublisherMode pm = new PublisherMode();
-            if (pgJson.has("publishMode")) {
-                JSONObject pmJson = pgJson.getJSONObject("publishMode");
-                pm.setUseConfirms(getMandatoryBoolValue(pmJson, "useConfirms"));
-
-                if (pm.isUseConfirms())
-                    pm.setInFlightLimit(getMandatoryIntValue(pmJson, "inFlightLimit"));
-            }
-            pgConfig.setPublisherMode(pm);
-
-            pgConfigs.add(pgConfig);
         }
 
         return pgConfigs;
@@ -352,33 +362,34 @@ public class TopologyLoader {
         List<ConsumerConfig> cgConfigs = new ArrayList<>();
 
         for (int i = 0; i < cgJsonArr.length(); i++) {
-            ConsumerConfig cgConfig = new ConsumerConfig();
             JSONObject cgJson = cgJsonArr.getJSONObject(i);
+            int scale = getMandatoryIntValue(cgJson, "scale");
+            if(scale > 0) {
+                ConsumerConfig cgConfig = new ConsumerConfig();
+                cgConfig.setGroup(getMandatoryStrValue(cgJson, "group"));
+                cgConfig.setVhostName(vhostName);
+                cgConfig.setQueueGroup(getMandatoryStrValue(cgJson, "queueGroup"), queueConfigs);
+                cgConfig.setScale(scale);
+                cgConfig.setFrameMax(getOptionalIntValue(cgJson, "frameMax", 0));
+                cgConfig.setProcessingMs(getOptionalIntValue(cgJson, "processingMs", 0));
 
-            cgConfig.setGroup(getMandatoryStrValue(cgJson, "group"));
-            cgConfig.setVhostName(vhostName);
-            cgConfig.setQueueGroup(getMandatoryStrValue(cgJson, "queueGroup"), queueConfigs);
-            cgConfig.setScale(getMandatoryIntValue(cgJson, "scale"));
-            cgConfig.setFrameMax(getOptionalIntValue(cgJson, "frameMax", 0));
-            cgConfig.setProcessingMs(getOptionalIntValue(cgJson, "processingMs", 0));
-
-            if (cgJson.has("ackMode")) {
-                JSONObject ackModeJson = cgJson.getJSONObject("ackMode");
-                boolean manualAcks = getMandatoryBoolValue(ackModeJson, "manualAcks");
-                if (manualAcks) {
-                    cgConfig.setAckMode(AckMode.withManualAcks(
-                            getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
-                            getMandatoryIntValue(ackModeJson, "ackInterval")
-                    ));
-                }
-                else {
+                if (cgJson.has("ackMode")) {
+                    JSONObject ackModeJson = cgJson.getJSONObject("ackMode");
+                    boolean manualAcks = getMandatoryBoolValue(ackModeJson, "manualAcks");
+                    if (manualAcks) {
+                        cgConfig.setAckMode(AckMode.withManualAcks(
+                                getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
+                                getMandatoryIntValue(ackModeJson, "ackInterval")
+                        ));
+                    } else {
+                        cgConfig.setAckMode(AckMode.withNoAck());
+                    }
+                } else {
                     cgConfig.setAckMode(AckMode.withNoAck());
                 }
-            } else {
-                cgConfig.setAckMode(AckMode.withNoAck());
-            }
 
-            cgConfigs.add(cgConfig);
+                cgConfigs.add(cgConfig);
+            }
         }
 
         return cgConfigs;
@@ -388,20 +399,22 @@ public class TopologyLoader {
         List<QueueConfig> queueConfigs = new ArrayList<>();
 
         for (int i = 0; i < qgJsonArr.length(); i++) {
-            QueueConfig qConfig = new QueueConfig();
             JSONObject qJson = qgJsonArr.getJSONObject(i);
+            int scale = getMandatoryIntValue(qJson, "scale");
+            if(scale > 0) {
+                QueueConfig qConfig = new QueueConfig();
+                qConfig.setGroup(getMandatoryStrValue(qJson, "group"));
+                qConfig.setVhostName(vhostName);
+                qConfig.setScale(scale);
 
-            qConfig.setGroup(getMandatoryStrValue(qJson, "group"));
-            qConfig.setVhostName(vhostName);
-            qConfig.setScale(getMandatoryIntValue(qJson, "scale"));
+                if (qJson.has("properties"))
+                    qConfig.setProperties(getProperties(qJson.getJSONArray("properties")));
 
-            if (qJson.has("properties"))
-                qConfig.setProperties(getProperties(qJson.getJSONArray("properties")));
+                if (qJson.has("bindings"))
+                    qConfig.setBindings(getBindings(qJson.getJSONArray("bindings"), qConfig.getGroup()));
 
-            if (qJson.has("bindings"))
-                qConfig.setBindings(getBindings(qJson.getJSONArray("bindings"), qConfig.getGroup()));
-
-            queueConfigs.add(qConfig);
+                queueConfigs.add(qConfig);
+            }
         }
 
         return queueConfigs;

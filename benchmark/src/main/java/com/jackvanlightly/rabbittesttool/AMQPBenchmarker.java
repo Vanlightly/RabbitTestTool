@@ -148,6 +148,7 @@ public class AMQPBenchmarker {
             String policiesPath = arguments.getStr("--policies", "none");
             Map<String,String> policyVariables = arguments.getPolicyVariables();
             int ordinal = arguments.getInt("--run-ordinal", 1);
+            boolean declareArtefacts = arguments.getBoolean("--declare", true);
             String benchmarkTags = arguments.getStr("--benchmark-tags", "");
             StepOverride stepOverride = getStepOverride(arguments);
             InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
@@ -175,7 +176,8 @@ public class AMQPBenchmarker {
                     messageModel,
                     gracePeriod,
                     arguments.getArgsStr(","),
-                    benchmarkTags);
+                    benchmarkTags,
+                    declareArtefacts);
 
             messageModel.stopMonitoring();
             modelExecutor.shutdown();
@@ -262,11 +264,12 @@ public class AMQPBenchmarker {
             String benchmarkTags = arguments.getStr("--benchmark-tags","");
             String topologyPath = arguments.getStr("--topology");
             int ordinal = arguments.getInt("--run-ordinal", 1);
+            boolean declareArtefacts = arguments.getBoolean("--declare", true);
             Map<String,String> topologyVariables = arguments.getTopologyVariables();
             String policiesPath = arguments.getStr("--policies", "none");
             Map<String,String> policyVariables = arguments.getPolicyVariables();
             StepOverride stepOverride = getStepOverride(arguments);
-            InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
+            InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
 
             performRun(Modes.Benchmark,
@@ -285,7 +288,8 @@ public class AMQPBenchmarker {
                     new MessageModel(false),
                     Duration.ZERO,
                     arguments.getArgsStr(","),
-                    benchmarkTags);
+                    benchmarkTags,
+                    declareArtefacts);
         }
         catch(CmdArgumentException e) {
             LOGGER.error(e.getMessage());
@@ -313,7 +317,8 @@ public class AMQPBenchmarker {
                                        MessageModel messageModel,
                                        Duration gracePeriod,
                                        String argumentsStr,
-                                       String benchmarkTags) {
+                                       String benchmarkTags,
+                                       boolean declareArtefacts) {
         String benchmarkId = UUID.randomUUID().toString();
 
         Stats stats = null;
@@ -321,7 +326,7 @@ public class AMQPBenchmarker {
 
         try {
             TopologyLoader topologyLoader = new TopologyLoader();
-            Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables);
+            Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables, declareArtefacts);
 
             boolean unsafe = topology.getVirtualHosts().stream().anyMatch(x ->
                                     x.getPublishers().stream().anyMatch(p -> !p.getPublisherMode().isUseConfirms())
@@ -401,24 +406,6 @@ public class AMQPBenchmarker {
         String tenancy = arguments.getStr("--tenancy", "?");
         short coreCount = Short.parseShort(arguments.getStr("--core-count", "0"));
         short threadsPerCore = Short.parseShort(arguments.getStr("--threads-per-core", "0"));
-
-        return new InstanceConfiguration(instance,
-                volume,
-                fileSystem,
-                tenancy,
-                hosting,
-                coreCount,
-                threadsPerCore);
-    }
-
-    private static InstanceConfiguration getInstanceConfiguration(CmdArguments arguments) {
-        String instance = arguments.getStr("--instance");
-        String hosting = arguments.getStr("--hosting");
-        String volume = arguments.getStr("--volume");
-        String fileSystem = arguments.getStr("--filesystem");
-        String tenancy = arguments.getStr("--tenancy");
-        short coreCount = Short.parseShort(arguments.getStr("--core-count"));
-        short threadsPerCore = Short.parseShort(arguments.getStr("--threads-per-core"));
 
         return new InstanceConfiguration(instance,
                 volume,
