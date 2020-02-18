@@ -3,13 +3,10 @@ from command_args import get_args, get_optional_arg, get_mandatory_arg, get_mand
 class UniqueConfiguration:
     def __init__(self, args, suffix):
         self.suffix = suffix
-        self.config_tag  = get_mandatory_arg(args, "--config-tag", self.suffix)
-        self.generic_unix_url  = get_mandatory_arg(args, "--generic-unix-url", self.suffix)
+        self.config_tag = get_mandatory_arg(args, "--config-tag", self.suffix)
         self.technology = get_mandatory_arg_validated(args, "--technology", self.suffix, ["rabbitmq"])
         self.cluster_size = int(get_optional_arg(args, "--cluster-size", self.suffix, "1"))
         self.broker_version = get_mandatory_arg(args, "--version", self.suffix)
-        self.instance = get_mandatory_arg(args, "--instance", self.suffix)
-        self.volume = get_mandatory_arg_validated(args, "--volume", self.suffix, ["ebs-io1","ebs-st1","ebs-gp2","local-nvme"])
         self.volume_size = get_mandatory_arg(args, "--volume-size", self.suffix)
         self.filesystem = get_mandatory_arg_validated(args, "--filesystem", self.suffix, ["ext4", "xfs"])
         self.tenancy = get_mandatory_arg_validated(args, "--tenancy", self.suffix, ["default","dedicated"])

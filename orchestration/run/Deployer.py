@@ -28,189 +28,34 @@ class Deployer:
         return self._deploy_status
 
     def update_single(self, unique_conf, common_conf):
-        status_id = unique_conf.technology + unique_conf.node_number
-        exit_code = subprocess.call(["bash", "update-benchmark.sh", 
-                        common_conf.key_pair, 
-                        unique_conf.node_number, 
-                        unique_conf.technology, 
-                        common_conf.run_tag], cwd="../deploy/aws")
-        if exit_code != 0:
-            console_out(self.actor, f"update {unique_conf.node_number} failed with exit code {exit_code}")
-            self._deploy_status[status_id] = "failed"   
-        else:
-            self._deploy_status[status_id] = "success"
+        raise NotImplementedError
 
     def deploy_single(self, unique_conf, common_conf):
-        status_id = unique_conf.technology + unique_conf.node_number
-        self._deploy_status[status_id] = "started"
-        volume_type = unique_conf.volume.split("-")[1]
-        exit_code = subprocess.call(["bash", "deploy-single-broker.sh", 
-                            common_conf.ami, 
-                            unique_conf.broker_version, 
-                            unique_conf.core_count,
-                            unique_conf.filesystem, 
-                            unique_conf.generic_unix_url,
-                            unique_conf.instance, 
-                            common_conf.key_pair, 
-                            common_conf.loadgen_instance, 
-                            common_conf.loadgen_sg, 
-                            common_conf.log_level,
-                            unique_conf.node_number, 
-                            common_conf.run_tag, 
-                            common_conf.broker_sg, 
-                            common_conf.subnet, 
-                            unique_conf.technology, 
-                            unique_conf.tenancy, 
-                            unique_conf.threads_per_core, 
-                            unique_conf.vars_file, 
-                            unique_conf.volume_size, 
-                            volume_type], cwd="../deploy/aws")
-
-        if exit_code != 0:
-            console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
-            self._deploy_status[status_id] = "failed"   
-        else:
-            self._deploy_status[status_id] = "success"
+        raise NotImplementedError
 
     def deploy_rabbitmq_cluster(self, unique_conf, common_conf):
-        status_id = unique_conf.technology + unique_conf.node_number
-        self._deploy_status[status_id] = "started"
-        volume_type = unique_conf.volume.split("-")[1]
-        
-        exit_code = subprocess.call(["bash", "deploy-rmq-cluster-instances.sh", 
-                                common_conf.ami, 
-                                str(unique_conf.cluster_size), 
-                                unique_conf.core_count, 
-                                unique_conf.instance, 
-                                common_conf.key_pair, 
-                                common_conf.loadgen_instance, 
-                                common_conf.loadgen_sg, 
-                                unique_conf.node_number, 
-                                common_conf.run_tag, 
-                                common_conf.broker_sg, 
-                                common_conf.subnet, 
-                                unique_conf.tenancy, 
-                                unique_conf.threads_per_core, 
-                                unique_conf.volume_size, 
-                                volume_type], cwd="../deploy/aws")
-        if exit_code != 0:
-            console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
-            self._deploy_status[status_id] = "failed" 
-            return  
-        
-        master_node = int(unique_conf.node_number)
-        node_range_start = master_node
-        node_range_end = master_node + int(unique_conf.cluster_size) - 1
-        
-        # deploy master
-        exit_code = subprocess.call(["bash", "deploy-rmq-cluster-broker.sh", 
-                                common_conf.ami, 
-                                unique_conf.broker_version, 
-                                unique_conf.core_count, 
-                                unique_conf.filesystem, 
-                                unique_conf.generic_unix_url,
-                                unique_conf.instance, 
-                                common_conf.key_pair, 
-                                common_conf.log_level,
-                                str(master_node), 
-                                str(node_range_end), 
-                                str(node_range_start), 
-                                "master", 
-                                common_conf.run_tag, 
-                                common_conf.broker_sg, 
-                                common_conf.subnet, 
-                                unique_conf.tenancy, 
-                                unique_conf.threads_per_core, 
-                                unique_conf.vars_file, 
-                                unique_conf.volume_size, 
-                                volume_type], cwd="../deploy/aws")
+        raise NotImplementedError
 
-        if exit_code != 0:
-            console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
-            self._deploy_status[status_id] = "failed"   
-            return
-
-        # deploy joinees
-        joinee_threads = list()
-        for node in range(node_range_start+1, node_range_end+1):
-            deploy = threading.Thread(target=self.deploy_joinee, args=(unique_conf, common_conf, status_id, volume_type, node, node_range_start, node_range_end))
-            joinee_threads.append(deploy)
-
-        for jt in joinee_threads:
-            jt.start()
-        
-        for jt in joinee_threads:
-            jt.join()
-
-        # deploy benchmark
-        if self._deploy_status[status_id] != "failed":
-            exit_code = subprocess.call(["bash", "deploy-benchmark.sh", 
-                                common_conf.key_pair, 
-                                str(master_node), 
-                                "rabbitmq", 
-                                common_conf.run_tag], cwd="../deploy/aws")
-
-            if exit_code != 0:
-                console_out(self.actor, f"deploy {unique_conf.node_number} failed with exit code {exit_code}")
-                self._deploy_status[status_id] = "failed"   
-            else:
-                self._deploy_status[status_id] = "success"
-    
-    
-
-    def deploy_joinee(self, unique_conf, common_conf, status_id, volume_type, node, node_range_start, node_range_end):
-        exit_code = subprocess.call(["bash", "deploy-rmq-cluster-broker.sh", 
-                                common_conf.ami, 
-                                unique_conf.broker_version, 
-                                unique_conf.core_count, 
-                                unique_conf.filesystem, 
-                                unique_conf.generic_unix_url,
-                                unique_conf.instance, 
-                                common_conf.key_pair, 
-                                common_conf.log_level,
-                                str(node), 
-                                str(node_range_end), 
-                                str(node_range_start), 
-                                "joinee", 
-                                common_conf.run_tag, 
-                                common_conf.broker_sg, 
-                                common_conf.subnet, 
-                                unique_conf.tenancy, 
-                                unique_conf.threads_per_core, 
-                                unique_conf.vars_file, 
-                                unique_conf.volume_size, 
-                                volume_type], cwd="../deploy/aws")    
-        if exit_code != 0:
-            console_out(self.actor, f"deploy of joinee rabbitmq{node} failed with exit code {exit_code}")
-            self._deploy_status[status_id] = "failed"   
-    
     def teardown(self, technology, node, run_tag, no_destroy):
-        if no_destroy:
-            console_out(self.actor, "No teardown as --no-destroy set to true")
-        else:
-            terminated = False
-            while not terminated:
-                exit_code = subprocess.call(["bash", "terminate-instances.sh", technology, node, run_tag], cwd="../deploy/aws")
-                if exit_code == 0:
-                    terminated = True
-                else:
-                    console_out(self.actor, "teardown failed, will retry in 1 minute")
-                    time.sleep(60)
+        raise NotImplementedError
 
-    def teardown_all(self, configurations, key_pair, run_tag, no_destroy):
+    def teardown_loadgen(self, unique_conf, common_conf, no_destroy):
+        pass
+
+    def teardown_all(self, configurations, common_conf, no_destroy):
         try:
             console_out(self.actor, f"Getting logs")
             start_node, end_node = self.get_start_end_nodes(configurations)
-            self.get_logs(key_pair, run_tag, start_node, end_node)
+            self.get_logs(common_conf, start_node, end_node)
             console_out(self.actor, f"Logs retrieved")
         except Exception as e:
             console_out_exception(self.actor, "Failed retrieving logs", e)
-        
+
         if no_destroy:
             console_out(self.actor, "No teardown as --no-destroy set to true")
         else:
             console_out(self.actor, "Terminating all servers")
-            
+
             for config_tag in configurations:
                 console_out(self.actor, f"TEARDOWN FOR configuration {config_tag}")
                 unique_conf_list = configurations[config_tag]
@@ -220,9 +65,16 @@ class Deployer:
                     for n in range(0, unique_conf.cluster_size):
                         node_num = int(unique_conf.node_number) + n
                         console_out(self.actor, f"TEARDOWN FOR node {node_num}")
-                        self.teardown(unique_conf.technology, str(node_num), run_tag, no_destroy)
+                        self.teardown(unique_conf.technology,
+                                      str(node_num),
+                                      common_conf.run_tag,
+                                      no_destroy)
+                    console_out(self.actor, f"TEARDOWN FOR {unique_conf.suffix} loadgen")
+                    self.teardown_loadgen(unique_conf,
+                                          common_conf,
+                                          no_destroy)
                 console_out(self.actor, "All servers terminated")
-            exit(1)    
+            exit(1)
 
     def get_start_end_nodes(self, configurations):
         start_node = 0
@@ -275,14 +127,7 @@ class Deployer:
                 if self._deploy_status[status_id1] != "success":
                     console_out(self.actor, f"Deployment failed for node {unique_conf.technology}{unique_conf.node_number}")
                     if not common_conf.no_deploy:
-                        self.teardown_all(configurations, common_conf.key_pair, common_conf.run_tag, False)
+                        self.teardown_all(configurations, common_conf, False)
 
-    def get_logs(self, key_pair, run_tag, start_node, end_node):
-        target_dir = "logs/" + datetime.now().strftime("%Y%m%d%H%M")
-        subprocess.call(["bash", "get-logs.sh", 
-                        key_pair, 
-                        str(start_node),
-                        str(end_node),
-                        str(run_tag),
-                        "rabbitmq", 
-                        target_dir ])
+    def get_logs(self, common_conf, start_node, end_node):
+        raise NotImplementedError

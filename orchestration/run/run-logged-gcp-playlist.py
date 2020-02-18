@@ -7,11 +7,11 @@ import os.path
 import json
 from random import randint
 from command_args import get_args
-from AwsDeployer import AwsDeployer
-from AwsRunner import AwsRunner
-from AwsBrokerActions import AwsBrokerActions
-from AwsUniqueConfiguration import AwsUniqueConfiguration
-from AwsCommonConfiguration import AwsCommonConfiguration
+from GcpDeployer import GcpDeployer
+from GcpRunner import GcpRunner
+from GcpBrokerActions import GcpBrokerActions
+from GcpUniqueConfiguration import GcpUniqueConfiguration
+from GcpCommonConfiguration import GcpCommonConfiguration
 from PlaylistEntry import PlaylistEntry
 from printer import console_out
 
@@ -89,7 +89,7 @@ def get_playlist_entries(playlist_file):
     return playlist_entries
 
 args = get_args(sys.argv)
-common_conf = AwsCommonConfiguration(args)
+common_conf = GcpCommonConfiguration(args)
 
 console_out("RUNNER", f"RUN ID = {common_conf.run_id}")
 
@@ -102,7 +102,7 @@ for config_number in range(1, common_conf.config_count+1):
     unique_conf_list = list()
     for _ in range(common_conf.parallel_count):
         node_number = common_conf.node_counter
-        unique_conf = AwsUniqueConfiguration(args, str(config_number))
+        unique_conf = GcpUniqueConfiguration(args, str(config_number))
         unique_conf.set_node_number(str(node_number))
 
         if unique_conf.policies_file != "none" and not os.path.exists("../deploy/policies/" + unique_conf.policies_file):
@@ -124,9 +124,9 @@ playlist_entries = get_playlist_entries(common_conf.playlist_file)
 
 console_out("RUNNER", f"{len(playlist_entries)} entries in {common_conf.playlist_file} playlist")
 
-runner = AwsRunner()
-deployer = AwsDeployer()
-broker_actions = AwsBrokerActions(deployer)
+runner = GcpRunner()
+deployer = GcpDeployer()
+broker_actions = GcpBrokerActions(deployer)
 
 if len(playlist_entries) == 0:
     console_out("RUNNER", "No playlist entries to run")
@@ -210,7 +210,7 @@ for i in range(common_conf.repeat_count):
                 status_id1 = unique_conf.technology + unique_conf.node_number
                 if runner.get_benchmark_status(status_id1) != "success":
                     console_out("RUNNER", f"Benchmark failed for node {unique_conf.node_number} and topology {entry.topology}")
-                    deployer.teardown_all(configurations, common_conf.key_pair, common_conf, common_conf.no_destroy)
+                    deployer.teardown_all(configurations, common_conf, common_conf.no_destroy)
                     exit(1)
 
         # wait for configuration gap seconds

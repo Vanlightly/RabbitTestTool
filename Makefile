@@ -47,6 +47,16 @@ build: $(DOCKER) ## b  | Build JAR
 .PHONY: b
 b: build
 
+.PHONY: docker-image
+docker-image: $(DOCKER)
+	@docker build \
+	  --tag vanlightly/rabbittesttool:latest \
+	  .
+
+.PHONY: test-docker-image
+test-docker-image:
+	@docker run -it --rm vanlightly/rabbittesttool:latest help
+
 .PHONY: help
 help:
 	@awk -F"[:#]" '/^[^\.][a-zA-Z\._\-]+:+.+##.+$$/ { printf "\033[36m%-24s\033[0m %s\n", $$1, $$4 }' $(MAKEFILE_LIST) \

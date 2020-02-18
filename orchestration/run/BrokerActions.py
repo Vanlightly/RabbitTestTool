@@ -46,7 +46,7 @@ class BrokerActions:
                 # iterate over nodes of this configuration
                 for n in range(unique_conf.cluster_size):
                     node = int(unique_conf.node_number) + n
-                    restart = threading.Thread(target=self.restart_broker, args=(unique_conf.technology, str(node), common_conf.run_tag, common_conf.key_pair,))
+                    restart = threading.Thread(target=self.restart_broker, args=(unique_conf.technology, str(node), common_conf))
                     r_threads.append(restart)
 
         for rt in r_threads:
@@ -67,7 +67,7 @@ class BrokerActions:
                     if self._action_status[status_id] != "success":
                         console_out(self.actor, f"Broker restart failed for node {unique_conf.technology}{node}")
                         if not common_conf.no_deploy:
-                            self._deployer.teardown_all(configurations, common_conf.run_tag, False)
+                            self._deployer.teardown_all(configurations, common_conf, False)
 
     def restart_one_broker(self, configurations, common_conf):
         r_threads = list()
@@ -77,7 +77,7 @@ class BrokerActions:
             # iterate over configurations
             for p in range(len(unique_conf_list)):
                 unique_conf = unique_conf_list[p]
-                restart = threading.Thread(target=self.restart_broker, args=(unique_conf.technology, str(unique_conf.node_number), common_conf.run_tag, common_conf.key_pair,))
+                restart = threading.Thread(target=self.restart_broker, args=(unique_conf.technology, str(unique_conf.node_number), common_conf))
                 r_threads.append(restart)
 
         for rt in r_threads:
@@ -95,7 +95,7 @@ class BrokerActions:
                 if self._action_status[status_id] != "success":
                     console_out(self.actor, f"Broker restart failed for node {unique_conf.technology}{unique_conf.node_number}")
                     if not common_conf.no_deploy:
-                        self._deployer.teardown_all(configurations, common_conf.run_tag, False)
+                        self._deployer.teardown_all(configurations, common_conf, False)
                 
 
     def restart_broker(self, technology, node, run_tag, key_pair):

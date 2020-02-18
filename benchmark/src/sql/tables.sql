@@ -10,7 +10,7 @@ create table benchmark
 	description varchar(1000) not null,
 	run_tag varchar(10) not null,
 	config_tag varchar(50) not null,
-	node varchar(50) not null,
+	node varchar(100) not null,
 	technology varchar(100) not null,
 	broker_version varchar(50) not null,
 	instance varchar(100) not null,
