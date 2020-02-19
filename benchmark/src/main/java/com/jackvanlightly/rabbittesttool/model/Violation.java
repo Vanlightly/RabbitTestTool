@@ -41,4 +41,8 @@ public class Violation {
     public void setPriorMessagePayload(MessagePayload priorMessagePayload) {
         this.priorMessagePayload = priorMessagePayload;
     }
+
+    public long getTimestamp() {
+        return messagePayload.getTimestamp();
+    }
 }

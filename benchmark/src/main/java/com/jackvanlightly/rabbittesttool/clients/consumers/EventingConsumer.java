@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
 public class EventingConsumer extends DefaultConsumer {
 
@@ -23,7 +22,8 @@ public class EventingConsumer extends DefaultConsumer {
     private Stats stats;
     private MessageModel messageModel;
     private int ackInterval;
-    private long lastAcked;
+    private long delTagLastAcked;
+    private long delTagLastReceived;
     private int prefetch;
     private int processingMs;
     private ConsumerStats consumerStats;
@@ -50,11 +50,25 @@ public class EventingConsumer extends DefaultConsumer {
         this.processingMs = processingMs;
         this.consumerStats = consumerStats;
 
-        lastAcked = -1;
+        delTagLastAcked = -1;
     }
 
     public void setProcessingMs(int processingMs) {
         this.processingMs = processingMs;
+    }
+
+    public void tryAcknowledgeRemaining() {
+        if(delTagLastReceived > delTagLastAcked)
+        {
+            if(this.getChannel().isOpen()) {
+                try {
+                    getChannel().basicAck(delTagLastReceived, true);
+                }
+                catch(IOException e) {
+                    LOGGER.warn("Failed to ack on shutdown", e);
+                }
+            }
+        }
     }
 
     @Override
@@ -70,7 +84,7 @@ public class EventingConsumer extends DefaultConsumer {
         }
         catch(AlreadyClosedException e) {
             LOGGER.info("Could not ack message as connection was lost");
-            lastAcked = -1;
+            delTagLastAcked = -1;
         }
     }
 
@@ -88,13 +102,15 @@ public class EventingConsumer extends DefaultConsumer {
         long deliveryTag = envelope.getDeliveryTag();
         if(ackInterval == 1) {
             getChannel().basicAck(deliveryTag, false);
-            lastAcked = deliveryTag;
+            delTagLastAcked = deliveryTag;
         } else if (ackInterval > 1) {
-            if(deliveryTag - lastAcked > ackInterval) {
+            if(deliveryTag - delTagLastAcked > ackInterval) {
                 getChannel().basicAck(deliveryTag, true);
-                lastAcked = deliveryTag;
+                delTagLastAcked = deliveryTag;
             }
         }
+
+        delTagLastReceived = deliveryTag;
     }
 
     @Override

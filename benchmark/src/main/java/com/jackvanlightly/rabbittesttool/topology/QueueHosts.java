@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class QueueHosts {
     private static final Logger LOGGER = LoggerFactory.getLogger("QUEUE_HOSTS");
 
+    private boolean isDownstream = false;
     private List<Broker> brokers;
     private Map<String, Broker> brokersMap;
     private Map<String, Broker> queueHosts;
@@ -46,7 +47,7 @@ public class QueueHosts {
     public void updateQueueHosts(List<String> vhosts) {
         try {
             for (String vhost : vhosts) {
-                JSONArray queues = topologyGenerator.getQueues(vhost);
+                JSONArray queues = topologyGenerator.getQueues(vhost, isDownstream);
 
                 for (int i = 0; i < queues.length(); i++) {
                     JSONObject queue = queues.getJSONObject(i);
@@ -95,6 +96,15 @@ public class QueueHosts {
             brokers.add(broker);
             brokersMap.put(broker.getNodeName(), broker);
         }
+    }
+
+    public void addDownstreamHosts(BrokerConfiguration brokerConfiguration) {
+        for(Broker broker : brokerConfiguration.getDownstreamHosts()) {
+            brokers.add(broker);
+            brokersMap.put(broker.getNodeName(), broker);
+        }
+
+        isDownstream = true;
     }
 
     public boolean isQueueHost(String vhost, String queue, Broker broker) {

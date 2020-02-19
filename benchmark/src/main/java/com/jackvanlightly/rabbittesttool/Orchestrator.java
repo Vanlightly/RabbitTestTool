@@ -32,6 +32,7 @@ public class Orchestrator {
     private BenchmarkRegister benchmarkRegister;
     private TopologyGenerator topologyGenerator;
     private QueueHosts queueHosts;
+    private QueueHosts downstreamQueueHosts;
     private ExecutorService queueHostsExecutor;
     private ConnectionSettings connectionSettingsTemplate;
     private Stats stats;
@@ -50,10 +51,12 @@ public class Orchestrator {
                         Stats stats,
                         MessageModel messageModel,
                         QueueHosts queueHosts,
+                        QueueHosts downstreamQueueHosts,
                         String mode) {
         this.benchmarkRegister = benchmarkRegister;
         this.topologyGenerator = topologyGenerator;
         this.queueHosts = queueHosts;
+        this.downstreamQueueHosts = downstreamQueueHosts;
         this.connectionSettingsTemplate = connectionSettings;
         this.stats = stats;
         this.mode = mode;
@@ -66,7 +69,7 @@ public class Orchestrator {
         complete = false;
         jumpToCleanup = false;
 
-        queueHostsExecutor = Executors.newFixedThreadPool(1);
+        queueHostsExecutor = Executors.newFixedThreadPool(2);
     }
 
     public boolean runBenchmark(String runId,
@@ -126,6 +129,7 @@ public class Orchestrator {
         List<String> vhosts = topology.getVirtualHosts().stream().map(x -> x.getName()).collect(Collectors.toList());
         queueHosts.updateQueueHosts(vhosts);
         queueHostsExecutor.submit(() -> queueHosts.monitorQueueHosts(vhosts));
+        queueHostsExecutor.submit(() -> downstreamQueueHosts.monitorQueueHosts(vhosts));
     }
 
     private void addQueueGroups(VirtualHost vhost, Topology topology, List<String> nodes, boolean declareQueues) {
@@ -209,6 +213,7 @@ public class Orchestrator {
                     stats,
                     messageModel,
                     queueHosts,
+                    downstreamQueueHosts,
                     (int)consumerMaxScale);
             consumerGroup.createInitialConsumers();
             consumerGroups.add(consumerGroup);

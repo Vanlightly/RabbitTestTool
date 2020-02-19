@@ -1,0 +1,8 @@
+{
+  "broker-hosts": "192.168.233.136:5672,192.168.233.136:5673,192.168.233.136:5674",
+  "downstream-broker-hosts": "192.168.233.134:5672,192.168.233.134:5673,192.168.233.134:5674",
+  "broker-mgmt-port": "15672",
+  "broker-user": "guest",
+  "broker-password": "guest",
+  "broker-vhost": "benchmark"
+}

@@ -76,11 +76,11 @@ def get_playlist_entries(playlist_file):
 
         entry.grace_period_sec = get_entry_optional_field(playlist_entry, common_attr, "gracePeriodSec", 0)
         
-        if not os.path.exists("../benchmark/topologies/" + entry.topology):
+        if not os.path.exists("../../benchmark/topologies/" + entry.topology):
             console_out("RUNNER", f"The topology file {entry.topology} does not exist")
             exit(1)
         
-        if len(entry.policy) > 0 and not os.path.exists("../benchmark/policies/" + entry.policy):
+        if len(entry.policy) > 0 and not os.path.exists("../../benchmark/policies/" + entry.policy):
             console_out("RUNNER", f"The policy file {entry.policy} does not exist")
             exit(1)
 
@@ -105,7 +105,7 @@ for config_number in range(1, common_conf.config_count+1):
         unique_conf = AwsUniqueConfiguration(args, str(config_number))
         unique_conf.set_node_number(str(node_number))
 
-        if unique_conf.policies_file != "none" and not os.path.exists("../deploy/policies/" + unique_conf.policies_file):
+        if unique_conf.policies_file != "none" and not os.path.exists("../../benchmark/policies/" + unique_conf.policies_file):
             console_out("RUNNER", "The supplied policies file does not exist")
             exit(1)
 

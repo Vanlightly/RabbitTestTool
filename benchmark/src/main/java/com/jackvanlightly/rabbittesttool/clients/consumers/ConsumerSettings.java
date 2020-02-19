@@ -7,12 +7,14 @@ public class ConsumerSettings {
     private AckMode ackMode;
     private int frameMax;
     private int processingMs;
+    private boolean connectToDownstream;
 
-    public ConsumerSettings(String queue, AckMode ackMode, int frameMax, int processingMs) {
+    public ConsumerSettings(String queue, AckMode ackMode, int frameMax, int processingMs, boolean connectToDownstream) {
         this.queue = queue;
         this.ackMode = ackMode;
         this.frameMax = frameMax;
         this.processingMs = processingMs;
+        this.connectToDownstream = connectToDownstream;
     }
 
     public String getQueue() {
@@ -45,5 +47,13 @@ public class ConsumerSettings {
 
     public void setProcessingMs(int processingMs) {
         this.processingMs = processingMs;
+    }
+
+    public boolean shouldConnectToDownstream() {
+        return connectToDownstream;
+    }
+
+    public void setConnectToDownstream(boolean connectToDownstream) {
+        this.connectToDownstream = connectToDownstream;
     }
 }

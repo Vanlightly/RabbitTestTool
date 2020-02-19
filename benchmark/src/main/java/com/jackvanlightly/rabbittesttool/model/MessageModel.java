@@ -32,12 +32,19 @@ public class MessageModel {
     private Instant monitorStop;
     private double availability;
     private long publishedCount;
+    private boolean checkOrdering;
+    private boolean checkDataLoss;
+    private boolean checkDuplicates;
 
     public MessageModel(boolean enabled) {
-        this(enabled, 30);
+        this(enabled, 30, true, true, true);
     }
 
-    public MessageModel(boolean enabled, int unavailabilityThresholdSeconds) {
+    public MessageModel(boolean enabled,
+                        int unavailabilityThresholdSeconds,
+                        boolean checkOrdering,
+                        boolean checkDataLoss,
+                        boolean checkDuplicates) {
         this.enabled = enabled;
         receiveQueue = new LinkedBlockingQueue<>();
         expectsToReceive = new HashSet<>();
@@ -49,6 +56,9 @@ public class MessageModel {
         expLock = new ReentrantReadWriteLock();
         lastReceivedTime = Instant.now();
         this.unavailabilityThresholdMs = unavailabilityThresholdSeconds * 1000;
+        this.checkOrdering = checkOrdering;
+        this.checkDataLoss = checkDataLoss;
+        this.checkDuplicates = checkDuplicates;
     }
 
     public void stopMonitoring() {
@@ -113,7 +123,7 @@ public class MessageModel {
                 if (streamMessages.containsKey(stream)) {
                     ReceivedMessage lastMsg = streamMessages.get(stream);
 
-                    if (lastMsg.getMessagePayload().getSequenceNumber() > msg.getMessagePayload().getSequenceNumber()
+                    if (checkOrdering && lastMsg.getMessagePayload().getSequenceNumber() > msg.getMessagePayload().getSequenceNumber()
                             && !msg.isRedelivered()) {
                         violations.add(new Violation(ViolationType.Ordering, msg.getMessagePayload(), lastMsg.getMessagePayload()));
                     }
@@ -125,7 +135,7 @@ public class MessageModel {
 
                 try {
 
-                    if (actualReceived.contains(msg.getMessagePayload()) && !msg.isRedelivered())
+                    if (checkDuplicates && actualReceived.contains(msg.getMessagePayload()) && !msg.isRedelivered())
                         violations.add(new Violation(ViolationType.NonRedeliveredDuplicate, msg.getMessagePayload()));
 
                     actualReceived.add(msg.getMessagePayload());
@@ -146,10 +156,12 @@ public class MessageModel {
         }
 
         // detect missing at the end
-        Set<MessagePayload> missing = getReceivedMissing();
+        if(checkDataLoss) {
+            Set<MessagePayload> missing = getReceivedMissing();
 
-        for(MessagePayload mp : missing)
-            violations.add(new Violation(ViolationType.Missing, mp));
+            for (MessagePayload mp : missing)
+                violations.add(new Violation(ViolationType.Missing, mp));
+        }
 
         monitoringStopped = true;
         monitorStop = Instant.now();

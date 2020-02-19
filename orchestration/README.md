@@ -229,7 +229,7 @@ python3.6 run-logged-aws-playlist.py \
 --cluster-size 3 \
 --pub-connect-to-node local \
 --version 3.8.0 \
---generic-unix-url https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.0/rabbitmq-server-generic-unix-3.8.0.tar.xz \
+--generic-unix-url https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.0/rabbitmq-server-generic-unix-3.8.0.tar.xz
 ```
 
 Example with two configurations:
@@ -360,4 +360,4 @@ If it was a Logged benchmark run then you can find the configurations in Postgre
 
 #### Broker Server Metrics Dashboard
 
-Shows the usual CPU, memory, disk and network stats sourced from the VM where the broker is running, extracted by Telegraf.
+Shows the usual CPU, memory, disk and network stats sourced from the VM where the broker is running, extracted by Telegraf.check_user_pass_login

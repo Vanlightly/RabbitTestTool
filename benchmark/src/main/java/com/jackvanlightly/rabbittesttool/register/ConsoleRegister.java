@@ -7,12 +7,14 @@ import com.jackvanlightly.rabbittesttool.model.Violation;
 import com.jackvanlightly.rabbittesttool.model.ViolationType;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 
-import java.io.PrintStream;
+import java.io.*;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ConsoleRegister implements BenchmarkRegister {
 
@@ -173,9 +175,25 @@ public class ConsoleRegister implements BenchmarkRegister {
         }
         else {
             this.out.println("Property violations detected!");
+            List<Violation> sortedViolations = violations.stream()
+                    .sorted(Comparator.comparing(Violation::getViolationType)
+                            .thenComparing(Violation::getTimestamp))
+                    .collect(Collectors.toList());
+            writeToFile(sortedViolations);
+        }
+    }
+
+    private void writeToFile(List<Violation> violations) {
+        try {
+            String filename = "/tmp/prop-violations-" + Instant.now().getEpochSecond() + ".txt";
+            File fout = new File(filename);
+            FileOutputStream fos = new FileOutputStream(fout);
+
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+
             for (Violation violation : violations) {
                 if(violation.getViolationType() == ViolationType.Ordering) {
-                    this.out.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}, Prior Seq No {4,number,#}, Prior Timestamp {5,number,#}",
+                    bw.write(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}, Prior Seq No {4,number,#}, Prior Timestamp {5,number,#}",
                             violation.getViolationType(),
                             violation.getMessagePayload().getStream(),
                             violation.getMessagePayload().getSequenceNumber(),
@@ -185,13 +203,22 @@ public class ConsoleRegister implements BenchmarkRegister {
                     ));
                 }
                 else {
-                    this.out.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}",
+                    bw.write(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}",
                             violation.getViolationType(),
                             violation.getMessagePayload().getStream(),
                             violation.getMessagePayload().getSequenceNumber(),
                             violation.getMessagePayload().getTimestamp()));
                 }
+                bw.newLine();
             }
+
+            bw.close();
+
+            this.out.println("Saved violations to file " + filename);
+        }
+        catch(Exception e) {
+            this.out.println("Failed to write violations to file.");
+            e.printStackTrace(this.out);
         }
     }
 

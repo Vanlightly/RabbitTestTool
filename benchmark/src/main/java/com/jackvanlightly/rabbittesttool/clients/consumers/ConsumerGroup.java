@@ -27,6 +27,7 @@ public class ConsumerGroup {
     private ConsumerConfig consumerConfig;
     private MessageModel messageModel;
     private QueueHosts queueHosts;
+    private QueueHosts downstreamQueueHosts;
     private ExecutorService executorService;
     private Map<String, Integer> currentQueues;
     private int consumerCounter;
@@ -38,12 +39,14 @@ public class ConsumerGroup {
                          Stats stats,
                          MessageModel messageModel,
                          QueueHosts queueHosts,
+                         QueueHosts downstreamQueueHosts,
                          int maxScale) {
         this.connectionSettings = connectionSettings;
         this.consumerConfig = consumerConfig;
         this.stats = stats;
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
+        this.downstreamQueueHosts = downstreamQueueHosts;
         this.consumers = new ArrayList<>();
 
         this.currentQueues = new HashMap<>();
@@ -131,12 +134,14 @@ public class ConsumerGroup {
                 queue,
                 this.consumerConfig.getAckMode(),
                 this.consumerConfig.getFrameMax(),
-                this.consumerConfig.getProcessingMs());
+                this.consumerConfig.getProcessingMs(),
+                this.consumerConfig.shouldConnectToDownstream());
 
         Consumer consumer = new Consumer(
                 getConsumerId(consumerCounter),
                 this.connectionSettings,
                 queueHosts,
+                downstreamQueueHosts,
                 settings,
                 this.stats,
                 messageModel);

@@ -24,6 +24,7 @@ public class Consumer implements Runnable {
     private ConnectionSettings connectionSettings;
     private ConnectionFactory factory;
     private QueueHosts queueHosts;
+    private QueueHosts downstreamQueueHosts;
     private ExecutorService executorService;
     private boolean isCancelled;
     private Integer step;
@@ -37,6 +38,7 @@ public class Consumer implements Runnable {
     public Consumer(String consumerId,
                     ConnectionSettings connectionSettings,
                     QueueHosts queueHosts,
+                    QueueHosts downstreamQueueHosts,
                     ConsumerSettings consumerSettings,
                     Stats stats,
                     MessageModel messageModel) {
@@ -44,6 +46,7 @@ public class Consumer implements Runnable {
         this.consumerId = consumerId;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
+        this.downstreamQueueHosts = downstreamQueueHosts;
         this.isCancelled = isCancelled;
         this.stats = stats;
         this.messageModel = messageModel;
@@ -201,6 +204,9 @@ public class Consumer implements Runnable {
                 }
             }
 
+            if(isCancelled)
+                eventingConsumer.tryAcknowledgeRemaining();
+
             if(exitReason == 0) {
                 if (isCancelled)
                     exitReason = 1;
@@ -271,13 +277,13 @@ public class Consumer implements Runnable {
         while(!isCancelled) {
             Broker host = null;
             if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.RoundRobin))
-                host = queueHosts.getHostRoundRobin();
+                host = chooseQueueHosts().getHostRoundRobin();
             else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Random))
-                host = queueHosts.getRandomHost();
+                host = chooseQueueHosts().getRandomHost();
             else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Local))
-                host = queueHosts.getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+                host = chooseQueueHosts().getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
             else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.NonLocal))
-                host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+                host = chooseQueueHosts().getRandomOtherHost(connectionSettings.getVhost(), consumerSettings.getQueue());
             else
                 throw new TopologyException("ConnectToNode value not supported: " + connectionSettings.getConsumerConnectToNode());
 
@@ -288,6 +294,13 @@ public class Consumer implements Runnable {
         }
 
         throw new TopologyException("Could not identify a broker to connect to");
+    }
+
+    private QueueHosts chooseQueueHosts() {
+        if(consumerSettings.shouldConnectToDownstream())
+            return downstreamQueueHosts;
+
+        return queueHosts;
     }
 
     private boolean reconnectToNewHost() {

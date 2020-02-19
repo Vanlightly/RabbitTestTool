@@ -372,6 +372,7 @@ public class TopologyLoader {
                 cgConfig.setScale(scale);
                 cgConfig.setFrameMax(getOptionalIntValue(cgJson, "frameMax", 0));
                 cgConfig.setProcessingMs(getOptionalIntValue(cgJson, "processingMs", 0));
+                cgConfig.setConnectToDownstream(getOptionalBoolValue(cgJson, "connectToDownstream", false));
 
                 if (cgJson.has("ackMode")) {
                     JSONObject ackModeJson = cgJson.getJSONObject("ackMode");
@@ -538,6 +539,14 @@ public class TopologyLoader {
         }
 
         throw new TopologyException("Missing required field: " + jsonPath);
+    }
+
+    private boolean getOptionalBoolValue(JSONObject json, String jsonPath, boolean defaultValue) {
+        if(json.has(jsonPath)) {
+            return json.getBoolean(jsonPath);
+        }
+        else
+            return defaultValue;
     }
 
     private List<Double> getMandatoryDoubleArray(JSONObject json, String jsonPath) {

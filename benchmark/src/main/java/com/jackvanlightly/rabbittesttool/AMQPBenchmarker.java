@@ -155,7 +155,13 @@ public class AMQPBenchmarker {
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
             int unavailabilitySeconds = arguments.getInt("--unavailability-sec");
-            MessageModel messageModel = new MessageModel(true, unavailabilitySeconds);
+
+            String checkArgs = arguments.getStr("--checks", "all").toLowerCase();
+            boolean checkOrdering = checkArgs.contains("ordering") || checkArgs.contains("all");
+            boolean checkDataLoss = checkArgs.contains("dataloss") || checkArgs.contains("all");
+            boolean checkDuplicates = checkArgs.contains("duplicates") || checkArgs.contains("all");
+
+            MessageModel messageModel = new MessageModel(true, unavailabilitySeconds, checkOrdering, checkDataLoss, checkDuplicates);
 
             ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
             modelExecutor.execute(() -> messageModel.monitorProperties());
@@ -183,6 +189,9 @@ public class AMQPBenchmarker {
             modelExecutor.shutdown();
 
             List<Violation> violations = messageModel.getViolations();
+            long orderingViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.Ordering).count();
+            long dataLossViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.Missing).count();
+            long duplicationViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.NonRedeliveredDuplicate).count();
             List<ConsumeInterval> consumeIntervals = messageModel.getConsumeIntervals();
 
             LOGGER.info("-------------------------------------------------------");
@@ -190,7 +199,9 @@ public class AMQPBenchmarker {
             LOGGER.info("Run ID: " + runId + ", BenchmarkId: " + benchmarkId);
             LOGGER.info("Published Count: " + messageModel.getPublishedCount());
             LOGGER.info("Consumed Count: " + messageModel.getConsumedCount());
-            LOGGER.info("Property Violations: " + violations.size());
+            LOGGER.info("Ordering Property Violations: " + orderingViolations);
+            LOGGER.info("Data Loss Property Violations: " + dataLossViolations);
+            LOGGER.info("Non-Redelivered Duplicate Property Violations: " + duplicationViolations);
             LOGGER.info("Unavailability Periods: " + consumeIntervals.size());
             LOGGER.info("-------------------------------------------------------");
 
@@ -203,7 +214,6 @@ public class AMQPBenchmarker {
             benchmarkRegister.logViolations(benchmarkId, violations);
             benchmarkRegister.logConsumeIntervals(benchmarkId, consumeIntervals, unavailabilitySeconds, messageModel.getAvailability());
 
-            long dataLossViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.Missing).count();
             if(messageModel.getPublishedCount() == 0 || messageModel.getConsumedCount() == 0)
                 System.exit(3);
             else if(dataLossViolations == 0 && consumeIntervals.isEmpty())
@@ -354,12 +364,16 @@ public class AMQPBenchmarker {
             QueueHosts queueHosts = new QueueHosts(topologyGenerator);
             queueHosts.addHosts(brokerConfig);
 
+            QueueHosts downstreamHosts = new QueueHosts(topologyGenerator);
+            downstreamHosts.addDownstreamHosts(brokerConfig);
+
             Orchestrator orchestrator = new Orchestrator(topologyGenerator,
                     benchmarkRegister,
                     connectionSettings,
                     stats,
                     messageModel,
                     queueHosts,
+                    downstreamHosts,
                     mode);
 
 
@@ -419,17 +433,30 @@ public class AMQPBenchmarker {
     private static BrokerConfiguration getBrokerConfigWithDefaults(CmdArguments arguments) {
         return new BrokerConfiguration(arguments.getStr("--technology", "RabbitMQ"),
                 arguments.getStr("--version", "?"),
-                getBrokers(arguments));
+                getBrokers(arguments),
+                getDownstreamBrokers(arguments));
     }
 
     private static BrokerConfiguration getBrokerConfig(CmdArguments arguments) {
         return new BrokerConfiguration(arguments.getStr("--technology"),
                 arguments.getStr("--version"),
-                getBrokers(arguments));
+                getBrokers(arguments),
+                getDownstreamBrokers(arguments));
     }
 
     private static List<Broker> getBrokers(CmdArguments arguments) {
-        List<String> ipAndPorts = arguments.getListStr("--broker-hosts");
+        return getBrokers(arguments, "--broker-hosts");
+    }
+
+    private static List<Broker> getDownstreamBrokers(CmdArguments arguments) {
+        if(arguments.hasKey("--downstream-broker-hosts"))
+            return getBrokers(arguments, "--downstream-broker-hosts");
+        else
+            return new ArrayList<>();
+    }
+
+    private static List<Broker> getBrokers(CmdArguments arguments, String brokerHostsArgName) {
+        List<String> ipAndPorts = arguments.getListStr(brokerHostsArgName);
 
         String ip = ipAndPorts.get(0).split(":")[0];
         NamesGetter ng = new NamesGetter(ip, arguments.getStr("--broker-mgmt-port"), arguments.getStr("--broker-user"), arguments.getStr("--broker-password"));
@@ -487,26 +514,26 @@ public class AMQPBenchmarker {
     }
 
     private static void skipToCleanUp(Orchestrator orchestrator, String mode) {
-        try {
+//        try {
             if(orchestrator.isComplete()) {
                 return;
             }
             else {
                 orchestrator.jumpToCleanup();
                 System.out.println("Jumping to cleanup ...");
-                while (!orchestrator.isComplete())
-                    Thread.sleep(1000);
-
-                if(mode.equals("model")) {
-                    LOGGER.info("Shutting down in 30 seconds ...");
-                    Thread.sleep(30000);
-                }
+//                while (!orchestrator.isComplete())
+//                    Thread.sleep(1000);
+//
+//                if(mode.equals("model")) {
+//                    LOGGER.info("Shutting down in 30 seconds ...");
+//                    Thread.sleep(30000);
+//                }
             }
-        } catch (InterruptedException e) {
-            LOGGER.info("INTERRUPTED! ...");
-            Thread.currentThread().interrupt();
-            e.printStackTrace();
-        }
+//        } catch (InterruptedException e) {
+//            LOGGER.info("INTERRUPTED! ...");
+//            Thread.currentThread().interrupt();
+//            e.printStackTrace();
+//        }
     }
 
     private static void waitFor(int ms) {

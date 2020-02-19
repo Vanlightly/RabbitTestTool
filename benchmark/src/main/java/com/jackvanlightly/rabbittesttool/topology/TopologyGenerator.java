@@ -33,6 +33,7 @@ public class TopologyGenerator {
     private ConnectionSettings connectionSettings;
     private BrokerConfiguration brokerConfig;
     private String baseUrl;
+    private String downstreamBaseUrl;
     private Random rand;
 
     public TopologyGenerator(ConnectionSettings connectionSettings,
@@ -40,6 +41,10 @@ public class TopologyGenerator {
         this.connectionSettings = connectionSettings;
         this.brokerConfig = brokerConfig;
         this.baseUrl = "http://" + brokerConfig.getHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
+
+        if(!brokerConfig.getDownstreamHosts().isEmpty())
+            this.downstreamBaseUrl = "http://" + brokerConfig.getDownstreamHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
+
         this.rand = new Random();
     }
 
@@ -199,8 +204,8 @@ public class TopologyGenerator {
 
 
 
-    public JSONArray getQueues(String vhost) {
-        String url = getQueuesUrl(vhost);
+    public JSONArray getQueues(String vhost, boolean downstream) {
+        String url = getQueuesUrl(vhost, downstream);
 
         try {
             RequestConfig.Builder requestConfig = RequestConfig.custom();
@@ -404,8 +409,8 @@ public class TopologyGenerator {
         return this.baseUrl + "/api/queues/" + vhost + "/" + queue;
     }
 
-    private String getQueuesUrl(String vhost) {
-        return this.baseUrl + "/api/queues/" + vhost;
+    private String getQueuesUrl(String vhost, boolean downstream) {
+        return chooseUrl(downstream) + "/api/queues/" + vhost;
     }
 
     private String getExchangeToQueueBindingUrl(String vhost, String from, String to) {
@@ -418,5 +423,12 @@ public class TopologyGenerator {
 
     private String getHaQueuesPolicyUrl(String name, String vhost) {
         return this.baseUrl + "/api/policies/" + vhost + "/" + name;
+    }
+
+    private String chooseUrl(boolean downstream) {
+        if(downstream)
+            return downstreamBaseUrl;
+
+        return baseUrl;
     }
 }
