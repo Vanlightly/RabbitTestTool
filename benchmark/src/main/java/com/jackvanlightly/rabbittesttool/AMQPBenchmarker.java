@@ -1,6 +1,5 @@
 package com.jackvanlightly.rabbittesttool;
 
-import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.comparer.StatisticsComparer;
@@ -151,7 +150,7 @@ public class AMQPBenchmarker {
             boolean declareArtefacts = arguments.getBoolean("--declare", true);
             String benchmarkTags = arguments.getStr("--benchmark-tags", "");
             StepOverride stepOverride = getStepOverride(arguments);
-            InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
+            InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
             int unavailabilitySeconds = arguments.getInt("--unavailability-sec");
@@ -279,7 +278,7 @@ public class AMQPBenchmarker {
             String policiesPath = arguments.getStr("--policies", "none");
             Map<String,String> policyVariables = arguments.getPolicyVariables();
             StepOverride stepOverride = getStepOverride(arguments);
-            InstanceConfiguration instanceConfig = getInstanceConfigurationWithDefaults(arguments);
+            InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
             ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
 
             performRun(Modes.Benchmark,
@@ -380,11 +379,13 @@ public class AMQPBenchmarker {
             benchmarkRegister.logBenchmarkStart(benchmarkId, ordinal, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology, argumentsStr, benchmarkTags);
             loggedStart = true;
 
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                public void run() {
-                    skipToCleanUp(orchestrator, mode);
-                }
-            });
+            // this strategy prevents a second Ctrl+C from terminating
+            // also since making grace period a rolling period, triggering an early shutdown is less useful
+//            Runtime.getRuntime().addShutdownHook(new Thread() {
+//                public void run() {
+//                    skipToCleanUp(orchestrator, mode);
+//                }
+//            });
 
             orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod);
 
@@ -412,7 +413,7 @@ public class AMQPBenchmarker {
         return benchmarkId;
     }
 
-    private static InstanceConfiguration getInstanceConfigurationWithDefaults(CmdArguments arguments) {
+    private static InstanceConfiguration getInstanceConfiguration(CmdArguments arguments) {
         String instance = arguments.getStr("--instance", "?");
         String hosting = arguments.getStr("--hosting", "?");
         String volume = arguments.getStr("--volume", "?");
@@ -428,13 +429,6 @@ public class AMQPBenchmarker {
                 hosting,
                 coreCount,
                 threadsPerCore);
-    }
-
-    private static BrokerConfiguration getBrokerConfigWithDefaults(CmdArguments arguments) {
-        return new BrokerConfiguration(arguments.getStr("--technology", "RabbitMQ"),
-                arguments.getStr("--version", "?"),
-                getBrokers(arguments),
-                getDownstreamBrokers(arguments));
     }
 
     private static BrokerConfiguration getBrokerConfig(CmdArguments arguments) {
@@ -513,14 +507,14 @@ public class AMQPBenchmarker {
         }
     }
 
-    private static void skipToCleanUp(Orchestrator orchestrator, String mode) {
+//    private static void skipToCleanUp(Orchestrator orchestrator, String mode) {
 //        try {
-            if(orchestrator.isComplete()) {
-                return;
-            }
-            else {
-                orchestrator.jumpToCleanup();
-                System.out.println("Jumping to cleanup ...");
+//            if(orchestrator.isComplete()) {
+//                return;
+//            }
+//            else {
+//                orchestrator.jumpToCleanup();
+//                System.out.println("Jumping to cleanup ...");
 //                while (!orchestrator.isComplete())
 //                    Thread.sleep(1000);
 //
@@ -528,13 +522,13 @@ public class AMQPBenchmarker {
 //                    LOGGER.info("Shutting down in 30 seconds ...");
 //                    Thread.sleep(30000);
 //                }
-            }
+//            }
 //        } catch (InterruptedException e) {
 //            LOGGER.info("INTERRUPTED! ...");
 //            Thread.currentThread().interrupt();
 //            e.printStackTrace();
 //        }
-    }
+//    }
 
     private static void waitFor(int ms) {
         try {
