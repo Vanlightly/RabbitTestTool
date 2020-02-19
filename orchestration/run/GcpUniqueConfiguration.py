@@ -8,4 +8,4 @@ class GcpUniqueConfiguration(UniqueConfiguration):
         self.container_image = get_mandatory_arg(args, "--container-image", self.suffix)
         self.container_env = get_optional_arg(args, "--container-env", self.suffix, "")
         self.machine_type = get_mandatory_arg(args, "--machine-type", self.suffix)
-        self.volume = get_mandatory_arg_validated(args, "--volume", self.suffix, ["pd-ssd", "standard"])
+        self.volume = get_mandatory_arg_validated(args, "--volume", self.suffix, ["pd-ssd", "pd-standard"])

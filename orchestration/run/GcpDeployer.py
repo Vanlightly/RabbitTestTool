@@ -15,7 +15,7 @@ class GcpDeployer(Deployer):
     def update_single(self, unique_conf, common_conf):
         status_id = unique_conf.technology + unique_conf.node_number
 
-        node_name = f"{common_conf.run_tag}-{unique_conf.suffix}-loadgen"
+        node_name = f"{common_conf.run_tag}-{unique_conf.config_tag}-loadgen"
 
         console_out(self.actor, f"Updating node {node_name}...")
 
@@ -77,8 +77,30 @@ class GcpDeployer(Deployer):
                     if exit_code != 0:
                         raise Exception(f"rabbitmqctl {command} on {node_name} failed with exit code {exit_code}")
 
+            # name the cluster
+            command_args = ["gcloud", "compute", "ssh",
+                            node_name,
+                            "--",
+                            "docker exec $(docker container ls | awk '/rabbitmq/ { print $1 }') "
+                            f"rabbitmqctl -l -q set_cluster_name {common_conf.run_tag}-{unique_conf.config_tag}"]
+            exit_code = subprocess.call(command_args)
+            if exit_code != 0:
+                raise Exception(f"'{command_args[-1]}' on {node_name} failed with exit code {exit_code}")
+
+            # enable prometheus
+            for node in range(first_node_number, first_node_number + cluster_size):
+                node_name = f"{common_conf.run_tag}-rmq{node}-server"
+                command_args = ["gcloud", "compute", "ssh",
+                                node_name,
+                                "--",
+                                "docker exec $(docker container ls | awk '/rabbitmq/ { print $1 }') "
+                                "rabbitmq-plugins enable rabbitmq_prometheus"]
+                exit_code = subprocess.call(command_args)
+                if exit_code != 0:
+                    raise Exception(f"'rabbitmq-plugins enable rabbitmq_prometheus' on {node_name} failed with exit code {exit_code}")
+
             # deploy benchmark
-            node_name = f"{common_conf.run_tag}-{unique_conf.suffix}-loadgen"
+            node_name = f"{common_conf.run_tag}-{unique_conf.config_tag}-loadgen"
             if not self.__node_exists(node_name):
                 self.__deploy_loadgen_node(node_name, common_conf)
             else:
@@ -103,7 +125,7 @@ class GcpDeployer(Deployer):
             console_out(self.actor, "No teardown as --no-destroy set to true")
         else:
             try:
-                self.__delete_instance(f"{common_conf.run_tag}-{unique_conf.suffix}-loadgen")
+                self.__delete_instance(f"{common_conf.run_tag}-{unique_conf.config_tag}-loadgen")
             except Exception as e:
                 console_out(self.actor, f"{e}, ignoring")
 
@@ -160,11 +182,17 @@ class GcpDeployer(Deployer):
         f"type={unique_conf.volume},"
         f"auto-delete=yes"
 
+        labels = ",".join([f"deployment=rtt-benchmark",
+                           f"rtt-role=broker",
+                           f"rtt-run-tag={common_conf.run_tag}",
+                           f"rtt-config-tag={unique_conf.config_tag}"])
+
         command_args = ["gcloud", "compute", "instances", "create-with-container",
                         node_name,
                         f"--public-dns",
                         f"--boot-disk-type=pd-ssd",
-                        f"--labels=namespace={common_conf.run_tag}",
+                        f"--labels={labels}",
+                        f"--tags=rtt-benchmark",
                         f"--container-stdin",
                         f"--container-tty",
                         f"--preemptible",
@@ -180,6 +208,11 @@ class GcpDeployer(Deployer):
 
         if unique_conf.container_env:
             command_args.append(f"--container-env={unique_conf.container_env}")
+
+        if common_conf.network:
+            command_args.append(f"--network={common_conf.network}")
+        if common_conf.subnet:
+            command_args.append(f"--subnet={common_conf.subnet}")
 
         exit_code = subprocess.call(command_args)
 
@@ -202,17 +235,27 @@ class GcpDeployer(Deployer):
 
         scopes = ",".join(default_scopes + sql_proxy_scopes)
 
+        labels = ",".join([f"deployment=rtt-benchmark",
+                           f"rtt-role=loadgen",
+                           f"rtt-run-tag={common_conf.run_tag}"])
+
         command_args = ["gcloud", "compute", "instances", "create-with-container",
                         node_name,
                         f"--public-dns",
                         f"--boot-disk-type=pd-ssd",
-                        f"--labels=namespace={common_conf.run_tag}",
+                        f"--labels={labels}",
+                        f"--tags=rtt-benchmark",
                         f"--container-stdin",
                         f"--container-tty",
                         f"--preemptible",
                         f"--scopes={scopes}",
                         f"--machine-type={common_conf.loadgen_machine_type}",
                         f"--container-image={common_conf.loadgen_container_image}"]
+
+        if common_conf.network:
+            command_args.append(f"--network={common_conf.network}")
+        if common_conf.subnet:
+            command_args.append(f"--subnet={common_conf.subnet}")
 
         exit_code = subprocess.call(command_args)
 

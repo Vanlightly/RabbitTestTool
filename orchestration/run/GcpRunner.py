@@ -19,7 +19,7 @@ class GcpRunner(Runner):
         broker_hosts = ",".join([f"{host}:5672" for host in hosts])
 
         command_args = ["gcloud", "compute", "ssh",
-                        f"{common_conf.run_tag}-{unique_conf.suffix}-loadgen",
+                        f"{common_conf.run_tag}-{unique_conf.config_tag}-loadgen",
                         "--",
                         "docker exec $(docker container ls | awk '/rabbittesttool/ { print $1 }') "
                         f"java -Xms1024m -Xmx8192m -jar rabbittesttool.jar "
@@ -79,7 +79,7 @@ class GcpRunner(Runner):
         broker_hosts = ",".join([f"{host}:5672" for host in hosts])
 
         command_args = ["gcloud", "compute", "ssh",
-                        f"{common_conf.run_tag}-{unique_conf.suffix}-loadgen",
+                        f"{common_conf.run_tag}-{unique_conf.config_tag}-loadgen",
                         "--",
                         "docker exec $(docker container ls | awk '/rabbittesttool/ { print $1 }') "
                         f"java -Xms1024m -Xmx8192m -jar rabbittesttool.jar "
