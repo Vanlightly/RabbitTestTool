@@ -19,17 +19,16 @@ public class CmdArguments {
     public static void printTopLevelHelp(PrintStream printStream) {
         printStream.println("RabbitMQ Test Tool");
         printStream.println("");
-        printStream.println("There are four modes:");
-        printStream.println("--mode local-benchmark         When running a single instance of the benchmark locally");
-        printStream.println("--mode logged-benchmark        When deploying and running one or more benchmarks with all data sent to Postgres");
-        printStream.println("--mode model                   WIP. Model driven property based test");
-        printStream.println("--mode comparison              Compares the results of two logged benchmark configurations (by reading data from Postgres)");
+        printStream.println("There are three modes:");
+        printStream.println("--mode benchmark         Runs a benchmark");
+        printStream.println("--mode model             Runs a model driven property based test");
+        printStream.println("--mode comparison        Compares the results of two logged benchmark configurations (by reading data from Postgres)");
         printStream.println("");
-        printStream.println("To see arguments, for mode local-benchmark as an example, use the args: help --mode local-benchmark");
+        printStream.println("To see arguments, for mode benchmark as an example, use the args: help --mode benchmark");
     }
 
     public static void printLoggedBenchmarkHelp(PrintStream printStream) {
-        printStream.println("Logged benchmark arguments are categorized as either:");
+        printStream.println("Benchmark arguments are categorized as either:");
         printStream.println(" + Determining behaviour of a benchmark run (mandatory)");
         printStream.println(" + Broker connection details (mandatory)");
         printStream.println(" + Postgres connection details (mandatory). Storing results in Postgres allows for keeping track of previous runs and running statistical comparisons of different runs.");
@@ -44,14 +43,20 @@ public class CmdArguments {
         printStream.println("All arguments listed below are in the command line format: --arg-name");
         printStream.println("");
         printStream.println("Behaviour arguments:");
-        printStream.println("--topology         The absolute filepath to the topology file of the benchmark");
+        printStream.println("--topology             The absolute filepath to the topology file of the benchmark");
+        printStream.println("--policies             The absolute filepath to the policy file of the benchmark");
+        printStream.println("--declare              true/false. Where to declare vhost, exchanges and queues of the topology." +
+                " Note that when set to false, the vhost, exchanges and queues with names using the conventions of this tool are expected to exist");
+        printStream.println("--pub-connect-to-node  roundrobin/random/local/non-local. Defines which broker publishers connect to. See readme for details.");
+        printStream.println("--con-connect-to-node  roundrobin/random/local/non-local. Defines which broker consumers connect to. See readme for details.");
         printStream.println("");
         printStream.println("Broker connection:");
-        printStream.println("--broker-hosts      The broker hostname or IP");
-        printStream.println("--broker-mgmt-port The broker management plugin port");
-        printStream.println("--broker-port      The broker amqp port");
-        printStream.println("--broker-user      The broker user");
-        printStream.println("--broker-password  The broker password");
+        printStream.println("--broker-hosts             The broker hostnames or IPs, comma separated");
+        printStream.println("--broker-mgmt-port         The broker management plugin port");
+        printStream.println("--broker-port              The broker amqp port");
+        printStream.println("--broker-user              The broker user");
+        printStream.println("--broker-password          The broker password");
+        printStream.println("--downstream-broker-hosts  The downstream broker hostnames or IPs, comma separated, if any. Used when testing federation. Note, the tool does not yet support generation of upstreams. TODO");
         printStream.println("");
         printStream.println("Postgres connection:");
         printStream.println("--postgres-jdbc-url    The postgres connection url");
@@ -71,14 +76,24 @@ public class CmdArguments {
         printStream.println("--run-tag          Differentiates results when running multiple identical benchmarks in parallel.");
         printStream.println("--technology       The broker under test, for example: rabbitmq");
         printStream.println("--version          The broker version, for example: 3.7.15");
-        printStream.println("--node             The numerical suffix of the logged broker, for example, if the target broker is rabbitmq1, then this arg value would be: 1");
         printStream.println("--instance         Details of the broker server. If in the cloud, the instance type, like c5.large");
         printStream.println("--volume           Details of the broker disk drive. If in the cloud, for example gp2, io1 etc.");
         printStream.println("--filesystem       Filesystem of the broker: XFS, ext4 etc");
         printStream.println("--hosting          Local, AWS, GCP etc");
         printStream.println("--tenancy          In AWS dedicated or default for example");
         printStream.println("--core-count       The number of cores available to the broker");
-        printStream.println("--threads-per-core The number of threads per core: 1 or 2");
+        printStream.println("--threads-per-core The number of threads per core: 1 or 2 aka hyperthreading or not");
+        printStream.println("--benchmark-tags   Tags to help you identity the purpose of the benchmark later (when using postgres)");
+        printStream.println("--run-ordinal      The ordinal position of this benchmark when run by an orchrestator playlist");
+        printStream.println("");
+        printStream.println("Overrides:");
+        printStream.println("Topology variables can be overriden with: --tvar.variable value");
+        printStream.println("Policy variables can be overriden with: --pvar.variable value");
+        printStream.println("--step-override-seconds    Override the topology step duration with this value.");
+        printStream.println("--step-override-repeat     Run each step this number of times.");
+        printStream.println("--override-step-msg-size   Override the topology message size with this value");
+        printStream.println("--override-step-msg-limit  Override the topology message limit with this value");
+        printStream.println("--override-step-pub-rate   Override the topology publisher rate with this value");
     }
 
     public static void printComparisonHelp(PrintStream printStream) {
@@ -99,7 +114,17 @@ public class CmdArguments {
 
     public static void printModelHelp(PrintStream printStream) {
 
-        printStream.println("TODO - WIP");
+        printStream.println(
+                        "--grace-period-sec      Once the benchmark has reached its time duration, publishers are stopped " +
+                        "but consumers are allowed to carry on until either all expected messages have been consumed or a" +
+                        " message has not been recoved for grace-period-sec number of seconds");
+
+        printStream.println(
+                        "                        For example, if set to 60 and a message has been lost, then 60 seconds after " +
+                                "consuming the last message the test stops. However, if no message was lost, then as soon as all " +
+                                "expected messages have been consumed, the test will stop.");
+        printStream.println(
+                "--unavailability-sec    Treat any periods when no messages are consumed that exceed this threshold as a period of unavailanility");
     }
 
     private Map<String,String> arguments;
