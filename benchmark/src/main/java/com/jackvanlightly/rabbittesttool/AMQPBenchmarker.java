@@ -142,16 +142,6 @@ public class AMQPBenchmarker {
                 benchmarkRegister = new ConsoleRegister(System.out);
             }
 
-            String topologyPath = arguments.getStr("--topology");
-            Map<String,String> topologyVariables = arguments.getTopologyVariables();
-            String policiesPath = arguments.getStr("--policies", "none");
-            Map<String,String> policyVariables = arguments.getPolicyVariables();
-            int ordinal = arguments.getInt("--run-ordinal", 1);
-            boolean declareArtefacts = arguments.getBoolean("--declare", true);
-            String benchmarkTags = arguments.getStr("--benchmark-tags", "");
-            StepOverride stepOverride = getStepOverride(arguments);
-            InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
-            ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
             int unavailabilitySeconds = arguments.getInt("--unavailability-sec");
 
@@ -166,23 +156,13 @@ public class AMQPBenchmarker {
             modelExecutor.execute(() -> messageModel.monitorProperties());
 
             String benchmarkId = performRun(Modes.Model,
-                    topologyPath,
-                    topologyVariables,
-                    policiesPath,
-                    policyVariables,
-                    ordinal,
-                    stepOverride,
+                    arguments,
                     benchmarkRegister,
                     metrics,
                     brokerConfig,
-                    instanceConfig,
-                    connectionSettings,
                     arguments.hasMetrics(),
                     messageModel,
-                    gracePeriod,
-                    arguments.getArgsStr(","),
-                    benchmarkTags,
-                    declareArtefacts);
+                    gracePeriod);
 
             messageModel.stopMonitoring();
             modelExecutor.shutdown();
@@ -270,35 +250,14 @@ public class AMQPBenchmarker {
                 benchmarkRegister = new ConsoleRegister(System.out);
             }
 
-            String benchmarkTags = arguments.getStr("--benchmark-tags","");
-            String topologyPath = arguments.getStr("--topology");
-            int ordinal = arguments.getInt("--run-ordinal", 1);
-            boolean declareArtefacts = arguments.getBoolean("--declare", true);
-            Map<String,String> topologyVariables = arguments.getTopologyVariables();
-            String policiesPath = arguments.getStr("--policies", "none");
-            Map<String,String> policyVariables = arguments.getPolicyVariables();
-            StepOverride stepOverride = getStepOverride(arguments);
-            InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
-            ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig);
-
             performRun(Modes.Benchmark,
-                    topologyPath,
-                    topologyVariables,
-                    policiesPath,
-                    policyVariables,
-                    ordinal,
-                    stepOverride,
+                    arguments,
                     benchmarkRegister,
                     metrics,
                     brokerConfig,
-                    instanceConfig,
-                    connectionSettings,
                     arguments.hasMetrics(),
                     new MessageModel(false),
-                    Duration.ZERO,
-                    arguments.getArgsStr(","),
-                    benchmarkTags,
-                    declareArtefacts);
+                    Duration.ZERO);
         }
         catch(CmdArgumentException e) {
             LOGGER.error(e.getMessage());
@@ -311,23 +270,28 @@ public class AMQPBenchmarker {
     }
 
     private static String performRun(String mode,
-                                       String topologyPath,
-                                       Map<String,String> topologyVariables,
-                                       String policyPath,
-                                       Map<String,String> policyVariables,
-                                       int ordinal,
-                                       StepOverride stepOverride,
+                                       CmdArguments arguments,
                                        BenchmarkRegister benchmarkRegister,
                                        InfluxMetrics metrics,
                                        BrokerConfiguration brokerConfig,
-                                       InstanceConfiguration instanceConfig,
-                                       ConnectionSettings connectionSettings,
                                        boolean publishRealTimeMetrics,
                                        MessageModel messageModel,
-                                       Duration gracePeriod,
-                                       String argumentsStr,
-                                       String benchmarkTags,
-                                       boolean declareArtefacts) {
+                                       Duration gracePeriod) {
+
+        String benchmarkTags = arguments.getStr("--benchmark-tags","");
+        String topologyPath = arguments.getStr("--topology");
+        int ordinal = arguments.getInt("--run-ordinal", 1);
+        boolean declareArtefacts = arguments.getBoolean("--declare", true);
+        Map<String,String> topologyVariables = arguments.getTopologyVariables();
+        String policyPath = arguments.getStr("--policies", "none");
+        Map<String,String> policyVariables = arguments.getPolicyVariables();
+        StepOverride stepOverride = getStepOverride(arguments);
+        InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
+        String argumentsStr = arguments.getArgsStr(",");
+        ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig.getHosts());
+        ConnectionSettings downstreamConnectionSettings = getConnectionSettings(arguments, brokerConfig.getDownstreamHosts());
+
+
         String benchmarkId = UUID.randomUUID().toString();
 
         Stats stats = null;
@@ -369,6 +333,7 @@ public class AMQPBenchmarker {
             Orchestrator orchestrator = new Orchestrator(topologyGenerator,
                     benchmarkRegister,
                     connectionSettings,
+                    downstreamConnectionSettings,
                     stats,
                     messageModel,
                     queueHosts,
@@ -432,10 +397,16 @@ public class AMQPBenchmarker {
     }
 
     private static BrokerConfiguration getBrokerConfig(CmdArguments arguments) {
-        return new BrokerConfiguration(arguments.getStr("--technology"),
+        BrokerConfiguration brokerConfig = new BrokerConfiguration(arguments.getStr("--technology"),
                 arguments.getStr("--version"),
                 getBrokers(arguments),
                 getDownstreamBrokers(arguments));
+
+        brokerConfig.setFederationPrefetchCount(arguments.getInt("fed-prefetch-count", 10000));
+        brokerConfig.setFederationReconnectDelaySeconds(arguments.getInt("fed-reconnect-delay-seconds", 5));
+        brokerConfig.setFederationAckMode(arguments.getStr("fed-ack-mode", "on-publish"));
+
+        return brokerConfig;
     }
 
     private static List<Broker> getBrokers(CmdArguments arguments) {
@@ -483,9 +454,10 @@ public class AMQPBenchmarker {
         }
     }
 
-    private static ConnectionSettings getConnectionSettings(CmdArguments cmdArguments, BrokerConfiguration brokerConfig) {
+    private static ConnectionSettings getConnectionSettings(CmdArguments cmdArguments,
+                                                            List<Broker> hosts) {
         ConnectionSettings connectionSettings = new ConnectionSettings();
-        connectionSettings.setHosts(brokerConfig.getHosts());
+        connectionSettings.setHosts(hosts);
         connectionSettings.setManagementPort(Integer.valueOf(cmdArguments.getStr("--broker-mgmt-port")));
         connectionSettings.setUser(cmdArguments.getStr("--broker-user"));
         connectionSettings.setPassword(cmdArguments.getStr("--broker-password"));

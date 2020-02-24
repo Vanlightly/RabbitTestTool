@@ -1,5 +1,5 @@
 {
-  "topologyName": "fanout_exchange",
+  "topologyName": "federated_queue",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
@@ -24,11 +24,11 @@
     {
       "name": "benchmark",
       "scale": "{{ var.vhostCount }}",
-      "exchanges": [ { "name": "ex1", "type": "fanout" }],
+      "federation": "upstream",
       "queueGroups": [
-        { "group": "q1",
+        {
+          "group": "q1",
           "scale": "{{ var.queueCount }}",
-          "bindings": [{ "from": "ex1" }],
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
           ]
@@ -42,13 +42,26 @@
             "useConfirms": "{{ var.useConfirms }}",
             "inFlightLimit": "{{ var.inflightLimit }}"
           },
-          "sendToExchange": {
-            "exchange": "ex1",
-            "routingKeyMode": "none"
+          "sendToQueueGroup": {
+            "queueGroup": "q1",
+            "mode": "Counterpart"
           },
           "deliveryMode": "{{ var.deliveryMode }}",
           "messageSize": "{{ var.messageSize }}",
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        }
+      ]
+    },
+    {
+      "name": "benchmark",
+      "scale": "{{ var.vhostCount }}",
+      "federation": "downstream",
+      "queueGroups": [
+        { "group": "q1",
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
         }
       ],
       "consumerGroups": [
@@ -60,20 +73,7 @@
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",
             "ackInterval": "{{ var.ackInterval }}"
-          },
-          "processingMs": "1",
-          "connectToDownstream": "false"
-        },
-        {
-          "group": "c2",
-          "scale": "{{ var.consumerCount }}",
-          "queueGroup": "q1",
-          "ackMode": {
-            "manualAcks": "{{ var.manualAcks }}",
-            "consumerPrefetch": "{{ var.consumerPrefetch }}",
-            "ackInterval": "{{ var.ackInterval }}"
-          },
-          "connectToDownstream": "true"
+          }
         }
       ]
     }

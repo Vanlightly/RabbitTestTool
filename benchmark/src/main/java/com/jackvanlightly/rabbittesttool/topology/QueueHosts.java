@@ -127,31 +127,12 @@ public class QueueHosts {
 
     public Broker getHostRoundRobin() {
         int index = currentIndex.getAndIncrement();
-        lock.readLock().lock();
-        try {
-            if(queueHosts.isEmpty())
-                return null;
-
-            String key = (String)queueHosts.keySet().toArray()[index % queueHosts.size()];
-            return queueHosts.get(key);
-        }
-        finally {
-            lock.readLock().unlock();
-        }
+        return brokers.get(index % brokers.size());
     }
 
     public Broker getRandomHost() {
-        lock.readLock().lock();
-        try {
-            if(queueHosts.isEmpty())
-                return null;
-
-            String key = (String)queueHosts.keySet().toArray()[rand.nextInt(queueHosts.size())];
-            return queueHosts.get(key);
-        }
-        finally {
-            lock.readLock().unlock();
-        }
+        int index = rand.nextInt(brokers.size());
+        return brokers.get(index);
     }
 
     public Broker getHost(String vhost, String queue) {

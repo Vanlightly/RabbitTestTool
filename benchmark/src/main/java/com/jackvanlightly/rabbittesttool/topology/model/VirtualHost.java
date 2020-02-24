@@ -12,7 +12,7 @@ public class VirtualHost {
     private List<ConsumerConfig> consumers;
     private List<ExchangeConfig> exchanges;
     private List<QueueConfig> queues;
-    private VariableDimension variableDimension;
+    private boolean isDownstream;
 
     public VirtualHost() {
         publishers = new ArrayList<>();
@@ -61,11 +61,11 @@ public class VirtualHost {
         this.queues = queues;
     }
 
-    public VariableDimension getVariableDimension() {
-        return variableDimension;
+    public boolean isDownstream() {
+        return isDownstream;
     }
 
-    public void setVariableDimension(VariableDimension variableDimension) {
-        this.variableDimension = variableDimension;
+    public void setDownstream(boolean downstream) {
+        isDownstream = downstream;
     }
 }

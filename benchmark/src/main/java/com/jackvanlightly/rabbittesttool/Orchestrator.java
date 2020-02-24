@@ -34,7 +34,8 @@ public class Orchestrator {
     private QueueHosts queueHosts;
     private QueueHosts downstreamQueueHosts;
     private ExecutorService queueHostsExecutor;
-    private ConnectionSettings connectionSettingsTemplate;
+    private ConnectionSettings connectionSettingsBase;
+    private ConnectionSettings downstreamConnectionSettingsBase;
     private Stats stats;
     private MessageModel messageModel;
     private String mode;
@@ -48,6 +49,7 @@ public class Orchestrator {
     public Orchestrator(TopologyGenerator topologyGenerator,
                         BenchmarkRegister benchmarkRegister,
                         ConnectionSettings connectionSettings,
+                        ConnectionSettings downstreamConnectionSettings,
                         Stats stats,
                         MessageModel messageModel,
                         QueueHosts queueHosts,
@@ -57,7 +59,8 @@ public class Orchestrator {
         this.topologyGenerator = topologyGenerator;
         this.queueHosts = queueHosts;
         this.downstreamQueueHosts = downstreamQueueHosts;
-        this.connectionSettingsTemplate = connectionSettings;
+        this.connectionSettingsBase = connectionSettings;
+        this.downstreamConnectionSettingsBase = downstreamConnectionSettings;
         this.stats = stats;
         this.mode = mode;
 
@@ -117,9 +120,19 @@ public class Orchestrator {
             if(topology.shouldDeclareArtefacts()) {
                 topologyGenerator.declareVHost(vhost);
                 topologyGenerator.declareExchanges(vhost);
-                topologyGenerator.declarePolicies(vhost.getName(), topology.getPolicies());
+
+                if(vhost.isDownstream()) {
+                    topologyGenerator.addUpstream(vhost,
+                            brokerConfiguration.getFederationPrefetchCount(),
+                            brokerConfiguration.getFederationReconnectDelaySeconds(),
+                            brokerConfiguration.getFederationAckMode());
+                }
+
+                topologyGenerator.declarePolicies(vhost.getName(), topology.getPolicies(), vhost.isDownstream());
             }
-            addQueueGroups(vhost, topology, brokerConfiguration.getNodeNames(), topology.shouldDeclareArtefacts());
+
+            List<String> nodeNames = vhost.isDownstream() ? brokerConfiguration.getDownstreamNodeNames() : brokerConfiguration.getNodeNames();
+            addQueueGroups(vhost, topology, nodeNames, topology.shouldDeclareArtefacts());
             addPublisherGroups(vhost, topology);
             addConsumerGroups(vhost, topology);
             stats.addClientGroups(publisherGroups, consumerGroups);
@@ -174,12 +187,19 @@ public class Orchestrator {
                     break;
             }
 
-            PublisherGroup publisherGroup = new PublisherGroup(connectionSettingsTemplate.getClone(vhost.getName()),
+            ConnectionSettings connSettings = publisherConfig.isDownstream()
+                    ? downstreamConnectionSettingsBase.getClone(vhost.getName())
+                    : connectionSettingsBase.getClone(vhost.getName());
+
+            QueueHosts publisherQueueHosts = publisherConfig.isDownstream()
+                    ? downstreamQueueHosts : queueHosts;
+
+            PublisherGroup publisherGroup = new PublisherGroup(connSettings,
                     publisherConfig,
                     vhost,
                     stats,
                     messageModel,
-                    queueHosts,
+                    publisherQueueHosts,
                     (int)publisherMaxScale);
             publisherGroup.createInitialPublishers();
             publisherGroups.add(publisherGroup);
@@ -207,13 +227,19 @@ public class Orchestrator {
                     break;
             }
 
-            ConsumerGroup consumerGroup = new ConsumerGroup(connectionSettingsTemplate.getClone(vhost.getName()),
+            ConnectionSettings connSettings = consumerConfig.isDownstream()
+                    ? downstreamConnectionSettingsBase.getClone(vhost.getName())
+                    : connectionSettingsBase.getClone(vhost.getName());
+
+            QueueHosts consumerQueueHosts = consumerConfig.isDownstream()
+                    ? downstreamQueueHosts : queueHosts;
+
+            ConsumerGroup consumerGroup = new ConsumerGroup(connSettings,
                     consumerConfig,
                     vhost,
                     stats,
                     messageModel,
-                    queueHosts,
-                    downstreamQueueHosts,
+                    consumerQueueHosts,
                     (int)consumerMaxScale);
             consumerGroup.createInitialConsumers();
             consumerGroups.add(consumerGroup);

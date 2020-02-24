@@ -12,7 +12,7 @@ public class ConsumerConfig {
     private String queueGroup;
     private int frameMax;
     private int processingMs;
-    private boolean connectToDownstream;
+    private boolean isDownstream;
 
     public String getVhostName() {
         return vhostName;
@@ -79,11 +79,11 @@ public class ConsumerConfig {
         this.processingMs = processingMs;
     }
 
-    public boolean shouldConnectToDownstream() {
-        return connectToDownstream;
+    public boolean isDownstream() {
+        return isDownstream;
     }
 
-    public void setConnectToDownstream(boolean connectToDownstream) {
-        this.connectToDownstream = connectToDownstream;
+    public void setDownstream(boolean downstream) {
+        isDownstream = downstream;
     }
 }

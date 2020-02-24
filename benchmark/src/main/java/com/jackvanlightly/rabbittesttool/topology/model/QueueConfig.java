@@ -8,6 +8,7 @@ import java.util.List;
 public class QueueConfig {
     private String group;
     private String vhostName;
+    private boolean isDownstream;
     private int scale;
     private List<Property> properties;
     private List<BindingConfig> bindings;
@@ -31,6 +32,14 @@ public class QueueConfig {
 
     public void setVhostName(String vhostName) {
         this.vhostName = vhostName;
+    }
+
+    public boolean isDownstream() {
+        return isDownstream;
+    }
+
+    public void setDownstream(boolean downstream) {
+        isDownstream = downstream;
     }
 
     public int getScale() {

@@ -49,18 +49,18 @@ public class TopologyGenerator {
     }
 
     public void declareVHost(VirtualHost vhost) {
-        String vhostUrl = getVHostUrl(vhost.getName());
+        String vhostUrl = getVHostUrl(vhost.getName(), vhost.isDownstream());
         delete(vhostUrl, true);
         put(vhostUrl, "{}");
 
         String permissionsJson = "{\"configure\":\".*\",\"write\":\".*\",\"read\":\".*\"}";
-        put(getVHostUserPermissionsUrl(vhost.getName(), connectionSettings.getUser()), permissionsJson);
+        put(getVHostUserPermissionsUrl(vhost.getName(), connectionSettings.getUser(), vhost.isDownstream()), permissionsJson);
 
         LOGGER.info("Added vhost " + vhost.getName()+ " and added permissions to user " + connectionSettings.getUser());
     }
 
     public void deleteVHost(VirtualHost vhost) {
-        String vhostUrl = getVHostUrl(vhost.getName());
+        String vhostUrl = getVHostUrl(vhost.getName(), vhost.isDownstream());
         delete(vhostUrl, false);
     }
 
@@ -75,7 +75,7 @@ public class TopologyGenerator {
     private void declareExchange(ExchangeConfig exchangeConfig) {
         String exchangeTemplate = "{\"type\":\"[ex]\",\"auto_delete\":false,\"durable\":true,\"internal\":false,\"arguments\":{}}";
         String exchangeJson = exchangeTemplate.replace("[ex]", exchangeConfig.getExchangeTypeName());
-        put(getExchangeUrl(exchangeConfig.getVhostName(), exchangeConfig.getName()), exchangeJson);
+        put(getExchangeUrl(exchangeConfig.getVhostName(), exchangeConfig.getName(), exchangeConfig.isDownstream()), exchangeJson);
     }
 
     private void declareExchangeBindings(ExchangeConfig exchangeConfig) {
@@ -95,7 +95,10 @@ public class TopologyGenerator {
 
             String bindingJson = binding.toString();
 
-            post(getExchangeToExchangeBindingUrl(exchangeConfig.getVhostName(), bindingConfig.getFrom(), exchangeConfig.getName()), bindingJson);
+            post(getExchangeToExchangeBindingUrl(exchangeConfig.getVhostName(),
+                    bindingConfig.getFrom(),
+                    exchangeConfig.getName(),
+                    exchangeConfig.isDownstream()), bindingJson);
         }
     }
 
@@ -136,10 +139,13 @@ public class TopologyGenerator {
         JSONObject queue = new JSONObject();
         queue.put("auto_delete", false);
         queue.put("durable", true);
-        queue.put("node", brokerConfig.getHosts().get(nodeIndex).getNodeName());
+        String nodeName = queueConfig.isDownstream()
+                ? brokerConfig.getDownstreamHosts().get(nodeIndex).getNodeName()
+                : brokerConfig.getHosts().get(nodeIndex).getNodeName();
+        queue.put("node", nodeName);
         queue.put("arguments", arguments);
 
-        put(getQueueUrl(queueConfig.getVhostName(), queueName), queue.toString());
+        put(getQueueUrl(queueConfig.getVhostName(), queueName, queueConfig.isDownstream()), queue.toString());
 
         if(queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("ha-mode"))) {
             JSONObject policyJson = new JSONObject();
@@ -156,7 +162,10 @@ public class TopologyGenerator {
                 }
             }
             policyJson.put("definition", definition);
-            put(getHaQueuesPolicyUrl(queueName, queueConfig.getVhostName()), policyJson.toString());
+            put(getHaQueuesPolicyUrl(queueName,
+                    queueConfig.getVhostName(),
+                    queueConfig.isDownstream()),
+                    policyJson.toString());
         }
     }
 
@@ -179,11 +188,14 @@ public class TopologyGenerator {
 
             String bindingJson = binding.toString();
 
-            post(getExchangeToQueueBindingUrl(queueConfig.getVhostName(), bindingConfig.getFrom(), queueConfig.getQueueName(ordinal)), bindingJson);
+            post(getExchangeToQueueBindingUrl(queueConfig.getVhostName(),
+                    bindingConfig.getFrom(),
+                    queueConfig.getQueueName(ordinal),
+                    queueConfig.isDownstream()), bindingJson);
         }
     }
 
-    public void declarePolicies(String vhostName, List<Policy> policies) {
+    public void declarePolicies(String vhostName, List<Policy> policies, boolean isDownstream) {
         for(Policy policy : policies) {
             JSONObject policyJson = new JSONObject();
             policyJson.put("pattern", policy.getPattern());
@@ -198,14 +210,27 @@ public class TopologyGenerator {
 
             policyJson.put("definition", definition);
 
-            put(getHaQueuesPolicyUrl(policy.getName(), vhostName), policyJson.toString());
+            put(getHaQueuesPolicyUrl(policy.getName(), vhostName, isDownstream), policyJson.toString());
         }
     }
 
+    public void addUpstream(VirtualHost vhost, int prefetch, int reconnectDelaySeconds, String ackMode) {
+        String url = getFederationUrl(vhost.getName() + "-upstream", vhost.getName());
 
+        JSONObject json = new JSONObject();
+        json.put("uri", getUpstreamUri());
+        json.put("prefetch-count", prefetch);
+        json.put("reconnect-delay", reconnectDelaySeconds);
+        json.put("ack-mode", ackMode);
 
-    public JSONArray getQueues(String vhost, boolean downstream) {
-        String url = getQueuesUrl(vhost, downstream);
+        JSONObject wrapper = new JSONObject();
+        wrapper.put("value", json);
+
+        put(url, wrapper.toString());
+    }
+
+    public JSONArray getQueues(String vhost, boolean isDownstream) {
+        String url = getQueuesUrl(vhost, isDownstream);
 
         try {
             RequestConfig.Builder requestConfig = RequestConfig.custom();
@@ -389,44 +414,53 @@ public class TopologyGenerator {
         }
     }
 
-    private String getVHostUrl(String vhost) {
-        return this.baseUrl + "/api/vhosts/" + vhost;
+    private String getVHostUrl(String vhost, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/vhosts/" + vhost;
     }
 
     private String getNodesUrl() {
         return this.baseUrl + "/api/nodes";
     }
 
-    private String getVHostUserPermissionsUrl(String vhost, String user) {
-        return this.baseUrl + "/api/permissions/"+ vhost + "/" + user;
+    private String getVHostUserPermissionsUrl(String vhost, String user, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/permissions/"+ vhost + "/" + user;
     }
 
-    private String getExchangeUrl(String vhost, String exchange) {
-        return this.baseUrl + "/api/exchanges/" + vhost + "/" + exchange;
+    private String getExchangeUrl(String vhost, String exchange, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/exchanges/" + vhost + "/" + exchange;
     }
 
-    private String getQueueUrl(String vhost, String queue) {
-        return this.baseUrl + "/api/queues/" + vhost + "/" + queue;
+    private String getQueueUrl(String vhost, String queue, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/queues/" + vhost + "/" + queue;
     }
 
-    private String getQueuesUrl(String vhost, boolean downstream) {
-        return chooseUrl(downstream) + "/api/queues/" + vhost;
+    private String getQueuesUrl(String vhost, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/queues/" + vhost;
     }
 
-    private String getExchangeToQueueBindingUrl(String vhost, String from, String to) {
-        return this.baseUrl + "/api/bindings/" + vhost + "/e/" + from + "/q/" + to;
+    private String getExchangeToQueueBindingUrl(String vhost, String from, String to, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/bindings/" + vhost + "/e/" + from + "/q/" + to;
     }
 
-    private String getExchangeToExchangeBindingUrl(String vhost, String from, String to) {
-        return this.baseUrl + "/api/bindings/" + vhost + "/e/" + from + "/e/" + to;
+    private String getExchangeToExchangeBindingUrl(String vhost, String from, String to, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/bindings/" + vhost + "/e/" + from + "/e/" + to;
     }
 
-    private String getHaQueuesPolicyUrl(String name, String vhost) {
-        return this.baseUrl + "/api/policies/" + vhost + "/" + name;
+    private String getHaQueuesPolicyUrl(String name, String vhost, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/policies/" + vhost + "/" + name;
     }
 
-    private String chooseUrl(boolean downstream) {
-        if(downstream)
+    private String getUpstreamUri() {
+        // for now just get random broker from upstream cluster
+        return "amqp://"+brokerConfig.getHosts().get(rand.nextInt(brokerConfig.getHosts().size())).getIp();
+    }
+
+    private String getFederationUrl(String name, String vhost) {
+        return downstreamBaseUrl + "/api/parameters/federation-upstream/" + vhost +"/" + name;
+    }
+
+    private String chooseUrl(boolean isDownstream) {
+        if(isDownstream)
             return downstreamBaseUrl;
 
         return baseUrl;

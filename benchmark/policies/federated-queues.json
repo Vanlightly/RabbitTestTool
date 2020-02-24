@@ -1,0 +1,13 @@
+{
+    "policies": [
+        {
+            "name": "fed-queues",
+            "applyTo": "queues",
+            "pattern": "",
+            "priority": 0,
+            "properties" : [
+                { "key": "federation-upstream-set", "value": "all", "type": "string" }
+            ]
+        }
+    ]
+}

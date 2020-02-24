@@ -200,34 +200,38 @@ public class TopologyLoader {
             if(vhostName.contains("_"))
                 throw new TopologyException("Virtual host names cannot contain an underscore");
 
+            boolean isDownstream = getOptionalStrValue(vhostJson, "federation", "upstream")
+                    .toLowerCase().equals("downstream");
+
             VirtualHost vhost = new VirtualHost();
             vhost.setName(vhostName);
+            vhost.setDownstream(isDownstream);
 
-            if (!vhostJson.has("queueGroups"))
-                throw new TopologyException("At least one queue group must be defined for vhost " + vhostName);
-
-            if (!vhostJson.has("publisherGroups") && !vhostJson.has("consumerGroups"))
-                throw new TopologyException("At least one publisher group and/or one consumer group must be defined for vhost" + vhostName);
+            String info = isDownstream ? " on downstream" : "";
 
             if (vhostJson.has("exchanges"))
-                vhost.setExchanges(loadExchanges(vhostName, vhostJson.getJSONArray("exchanges")));
+                vhost.setExchanges(loadExchanges(vhostName, vhostJson.getJSONArray("exchanges"), isDownstream));
             else
-                LOGGER.info("No exchanges defined for vhost " + vhostName);
+                LOGGER.info("No exchanges defined for vhost " + vhostName + info);
 
-            vhost.setQueues(loadQueueGroupConfigs(vhostName, vhostJson.getJSONArray("queueGroups")));
+            if(vhostJson.has("queueGroups"))
+                vhost.setQueues(loadQueueGroupConfigs(vhostName, vhostJson.getJSONArray("queueGroups"), isDownstream));
+            else
+                LOGGER.info("No queue groups defined for vhost " + vhostName + info);
 
             if (vhostJson.has("publisherGroups"))
                 vhost.setPublishers(loadPublisherGroupConfigs(vhostName, vhostJson.getJSONArray("publisherGroups"),
                         vhost.getQueues(),
                         benchmarkType,
-                        stepOverride));
+                        stepOverride,
+                        isDownstream));
             else
-                LOGGER.info("No publisher groups defined  for vhost " + vhostName);
+                LOGGER.info("No publisher groups defined  for vhost " + vhostName + info);
 
             if (vhostJson.has("consumerGroups"))
-                vhost.setConsumers(loadConsumerGroupConfigs(vhostName, vhostJson.getJSONArray("consumerGroups"), vhost.getQueues()));
+                vhost.setConsumers(loadConsumerGroupConfigs(vhostName, vhostJson.getJSONArray("consumerGroups"), vhost.getQueues(), isDownstream));
             else
-                LOGGER.info("No consumer groups defined vhost " + vhostName);
+                LOGGER.info("No consumer groups defined vhost " + vhostName + info);
 
             virtualHosts.add(vhost);
         }
@@ -239,7 +243,8 @@ public class TopologyLoader {
                                                            JSONArray pgJsonArr,
                                                            List<QueueConfig> queueConfigs,
                                                            BenchmarkType benchmarkType,
-                                                           StepOverride stepOverride) {
+                                                           StepOverride stepOverride,
+                                                           boolean isDownstream) {
         List<PublisherConfig> pgConfigs = new ArrayList<>();
 
         for (int i = 0; i < pgJsonArr.length(); i++) {
@@ -250,6 +255,7 @@ public class TopologyLoader {
                 PublisherConfig pgConfig = new PublisherConfig();
                 pgConfig.setGroup(getMandatoryStrValue(pgJson, "group"));
                 pgConfig.setVhostName(vhostName);
+                pgConfig.setDownstream(isDownstream);
                 pgConfig.setScale(scale);
                 pgConfig.setDeliveryMode(getDeliveryMode(getMandatoryStrValue(pgJson, "deliveryMode")));
                 pgConfig.setHeadersPerMessage(getOptionalIntValue(pgJson, "headersPerMessage", 0));
@@ -358,7 +364,8 @@ public class TopologyLoader {
 
     public List<ConsumerConfig> loadConsumerGroupConfigs(String vhostName,
                                                          JSONArray cgJsonArr,
-                                                         List<QueueConfig> queueConfigs) {
+                                                         List<QueueConfig> queueConfigs,
+                                                         boolean isDownstream) {
         List<ConsumerConfig> cgConfigs = new ArrayList<>();
 
         for (int i = 0; i < cgJsonArr.length(); i++) {
@@ -372,7 +379,7 @@ public class TopologyLoader {
                 cgConfig.setScale(scale);
                 cgConfig.setFrameMax(getOptionalIntValue(cgJson, "frameMax", 0));
                 cgConfig.setProcessingMs(getOptionalIntValue(cgJson, "processingMs", 0));
-                cgConfig.setConnectToDownstream(getOptionalBoolValue(cgJson, "connectToDownstream", false));
+                cgConfig.setDownstream(isDownstream);
 
                 if (cgJson.has("ackMode")) {
                     JSONObject ackModeJson = cgJson.getJSONObject("ackMode");
@@ -396,7 +403,7 @@ public class TopologyLoader {
         return cgConfigs;
     }
 
-    public List<QueueConfig> loadQueueGroupConfigs(String vhostName, JSONArray qgJsonArr) {
+    public List<QueueConfig> loadQueueGroupConfigs(String vhostName, JSONArray qgJsonArr, boolean isDownstream) {
         List<QueueConfig> queueConfigs = new ArrayList<>();
 
         for (int i = 0; i < qgJsonArr.length(); i++) {
@@ -406,6 +413,7 @@ public class TopologyLoader {
                 QueueConfig qConfig = new QueueConfig();
                 qConfig.setGroup(getMandatoryStrValue(qJson, "group"));
                 qConfig.setVhostName(vhostName);
+                qConfig.setDownstream(isDownstream);
                 qConfig.setScale(scale);
 
                 if (qJson.has("properties"))
@@ -421,7 +429,7 @@ public class TopologyLoader {
         return queueConfigs;
     }
 
-    public List<ExchangeConfig> loadExchanges(String vhostName, JSONArray exJsonArr) {
+    public List<ExchangeConfig> loadExchanges(String vhostName, JSONArray exJsonArr, boolean isDownstream) {
         List<ExchangeConfig> exchangeConfigs = new ArrayList<>();
 
         for(int i=0; i<exJsonArr.length(); i++) {
@@ -430,6 +438,7 @@ public class TopologyLoader {
 
             exConfig.setName(getMandatoryStrValue(exJson, "name"));
             exConfig.setVhostName(vhostName);
+            exConfig.setDownstream(isDownstream);
             exConfig.setExchangeType(getExchangeType(getMandatoryStrValue(exJson, "type")));
 
             if(exJson.has("bindings"))

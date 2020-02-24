@@ -10,6 +10,7 @@ public class PublisherConfig {
     private String group;
     private PublisherMode publisherMode;
     private String vhostName;
+    private boolean isDownstream;
 
     private int scale;
 
@@ -162,5 +163,13 @@ public class PublisherConfig {
 
     public void setInitialPublish(long initialPublish) {
         this.initialPublish = initialPublish;
+    }
+
+    public boolean isDownstream() {
+        return isDownstream;
+    }
+
+    public void setDownstream(boolean downstream) {
+        isDownstream = downstream;
     }
 }

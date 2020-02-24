@@ -48,12 +48,4 @@ public class ConsumerSettings {
     public void setProcessingMs(int processingMs) {
         this.processingMs = processingMs;
     }
-
-    public boolean shouldConnectToDownstream() {
-        return connectToDownstream;
-    }
-
-    public void setConnectToDownstream(boolean connectToDownstream) {
-        this.connectToDownstream = connectToDownstream;
-    }
 }

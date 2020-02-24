@@ -8,6 +8,7 @@ public class ExchangeConfig {
     private String vhostName;
     private ExchangeType exchangeType;
     private List<BindingConfig> bindings;
+    private boolean isDownstream;
 
     public ExchangeConfig() {
         bindings = new ArrayList<>();
@@ -56,5 +57,13 @@ public class ExchangeConfig {
 
     public void setBindings(List<BindingConfig> bindings) {
         this.bindings = bindings;
+    }
+
+    public boolean isDownstream() {
+        return isDownstream;
+    }
+
+    public void setDownstream(boolean downstream) {
+        isDownstream = downstream;
     }
 }
