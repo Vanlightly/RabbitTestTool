@@ -57,11 +57,8 @@ class GcpDeployer(Deployer):
                     continue
 
                 self.__deploy_rmq_node(node_name, common_conf, unique_conf)
-
-            # wait for nodes to be ready
-            for node in range(first_node_number, first_node_number + cluster_size):
-                node_name = f"{common_conf.run_tag}-rmq{node}-server"
                 self.__wait_rabbitmq_ready(node_name)
+                self.__setup_cadvisor(node_name)
 
             # form the cluster
             master_node = f"rabbit@{common_conf.run_tag}-rmq{first_node_number}-server.c.{common_conf.gcp_project_id}.internal"
@@ -103,6 +100,7 @@ class GcpDeployer(Deployer):
             node_name = f"{common_conf.run_tag}-{unique_conf.config_tag}-loadgen"
             if not self.__node_exists(node_name):
                 self.__deploy_loadgen_node(node_name, common_conf)
+                self.__setup_cadvisor(node_name)
             else:
                 console_out(self.actor, f"{node_name} already exists, skipping deploy")
             self._deploy_status[status_id] = "success"
@@ -218,6 +216,24 @@ class GcpDeployer(Deployer):
 
         if exit_code != 0:
             raise Exception(f"deploy {node_name} failed with exit code {exit_code}")
+
+    def __setup_cadvisor(self, node_name):
+        command_args = ["gcloud", "compute", "ssh",
+                        node_name,
+                        "--",
+                        "docker run "
+                        "--volume=/:/rootfs:ro "
+                        "--volume=/var/run:/var/run:ro "
+                        "--volume=/sys:/sys:ro "
+                        "--volume=/var/lib/docker/:/var/lib/docker:ro "
+                        "--volume=/dev/disk/:/dev/disk:ro "
+                        "--publish=8080:8080 "
+                        "--detach=true "
+                        "--name=cadvisor "
+                        "gcr.io/google-containers/cadvisor:latest"]
+        exit_code = subprocess.call(command_args)
+        if exit_code != 0:
+            raise Exception(f"prometheus node_exporter on {node_name} failed with exit code {exit_code}")
 
     def __deploy_loadgen_node(self, node_name, common_conf):
         console_out(self.actor, f"Deploying node {node_name}...")
