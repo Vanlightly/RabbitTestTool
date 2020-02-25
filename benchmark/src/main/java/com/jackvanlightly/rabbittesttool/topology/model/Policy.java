@@ -8,13 +8,20 @@ public class Policy {
     private String applyTo;
     private int priority;
     private List<Property> properties;
+    private boolean isDownstream;
 
-    public Policy(String name, String pattern, String applyTo, int priority, List<Property> properties) {
+    public Policy(String name,
+                  String pattern,
+                  String applyTo,
+                  int priority,
+                  List<Property> properties,
+                  boolean isDownstream) {
         this.name = name;
         this.pattern = pattern;
         this.applyTo = applyTo;
         this.priority = priority;
         this.properties = properties;
+        this.isDownstream = isDownstream;
     }
 
     public String getName() {
@@ -39,5 +46,9 @@ public class Policy {
 
     public void setProperties(List<Property> properties) {
         this.properties = properties;
+    }
+
+    public boolean isDownstream() {
+        return isDownstream;
     }
 }

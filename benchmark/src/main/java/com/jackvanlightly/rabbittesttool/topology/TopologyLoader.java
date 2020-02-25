@@ -95,10 +95,10 @@ public class TopologyLoader {
             List<Property> props = removeIncompatibleProps(policy.getProperties());
             for(Property prop : props) {
                 if(isQuorumQueueProperty(prop)) {
-                    addPropertyToQueue(topology, prop, policy.getPattern());
+                    addPropertyToQueue(topology, prop, policy.getPattern(), policy.isDownstream());
                 }
                 else if(isStreamQueueProperty(prop)) {
-                    addPropertyToQueue(topology, prop, policy.getPattern());
+                    addPropertyToQueue(topology, prop, policy.getPattern(), policy.isDownstream());
                 }
                 else {
                     finalProps.add(prop);
@@ -143,11 +143,13 @@ public class TopologyLoader {
         return false;
     }
 
-    private void addPropertyToQueue(Topology topology, Property prop, String pattern) {
+    private void addPropertyToQueue(Topology topology, Property prop, String pattern, boolean isDownstream) {
         for(VirtualHost vhost : topology.getVirtualHosts()) {
             for(QueueConfig qc : vhost.getQueues()) {
-                if(pattern.equals("") || qc.getGroup().matches(pattern))
-                    qc.getProperties().add(prop);
+                if(qc.isDownstream() == isDownstream) {
+                    if (pattern.equals("") || qc.getGroup().matches(pattern))
+                        qc.getProperties().add(prop);
+                }
             }
         }
     }
@@ -747,13 +749,17 @@ public class TopologyLoader {
 
     private Policy getPolicy(JSONObject policyJson) {
         List<Property> properties = getProperties(policyJson.getJSONArray("properties"));
+        boolean isDownstream = getOptionalStrValue(policyJson, "federation", "upstream")
+                .toLowerCase()
+                .equals("downstream");
 
         return new Policy(
                 getMandatoryStrValue(policyJson, "name"),
                 getMandatoryStrValue(policyJson, "pattern"),
                 getMandatoryStrValue(policyJson, "applyTo"),
                 getMandatoryIntValue(policyJson, "priority"),
-                properties);
+                properties,
+                isDownstream);
     }
 
     private Map<String, String> getVariableDefaults(JSONObject json) {

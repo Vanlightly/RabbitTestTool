@@ -115,18 +115,17 @@ public class TopologyGenerator {
     }
 
     public void declareQueue(QueueConfig queueConfig, int ordinal, int nodeIndex) {
-        //TODO queue properties
-        //String queueTemplate = "{\"auto_delete\":false,\"durable\":true,\"arguments\":{},\"node\":\"rabbit@rabbitmq" + node + "\"}";
-
         JSONObject arguments = new JSONObject();
 
         boolean isQuorum = queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("x-queue-type") && x.getValue().equals("quorum"));
 
         if(queueConfig.getProperties() != null && !queueConfig.getProperties().isEmpty()) {
             for(Property prop : queueConfig.getProperties()) {
+                // remove the x-queue-mode property if this is a quorum queue
                 if(isQuorum && prop.getKey().equals("x-queue-mode"))
                     continue;
 
+                // remove any HA queue properties, these will be added via a policy
                 if(prop.getKey().startsWith("ha-"))
                     continue;
 
@@ -147,6 +146,7 @@ public class TopologyGenerator {
 
         put(getQueueUrl(queueConfig.getVhostName(), queueName, queueConfig.isDownstream()), queue.toString());
 
+        // if this has HA queue properties, declare a separate policy for that
         if(queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("ha-mode"))) {
             JSONObject policyJson = new JSONObject();
             policyJson.put("pattern", queueConfig.getQueueName(ordinal));
@@ -195,22 +195,24 @@ public class TopologyGenerator {
         }
     }
 
-    public void declarePolicies(String vhostName, List<Policy> policies, boolean isDownstream) {
+    public void declarePolicies(String vhostName, List<Policy> policies, boolean isDownstreamVhost) {
         for(Policy policy : policies) {
-            JSONObject policyJson = new JSONObject();
-            policyJson.put("pattern", policy.getPattern());
-            policyJson.put("priority", policy.getPriority());
-            policyJson.put("apply-to", policy.getApplyTo());
+            if(policy.isDownstream() == isDownstreamVhost) {
+                JSONObject policyJson = new JSONObject();
+                policyJson.put("pattern", policy.getPattern());
+                policyJson.put("priority", policy.getPriority());
+                policyJson.put("apply-to", policy.getApplyTo());
 
-            JSONObject definition = new JSONObject();
+                JSONObject definition = new JSONObject();
 
-            for (Property prop : policy.getProperties()) {
-                definition.put(prop.getKey(), prop.getValue());
+                for (Property prop : policy.getProperties()) {
+                    definition.put(prop.getKey(), prop.getValue());
+                }
+
+                policyJson.put("definition", definition);
+
+                put(getHaQueuesPolicyUrl(policy.getName(), vhostName, policy.isDownstream()), policyJson.toString());
             }
-
-            policyJson.put("definition", definition);
-
-            put(getHaQueuesPolicyUrl(policy.getName(), vhostName, isDownstream), policyJson.toString());
         }
     }
 

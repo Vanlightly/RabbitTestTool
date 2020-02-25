@@ -5,6 +5,7 @@
             "applyTo": "exchanges",
             "pattern": "",
             "priority": 0,
+            "federation": "downstream",
             "properties" : [
                 { "key": "federation-upstream-set", "value": "all", "type": "string" }
             ]
