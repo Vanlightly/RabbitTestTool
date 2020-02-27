@@ -193,7 +193,6 @@ class GcpDeployer(Deployer):
                         f"--tags=rtt-benchmark",
                         f"--container-stdin",
                         f"--container-tty",
-                        f"--preemptible",
                         f"--machine-type={unique_conf.machine_type}",
                         f"--create-disk={create_disk_args}",
                         f"--container-mount-disk=name={disk_name},mount-path=/var/lib/rabbitmq",
@@ -263,7 +262,6 @@ class GcpDeployer(Deployer):
                         f"--tags=rtt-benchmark",
                         f"--container-stdin",
                         f"--container-tty",
-                        f"--preemptible",
                         f"--scopes={scopes}",
                         f"--machine-type={common_conf.loadgen_machine_type}",
                         f"--container-image={common_conf.loadgen_container_image}"]
