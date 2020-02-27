@@ -187,7 +187,6 @@ class GcpDeployer(Deployer):
 
         command_args = ["gcloud", "compute", "instances", "create-with-container",
                         node_name,
-                        f"--public-dns",
                         f"--boot-disk-type=pd-ssd",
                         f"--labels={labels}",
                         f"--tags=rtt-benchmark",
@@ -256,7 +255,6 @@ class GcpDeployer(Deployer):
 
         command_args = ["gcloud", "compute", "instances", "create-with-container",
                         node_name,
-                        f"--public-dns",
                         f"--boot-disk-type=pd-ssd",
                         f"--labels={labels}",
                         f"--tags=rtt-benchmark",
