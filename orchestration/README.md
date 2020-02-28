@@ -14,6 +14,7 @@ The orchrestration scripts aim to make it easy to run both small and large scale
     - [Config Files](#config-files)
     - [Notes on local storage and EBS volumes](#notes-on-local-storage-and-EBS-volumes)
     - [Notes on AWS CLI and Ansible](#notes-on-aws-cli-and-ansible)
+    - [Notes on gcloud CLI](#notes-on-gcloud-cli)
     - [Notes on Influxdb](#notes-on-influxdb)
     - [Grafana Dashboards](#grafana-dashboards)
         - [One Node Dashboard](#one-node-dashboard)
@@ -24,10 +25,10 @@ The orchrestration scripts aim to make it easy to run both small and large scale
 
 The Python orchestration scripts perform the following actions, in this order:
 
-1. Create broker and load generation EC2 instances.
+1. Create broker and load generation EC2 or GCP instances.
 2. Deploy RabbitMQ and the Java RabbitTestTool program.
 3. Run a playlist which is a list of benchmarks. Running a benchmark means running the deployed RabbitTestTool instances with a topology file specified in the playlist.
-4. Terminate all EC2 instances
+4. Terminate all EC2 or GCP instances
 
 Playlists are json files which specify a list of benchmarks to run. Each benchmark has a topology file, optionally a policies file and a list of other arguments to configure the benchmark.
 
@@ -42,16 +43,16 @@ This example shows a playlist of three benchmarks which run a common topology fi
     ],
     "commonAttributes": {
         "topology": "throughput/exchanges/fanout.json",
-        "topologyVariables": { 
-            "useConfirms": "true", 
-            "inflightLimit": "1000", 
-            "manualAcks": "true", 
-            "consumerPrefetch": "1000", 
-            "ackInterval": "1" 
+        "topologyVariables": {
+            "useConfirms": "true",
+            "inflightLimit": "1000",
+            "manualAcks": "true",
+            "consumerPrefetch": "1000",
+            "ackInterval": "1"
         },
         "policy": "quorum-queue.json",
-        "policyVariables": { 
-            "maxInMemoryLength": "100000" 
+        "policyVariables": {
+            "maxInMemoryLength": "100000"
         }
     }
 }
@@ -151,7 +152,7 @@ By default, only one broker is deployed per benchmark instance. But using this a
 Fig 1 shows a single benchmark run with --parallel 4. Each of the four instances gets its own run-tag but they share the same config-tag.
 
 ![](https://github.com/vanlightly/rabbittesttool/blob/master/images/rabbittesttool-side-by-side.png)
-Fig 2 shows a side-by-side run with --parallel 2. Each of the four instances gets its own run-tag then two have config-tag c1 and the other two have config-tag c2. 
+Fig 2 shows a side-by-side run with --parallel 2. Each of the four instances gets its own run-tag then two have config-tag c1 and the other two have config-tag c2.
 
 ![](https://github.com/vanlightly/rabbittesttool/blob/master/images/rabbittesttool-cluster.png)
 Fig 3 shows a single run with --parallel 2 and a cluster size of 3. The first benchmark VM and its three VMs share the same run-tag, the second benchmark VM and its three VMs share the same run-tag and they all share the same config-tag.
@@ -166,7 +167,12 @@ Common argument:
 | --- | --- | --- |
 | --playlist-file | None (mandatory) | The path to the playlist file that will be run |
 | --aws-config-file | None (optional) | The path to the AWS configuration file (described further below) |
+| --gcp-config-file | None (optional) | The path to the GCP configuration file (described further below) |
+| --gcp-project-id | None (mandatory) | The GCP project where the instances are created (used to construct rabbitmq node names) |
+| --gcp-postgres-connection-name | None (optional) | The connection name of a GCP Cloud SQL Database (decribed further below) |
 | --loadgen-instance | None (mandatory) | The EC2 instance type that the benchmark Java program will run on |
+| --loadgen-machine-type | None (mandatory) | The GCP machine type that the benchmark Java program will run on |
+| --loadgen-container-image | None (mandatory) | The docker image containing the Java program (built from the Dockerfile in this repo) (GCP only) |
 | --config-count | None (mandatory) | The number of configurations to run |
 | --gap-seconds | None (mandatory) | The number of seconds between each benchmark |
 | --repeat | 1 | The number of times the playlist is run sequentially. Default is once. |
@@ -190,7 +196,10 @@ Arguments that can be applied to all or specific configurations. When running mu
 | --technology | None (mandatory) | The technology being tested, rabbitmq |
 | --version | None (mandatory) | The version to be deployed |
 | --instance | None (mandatory) | The EC2 instance type of the broker instances |
-| --volume | None (mandatory) | The volume type. When EBS must be like ebs-io1 or ebs-st1 or ebs-gp2 |
+| --container-image | None (mandatory) | The docker image containing rabbitmq (typically rabbitmq:3.X) (GCP only) |
+| --container-env | None (optional) | Additional env vars to be passed to rabbitmq containers (GCP only) |
+| --machine-type | None (mandatory) | The GCP machine type of the broker instances |
+| --volume | None (mandatory) | The volume type. When EBS must be like ebs-io1 or ebs-st1 or ebs-gp2, pd-ssd or standard for GCP |
 | --volume-size | None (mandatory) | The size in MB of the volume |
 | --filesystem | None (mandatory) | xfs or ext4 |
 | --tenancy | None (mandatory) | Default or Dedicated |
@@ -334,6 +343,14 @@ These scripts assume either an AWS profile is set up or you have temporary crede
 
 This readme does not cover usage of AWS CLI or Ansible with dynamic inventory (ec2.py, ec2.ini).
 
+### Notes on gcloud CLI
+
+`run-logged-gcp-playlist.py` assumes that the `gcloud` cli is installed, and logged in with permissions to create vms. The `--gcp-project-id` flag should match the current project so that the internal DNS names of created vms are inferred correctly.
+
+Unlike AWS orchestration, GCP orchestration creates vms via `gcloud compute instances create-with-container ...`. Therefore the broker version is effectively specified in choosing the `--container-image` flag. The image can be hosted on Docker Hub, or the private Google Container Registry of the GCP project of the vms.
+
+The java benchmarking tool's version is also specified in this manner. Additional topologies and policies can be added by inheriting from the base image and placing them in `/rabbittesttool/policies` and `/rabbittesttool/topologies`.
+
 ### Notes on Influxdb
 
 The scripts assume that influxdb is installed on an EC2 instance with the tag: inventorygroup=benchmarking_metrics. The script will not work without that and would have to be customized.
@@ -360,4 +377,5 @@ If it was a Logged benchmark run then you can find the configurations in Postgre
 
 #### Broker Server Metrics Dashboard
 
-Shows the usual CPU, memory, disk and network stats sourced from the VM where the broker is running, extracted by Telegraf.check_user_pass_login
+Shows the usual CPU, memory, disk and network stats sourced from the VM where the broker is running, extracted by Telegraf.
+check_user_pass_login

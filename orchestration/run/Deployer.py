@@ -18,9 +18,9 @@ class Deployer:
     def deploy(self, runner, configurations, common_conf):
         if common_conf.run_tag == "none":
             common_conf.run_tag = str(randint(1, 99999))
-        
+
         self.parallel_deploy(configurations, common_conf)
-        
+
         if common_conf.background_topology_file != "none":
             runner.run_background_load_across_runs(configurations, common_conf)
 
@@ -69,7 +69,7 @@ class Deployer:
                                       str(node_num),
                                       common_conf.run_tag,
                                       no_destroy)
-                    console_out(self.actor, f"TEARDOWN FOR {unique_conf.suffix} loadgen")
+                    console_out(self.actor, f"TEARDOWN FOR {unique_conf.config_tag} loadgen")
                     self.teardown_loadgen(unique_conf,
                                           common_conf,
                                           no_destroy)
@@ -87,13 +87,13 @@ class Deployer:
 
                 if counter == 0:
                     start_node = unique_conf.node_number
-                
+
                 last_node = int(unique_conf.node_number) + int(unique_conf.cluster_size) - 1
                 counter += 1
 
         return start_node, last_node
 
-   
+
     def parallel_deploy(self, configurations, common_conf):
         d_threads = list()
 
@@ -113,17 +113,17 @@ class Deployer:
 
         for dt in d_threads:
             dt.start()
-        
+
         for dt in d_threads:
             dt.join()
-        
+
         for config_tag in configurations:
             unique_conf_list = configurations[config_tag]
-            
+
             for p in range(len(unique_conf_list)):
                 unique_conf = unique_conf_list[p]
                 status_id1 = unique_conf.technology + unique_conf.node_number
-            
+
                 if self._deploy_status[status_id1] != "success":
                     console_out(self.actor, f"Deployment failed for node {unique_conf.technology}{unique_conf.node_number}")
                     if not common_conf.no_deploy:

@@ -5,6 +5,6 @@ The RabbitTestTool is a tool for running performance and correctness experiments
 This repo contains:
 
 - The RabbitTestTool Java benchmarker and test tool (found under benchmark folder)
-- AWS deployment and orchestration scripts (found under orchestration)
+- AWS & GCP deployment and orchestration scripts (found under orchestration)
 
 Each has its own readme file as a guide.
