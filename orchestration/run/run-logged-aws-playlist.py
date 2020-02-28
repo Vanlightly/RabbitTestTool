@@ -210,7 +210,7 @@ for i in range(common_conf.repeat_count):
                 status_id1 = unique_conf.technology + unique_conf.node_number
                 if runner.get_benchmark_status(status_id1) != "success":
                     console_out("RUNNER", f"Benchmark failed for node {unique_conf.node_number} and topology {entry.topology}")
-                    deployer.teardown_all(configurations, common_conf.key_pair, common_conf, common_conf.no_destroy)
+                    deployer.teardown_all(configurations, common_conf, common_conf.no_destroy)
                     exit(1)
 
         # wait for configuration gap seconds

@@ -1,0 +1,15 @@
+- hosts: "tag_inventorygroup_benchmarking_rabbitmq{{ node }}_{{ run_tag }}"
+  remote_user: ubuntu
+  become: yes
+  tasks:
+  - name: Add upstream hosts to hosts file
+    blockinfile:
+      path: /etc/hosts
+      block: |
+        {{ item.ip }} {{ item.host }}
+      marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.host }}"
+      # owner: root
+      # group: root
+      # mode: 0644
+    with_items: "{{ upstream_hosts }}"
+    when: upstream_hosts is defined

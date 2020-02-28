@@ -137,5 +137,8 @@ do
     fi
 done
 
-cd ..
-bash deploy-benchmark.sh $KEY_PAIR $NODE_NUMBER $TECHNOLOGY $RUN_TAG
+# nodes above 100 are federation downstreams and do not have a separate benchmarker
+if (( $NODE_NUMBER < 100 )); then
+    cd ..
+    bash deploy-benchmark.sh $KEY_PAIR $NODE_NUMBER $TECHNOLOGY $RUN_TAG
+fi

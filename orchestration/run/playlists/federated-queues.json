@@ -1,0 +1,20 @@
+{
+    "benchmarks": [
+        { "policyVariables": { "fedPrefetch": 10, "fedAckMode": "no-ack" }},
+        { "policyVariables": { "fedPrefetch": 100, "fedAckMode": "no-ack" }},
+        { "policyVariables": { "fedPrefetch": 1000, "fedAckMode": "no-ack" }},
+        { "policyVariables": { "fedPrefetch": 10000, "fedAckMode": "no-ack" }},
+        { "policyVariables": { "fedPrefetch": 10, "fedAckMode": "on-publish" }},
+        { "policyVariables": { "fedPrefetch": 100, "fedAckMode": "on-publish" }},
+        { "policyVariables": { "fedPrefetch": 1000, "fedAckMode": "on-publish" }},
+        { "policyVariables": { "fedPrefetch": 10000, "fedAckMode": "on-publish" }},
+        { "policyVariables": { "fedPrefetch": 10, "fedAckMode": "on-confirm" }},
+        { "policyVariables": { "fedPrefetch": 100, "fedAckMode": "on-confirm" }},
+        { "policyVariables": { "fedPrefetch": 1000, "fedAckMode": "on-confirm" }},
+        { "policyVariables": { "fedPrefetch": 10000, "fedAckMode": "on-confirm" }}
+    ],
+    "commonAttributes": {
+        "topology": "federation/federated-queue.json",
+        "policy": "federated-queues.json"
+    }
+}

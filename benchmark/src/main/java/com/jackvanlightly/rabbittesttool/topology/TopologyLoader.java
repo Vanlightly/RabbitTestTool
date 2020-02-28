@@ -31,7 +31,8 @@ public class TopologyLoader {
                                  StepOverride stepOverride,
                                  Map<String,String> suppliedTopologyVariables,
                                  Map<String,String> suppliedPolicyVariables,
-                                 boolean declareArtefacts) {
+                                 boolean declareArtefacts,
+                                 String suppliedDescription) {
         LOGGER.info("Loading topology from: " + topologyPath);
         JSONObject topologyJson = loadJson(topologyPath);
         Map<String,String> topologyVariableDefaults = getVariableDefaults(topologyJson);
@@ -44,7 +45,7 @@ public class TopologyLoader {
         topology.setTopologyName(getMandatoryStrValue(topologyJson, "topologyName"));
         topology.setBenchmarkType(getBenchmarkType(getMandatoryStrValue(topologyJson, "benchmarkType")));
         topology.setTopologyType(getTopologyType(getMandatoryStrValue(topologyJson, "topologyType")));
-        topology.setDescription(getDescription(suppliedTopologyVariables, topologyVariableDefaults));
+        topology.setDescription(getDescription(suppliedDescription, suppliedTopologyVariables, topologyVariableDefaults, suppliedPolicyVariables, suppliedPolicyVariables));
 
         topology.setVirtualHosts(loadAllVirtualHosts(topologyJson.getJSONArray("vhosts"),
                 topology.getBenchmarkType(),
@@ -88,7 +89,9 @@ public class TopologyLoader {
         makeVariableReplacements(policiesJson, suppliedPolicyVariables, policyVariableDefaults);
         topology.setPoliciesJson(policiesJson.toString());
 
-        List<Policy> policies = getPolicies(policiesJson.getJSONArray("policies"));
+        topology.setFederationUpstream(getFederationUpstream(policiesJson));
+
+        List<Policy> policies = getPolicies(policiesJson);
         List<Policy> finalPolicies = new ArrayList<>();
         for(Policy policy : policies) {
             List<Property> finalProps = new ArrayList<>();
@@ -737,11 +740,27 @@ public class TopologyLoader {
         }
     }
 
-    private List<Policy> getPolicies(JSONArray policiesJson) {
+    private FederationUpstream getFederationUpstream(JSONObject policiesJson) {
+        if(policiesJson.has("federation")) {
+            JSONObject fedJson = policiesJson.getJSONObject("federation");
+            FederationUpstream upstream = new FederationUpstream(
+                    getOptionalIntValue(fedJson, "fed-prefetch-count", 10000),
+                    getOptionalIntValue(fedJson, "fed-reconnect-delay-seconds", 5),
+                    getOptionalStrValue(fedJson, "fed-ack-mode", "on-confirm")
+            );
+
+            return upstream;
+        }
+
+        return null;
+    }
+
+    private List<Policy> getPolicies(JSONObject policiesJson) {
+        JSONArray policiesArray = policiesJson.getJSONArray("policies");
         List<Policy> policies = new ArrayList<>();
 
-        for(int i=0; i<policiesJson.length(); i++) {
-            policies.add(getPolicy(policiesJson.getJSONObject(i)));
+        for(int i=0; i<policiesArray.length(); i++) {
+            policies.add(getPolicy(policiesArray.getJSONObject(i)));
         }
 
         return policies;
@@ -776,7 +795,36 @@ public class TopologyLoader {
         return vd;
     }
 
-    private String getDescription(Map<String, String> suppliedTopologyVariables, Map<String, String> defaultsTopologyVariables) {
+    private String getDescription(String suppliedDescription,
+                                  Map<String, String> suppliedTopologyVariables,
+                                  Map<String, String> defaultsTopologyVariables,
+                                  Map<String, String> suppliedPolicyVariables,
+                                  Map<String, String> defaultsPolicyVariables) {
+        String topologyVars = variablesToString(suppliedTopologyVariables, defaultsTopologyVariables);
+        String policyVars = variablesToString(suppliedPolicyVariables, defaultsPolicyVariables);
+
+        String description = "";
+        if(suppliedDescription != null && !suppliedDescription.isEmpty())
+            description += suppliedDescription;
+
+        if(!topologyVars.isEmpty()) {
+            if(description.isEmpty())
+                description = topologyVars;
+            else
+                description +=  " " + topologyVars;
+        }
+
+        if(!policyVars.isEmpty()) {
+            if(description.isEmpty())
+                description = policyVars;
+            else
+                description +=  " " + policyVars;
+        }
+
+        return description;
+    }
+
+    private String variablesToString(Map<String, String> suppliedTopologyVariables, Map<String, String> defaultsTopologyVariables) {
         StringBuilder sb = new StringBuilder();
 
         for(Map.Entry<String,String> entry : defaultsTopologyVariables.entrySet()) {

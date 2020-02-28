@@ -6,7 +6,6 @@ import java.util.List;
 public class Topology {
     private String topologyJson;
     private String policiesJson;
-    private String downstreamPoliciesJson;
     private TopologyType topologyType;
     private BenchmarkType benchmarkType;
     private String topologyName;
@@ -15,6 +14,7 @@ public class Topology {
     private FixedConfig fixedConfig;
     private VariableConfig variableConfig;
     private List<Policy> policies;
+    private FederationUpstream federationUpstream;
     private boolean declareArtefacts;
 
     public Topology() {
@@ -110,11 +110,11 @@ public class Topology {
         this.policiesJson = policiesJson;
     }
 
-    public String getDownstreamPoliciesJson() {
-        return downstreamPoliciesJson;
+    public FederationUpstream getFederationUpstream() {
+        return federationUpstream;
     }
 
-    public void setDownstreamPoliciesJson(String downstreamPoliciesJson) {
-        this.downstreamPoliciesJson = downstreamPoliciesJson;
+    public void setFederationUpstream(FederationUpstream federationUpstream) {
+        this.federationUpstream = federationUpstream;
     }
 }

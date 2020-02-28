@@ -290,7 +290,7 @@ public class AMQPBenchmarker {
         String argumentsStr = arguments.getArgsStr(",");
         ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig.getHosts());
         ConnectionSettings downstreamConnectionSettings = getConnectionSettings(arguments, brokerConfig.getDownstreamHosts());
-
+        String description = arguments.getStr("--description", "");
 
         String benchmarkId = UUID.randomUUID().toString();
 
@@ -299,7 +299,7 @@ public class AMQPBenchmarker {
 
         try {
             TopologyLoader topologyLoader = new TopologyLoader();
-            Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables, declareArtefacts);
+            Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables, declareArtefacts, description);
 
             boolean unsafe = topology.getVirtualHosts().stream().anyMatch(x ->
                                     x.getPublishers().stream().anyMatch(p -> !p.getPublisherMode().isUseConfirms())
@@ -358,7 +358,7 @@ public class AMQPBenchmarker {
 
             if(topology.shouldDeclareArtefacts()) {
                 for (VirtualHost vhost : topology.getVirtualHosts()) {
-                    LOGGER.info("Deleting vhost: " + vhost);
+                    LOGGER.info("Deleting vhost: " + vhost.getName());
                     topologyGenerator.deleteVHost(vhost);
                 }
             }
@@ -397,16 +397,10 @@ public class AMQPBenchmarker {
     }
 
     private static BrokerConfiguration getBrokerConfig(CmdArguments arguments) {
-        BrokerConfiguration brokerConfig = new BrokerConfiguration(arguments.getStr("--technology"),
+        return new BrokerConfiguration(arguments.getStr("--technology"),
                 arguments.getStr("--version"),
                 getBrokers(arguments),
                 getDownstreamBrokers(arguments));
-
-        brokerConfig.setFederationPrefetchCount(arguments.getInt("fed-prefetch-count", 10000));
-        brokerConfig.setFederationReconnectDelaySeconds(arguments.getInt("fed-reconnect-delay-seconds", 5));
-        brokerConfig.setFederationAckMode(arguments.getStr("fed-ack-mode", "on-publish"));
-
-        return brokerConfig;
     }
 
     private static List<Broker> getBrokers(CmdArguments arguments) {

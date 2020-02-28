@@ -74,16 +74,19 @@ fi
 if [[ ${LG_INCLUDED} == "false" ]];then
     echo "Node $NODE_NUMBER: Not deploying loadgen"
 else 
-    sleep $((RANDOM % 30))
-    LG_TAG=benchmarking_loadgen_${TECHNOLOGY}${NODE_NUMBER}_${RUN_TAG}
+    # nodes above 100 are federation downstreams and do not have a separate benchmarker
+    if (( $NODE_NUMBER < 100 )); then
+        sleep $((RANDOM % 30))
+        LG_TAG=benchmarking_loadgen_${TECHNOLOGY}${NODE_NUMBER}_${RUN_TAG}
 
-    echo "Node $NODE_NUMBER: Deploying loadgen"
-    aws ec2 run-instances \
-    --image-id "$AMI" \
-    --count 1 \
-    --instance-type "${LG_INSTANCE}" \
-    --key-name "$KEY_PAIR" \
-    --security-group-ids "${LG_SG}" \
-    --subnet-id "$SN" \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$LG_TAG},{Key=inventorygroup,Value=$LG_TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]"
+        echo "Node $NODE_NUMBER: Deploying loadgen"
+        aws ec2 run-instances \
+        --image-id "$AMI" \
+        --count 1 \
+        --instance-type "${LG_INSTANCE}" \
+        --key-name "$KEY_PAIR" \
+        --security-group-ids "${LG_SG}" \
+        --subnet-id "$SN" \
+        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$LG_TAG},{Key=inventorygroup,Value=$LG_TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]"
+    fi
 fi

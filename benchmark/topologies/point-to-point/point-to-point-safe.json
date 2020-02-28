@@ -18,7 +18,8 @@
     { "name": "ackInterval", "default": "100" },
     { "name": "processingMs", "default": "0" },
     { "name": "queueMode", "default": "default" },
-    { "name": "durationSeconds", "default": "120" }
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "initialPublish", "default": "0" }
   ],
   "description": "Point to point",
   "vhosts": [
@@ -48,7 +49,8 @@
           },
           "deliveryMode": "{{ var.deliveryMode }}",
           "messageSize": "{{ var.messageSize }}",
-          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
         }
       ],
       "consumerGroups": [ 

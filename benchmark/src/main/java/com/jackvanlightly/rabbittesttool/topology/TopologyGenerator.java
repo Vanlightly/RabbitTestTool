@@ -33,6 +33,7 @@ public class TopologyGenerator {
     private ConnectionSettings connectionSettings;
     private BrokerConfiguration brokerConfig;
     private String baseUrl;
+    private String baseAmqpUri;
     private String downstreamBaseUrl;
     private Random rand;
 
@@ -41,6 +42,7 @@ public class TopologyGenerator {
         this.connectionSettings = connectionSettings;
         this.brokerConfig = brokerConfig;
         this.baseUrl = "http://" + brokerConfig.getHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
+        this.baseAmqpUri = "amqp://" + connectionSettings.getUser() + ":" + connectionSettings.getPassword() + "@";
 
         if(!brokerConfig.getDownstreamHosts().isEmpty())
             this.downstreamBaseUrl = "http://" + brokerConfig.getDownstreamHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
@@ -61,7 +63,7 @@ public class TopologyGenerator {
 
     public void deleteVHost(VirtualHost vhost) {
         String vhostUrl = getVHostUrl(vhost.getName(), vhost.isDownstream());
-        delete(vhostUrl, false);
+        delete(vhostUrl, true);
     }
 
     public void declareExchanges(VirtualHost vhost) {
@@ -216,7 +218,10 @@ public class TopologyGenerator {
         }
     }
 
-    public void addUpstream(VirtualHost vhost, int prefetch, int reconnectDelaySeconds, String ackMode) {
+    public void addUpstream(VirtualHost vhost,
+                            int prefetch,
+                            int reconnectDelaySeconds,
+                            String ackMode) {
         String url = getFederationUrl(vhost.getName() + "-upstream", vhost.getName());
 
         JSONObject json = new JSONObject();
@@ -454,7 +459,7 @@ public class TopologyGenerator {
 
     private String getUpstreamUri() {
         // for now just get random broker from upstream cluster
-        return "amqp://"+brokerConfig.getHosts().get(rand.nextInt(brokerConfig.getHosts().size())).getIp();
+        return baseAmqpUri+brokerConfig.getHosts().get(rand.nextInt(brokerConfig.getHosts().size())).getIp();
     }
 
     private String getFederationUrl(String name, String vhost) {

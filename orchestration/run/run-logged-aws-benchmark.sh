@@ -30,8 +30,8 @@ echo "Will connect to $3 at ipS $BROKER_IPs"
 
 ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@$LOADGEN_IP java -Xms1024m -Xmx8192m -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
 --mode "${32}" \
---topology "../../../benchmark/topologies/${14}" \
---policies "../../../benchmark/policies/${24}" \
+--topology "topologies/${14}" \
+--policies "policies/${24}" \
 --run-id "${15}" \
 --run-tag "${18}" \
 --technology "$3" \
@@ -65,4 +65,4 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --con-connect-to-node "${31}" \
 --grace-period-sec "${33}" \
 --run-ordinal "${34}" \
---benchmark-tags "${35}" "${36}" "${37}"
+--benchmark-tags "${35}" "${36}" "${37}" "${38}"

@@ -123,9 +123,9 @@ public class Orchestrator {
 
                 if(vhost.isDownstream()) {
                     topologyGenerator.addUpstream(vhost,
-                            brokerConfiguration.getFederationPrefetchCount(),
-                            brokerConfiguration.getFederationReconnectDelaySeconds(),
-                            brokerConfiguration.getFederationAckMode());
+                            topology.getFederationUpstream().getPrefetchCount(),
+                            topology.getFederationUpstream().getReconnectDelaySeconds(),
+                            topology.getFederationUpstream().getAckMode());
                 }
 
                 topologyGenerator.declarePolicies(vhost.getName(), topology.getPolicies(), vhost.isDownstream());

@@ -18,6 +18,6 @@ class UniqueConfiguration:
         self.pub_connect_to_node = get_optional_arg_validated(args, "--pub-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.con_connect_to_node = get_optional_arg_validated(args, "--con-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.node_number = -1
-
+        
     def set_node_number(self, node_number):
         self.node_number = node_number

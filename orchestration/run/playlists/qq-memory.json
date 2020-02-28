@@ -1,0 +1,23 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "initialPublish": "3500000" } },
+        { "topologyVariables": { "initialPublish": "1000000" } },
+        { "topologyVariables": { "initialPublish": "2000000" } },
+        { "topologyVariables": { "initialPublish": "3000000" } },
+        { "topologyVariables": { "initialPublish": "4000000" } },
+        { "topologyVariables": { "initialPublish": "5000000" } },
+        { "topologyVariables": { "initialPublish": "6000000" } },
+        { "topologyVariables": { "initialPublish": "7000000" } },
+        { "topologyVariables": { "initialPublish": "8000000" } },
+        { "topologyVariables": { "initialPublish": "9000000" } },
+        { "topologyVariables": { "initialPublish": "10000000" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "processingMs": "1000",
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue.json"
+    }
+}

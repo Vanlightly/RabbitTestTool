@@ -1,9 +1,4 @@
 ---
-# - name: download tarball
-#   get_url:
-#     url: "{{ generic_unix_url }}"
-#     dest: /tmp/rabbit.tar.xz
-#     mode: '0755'
 
 - name: download tarball
   command: "wget -O /tmp/rabbit.tar.xz {{ generic_unix_url }} "
@@ -13,12 +8,6 @@
     path: /tmp/rabbitmq
     state: directory
     mode: '0755'
-
-# - name: Extract tarball into /tmp/rabbitmq
-#   unarchive:
-#     remote_src: yes
-#     src: /tmp/rabbit.tar.xz
-#     dest: /tmp/rabbitmq
 
 - name: Extract tarball into /tmp/rabbitmq
   command: tar xvf /tmp/rabbit.tar.xz -C /tmp/rabbitmq
@@ -110,6 +99,20 @@
 
 - name: Enable RabbitMQ Consistent Hash Exchange plugin
   command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_consistent_hash_exchange
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
+
+- name: Enable RabbitMQ Federation
+  command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_federation
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
+
+- name: Enable RabbitMQ Federation Management
+  command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_federation_management
   retries: 3
   delay: 20
   register: result

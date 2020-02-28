@@ -1,4 +1,5 @@
 import sys
+import io
 import subprocess
 import threading
 import time
@@ -24,6 +25,12 @@ class AwsRunner(Runner):
 
             node_number = int(unique_conf.node_number) + x
             nodes = f"{nodes}{comma}rabbit@rabbitmq{node_number}"
+
+        federation_args = ""
+        if common_conf.federation_enabled:
+            ds_node_number = int(unique_conf.node_number) + 100 + x
+            ds_broker_ips = self.get_broker_ips(unique_conf.technology, ds_node_number, unique_conf.cluster_size, common_conf.run_tag)
+            federation_args += f"--downstream-broker-hosts {ds_broker_ips}"
 
         self._benchmark_status[status_id] = "started"
         exit_code = subprocess.call(["bash", "run-logged-aws-benchmark.sh", 
@@ -63,7 +70,8 @@ class AwsRunner(Runner):
                                 str(run_ordinal),
                                 common_conf.tags,
                                 playlist_entry.get_topology_variables(),
-                                playlist_entry.get_policy_variables()])
+                                playlist_entry.get_policy_variables(),
+                                federation_args])
 
         if exit_code != 0:
             console_out(self.actor, f"Benchmark {unique_conf.node_number} failed")
@@ -106,3 +114,28 @@ class AwsRunner(Runner):
                         unique_conf.technology, 
                         topology, 
                         unique_conf.broker_version])
+
+
+    def get_broker_ips(self, technology, node, cluster_size, run_tag):
+        broker_ips = ""
+        attempts = 0
+        while broker_ips == "" and attempts < 3:
+            attempts += 1
+            process = subprocess.Popen(["bash", "get_broker_ips.sh", 
+                            str(cluster_size), 
+                            str(node), 
+                            run_tag,
+                            technology], stdout=subprocess.PIPE)
+            
+            for line in io.TextIOWrapper(process.stdout, encoding="utf-8"):
+                if not line:
+                    break
+                
+                if line.startswith("BROKER_IPS="):
+                    broker_ips = line.rstrip().replace("BROKER_IPS=","")
+                    break
+
+            if broker_ips == "":
+                time.sleep(5)
+
+        return broker_ips

@@ -11,9 +11,6 @@ public class BrokerConfiguration {
     private String version;
     private List<Broker> hosts;
     private List<Broker> downstreamHosts;
-    private int federationPrefetchCount;
-    private int federationReconnectDelaySeconds;
-    private String federationAckMode;
 
     public BrokerConfiguration(String technology, String version, List<Broker> hosts, List<Broker> downstreamHosts) {
         this.technology = technology;
@@ -44,29 +41,5 @@ public class BrokerConfiguration {
 
     public List<String> getDownstreamNodeNames() {
         return getDownstreamHosts().stream().map(x -> x.getNodeName()).collect(Collectors.toList());
-    }
-
-    public int getFederationPrefetchCount() {
-        return federationPrefetchCount;
-    }
-
-    public void setFederationPrefetchCount(int federationPrefetchCount) {
-        this.federationPrefetchCount = federationPrefetchCount;
-    }
-
-    public int getFederationReconnectDelaySeconds() {
-        return federationReconnectDelaySeconds;
-    }
-
-    public void setFederationReconnectDelaySeconds(int federationReconnectDelaySeconds) {
-        this.federationReconnectDelaySeconds = federationReconnectDelaySeconds;
-    }
-
-    public String getFederationAckMode() {
-        return federationAckMode;
-    }
-
-    public void setFederationAckMode(String federationAckMode) {
-        this.federationAckMode = federationAckMode;
     }
 }
