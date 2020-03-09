@@ -187,6 +187,7 @@ Common argument:
 | --bg-delay | 0 | A delay in seconds before running the main topology |
 | --bg-step-seconds | 0 | Override all step durations in the background topology |
 | --bg-step-repeat | 0 | Make all steps get executed repeatedly in the background topology |
+| --federation-enabled | false | When true, a second broker (cluster) will be deployed, acting as the downstream. The downstream will have the same node numbering as the upstream + 100. So an upstream may be rabbitmq1 and the downstream rabbitmq101. (Only supported in AWS orchrestration) |
 
 Arguments that can be applied to all or specific configurations. When running multiple configurations, you can add a number suffix to match the configuration, for example --version1 3.7.17 and --version2 3.8.1.
 

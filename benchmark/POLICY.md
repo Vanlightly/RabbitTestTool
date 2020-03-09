@@ -4,6 +4,8 @@ A policies file allows you to define one or more policies you want for a given b
 
 You can define variables with default values to avoid requiring multiple similar policies files.
 
+We also can define federation configuration in thise file.
+
 ## Example of a lazy queue without variables
 
 ```json
@@ -108,3 +110,34 @@ Note that quorum queues cannot be created using actual RabbitMQ policies - suppo
 ```
 
 Note that the policy must be applied to a queue group with the name "sharded". 
+
+## Federation
+
+An example of creating a federation upstream and federation policy.
+
+```json
+{
+    "variables": [
+        { "name": "fedPrefetch", "default": "10000" },
+        { "name": "reconnectSec", "default": "5" },
+        { "name": "fedAckMode", "default": "on-confirm" }
+    ],
+    "policies": [
+        {
+            "name": "fed-exchanges",
+            "applyTo": "exchanges",
+            "pattern": "",
+            "priority": 0,
+            "federation": "downstream",
+            "properties" : [
+                { "key": "federation-upstream-set", "value": "all", "type": "string" }
+            ]
+        }
+    ],
+    "federation": {
+        "fed-prefetch-count": "{{ var.fedPrefetch }}",
+        "fed-reconnect-delay-seconds": "{{ var.reconnectSec }}",
+        "fed-ack-mode": "{{ var.fedAckMode }}"
+    }
+}
+```

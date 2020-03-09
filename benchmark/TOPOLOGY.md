@@ -152,11 +152,14 @@ At least one virtual host must be defined. Each virtual host consists of a name,
 
 Underscores ARE NOT supported in virtual host names.
 
+Virtual hosts can optionally be marked as either `upstream` (the default) or `downstream` via the **federation** field. This is required when benchmarking either federated exchanges, federated queue or shovels.
+
 ```json
 "vhosts": [
     {
         "name": "test",
         "scale": 1,
+        "federation": "downstream",
         "exchanges": [],
         "queueGroups": [],
         "publisherGroups": [],
@@ -173,15 +176,16 @@ A virtual host can be scaled out. For example, when the virtual host "test" has 
 - test00004
 - test00005
 
-#### Exchange Fields
+#### `exchanges` Field
 
-Exchanges is a JSON array of exchange objects.
+`exchanges` is a JSON array of exchange objects.
 
 | Field | Mandatory | Default | Description  |
 | --- | --- | --- | --- |
 | name | yes | - | The name of the exchange |
 | type | yes | - | Fanout, Direct, Topic, Headers, ConsistentHash, ModulusHash |
 | bindings | no | - | An array of bindings. See Binding Fields |
+| shovel | no | - | See shovel field section |
 
 Example of five different exchanges.
 
@@ -203,6 +207,8 @@ Example of two exchanges, with an exchange to exchange binding.
     { "name": "ex2", "type": "fanout", "bindings": [ { "from": "ex1", "bindingKey": "error.#" }] }
 ]
 ```
+
+Exchanges also have a `shovel` field to allow for defining a shovel destination.
 
 #### Binding Fields
 
@@ -234,6 +240,7 @@ The queueGroups field is a JSON array of queueGroup objects.
 | scale | yes | - | The number of queues in the group |
 | properties | no | - | An array of properties. See Property Fields |
 | bindings | yes | - | An array of bindings. See Binding Fields |
+| shovel | no | - | See shovel field section |
 
 An example of two queue groups.
 
@@ -516,6 +523,66 @@ An example of a consumer group with one consumer that uses manual acks with a pr
 | manualAcks | yes | True makes the consumers use consumer acks, false is for NoAck |
 | consumerPrefetch | yes | The prefetch count per consumer |
 | ackInterval | yes | Governs the use of the multiple flag. When set to 1, each message is individually acked, when set to 5, every 5th message is acked using the multiple flag |
+
+#### `shovel` field
+
+To configure a shovel, you must define it on the shovel destination which can be either an exchange or a queue.
+
+The source can also be an exchange or queue, meaning that there are 4 combinations of source and destination.
+
+> Note that is the parent is a queueGroup and that has a value > 1 for `scale` then you will end up with one shovel per queue in the group. For those cases use the `counterpart` value for srcName (see below).
+
+| Field | Mandatory | Description  |
+| --- | --- | --- |
+| ackMode | yes | no-ack, on-publish or on-confirm |
+| prefetch | yes | the shovel prefetch |
+| reconnectDelaySeconds | no | defaults to 5 seconds |
+| srcBroker | yes | Either `upstream` or `downstream`. In a single cluster test this should be `upstream`, in a test with an upstream and downstream broker, you would normally set this to upstream, but there's no reason you couldn't also declare shovels that source from the downstream server |
+| srcType | yes | `queue` or `exchange` |
+| srcName | yes | For exchange sources, this would be the name of the source exchange. For queue sources, either specify a queue name or use the value `counterpart` to configure the shovel to use the same name as this queue. This is important when using a `scale` > 1 as queue on queueGroup section could generate multiple queues, which will generate multiple shovels. If you use any value other than `counterpart` all the shovels will have the same source which may not be what you want. |
+
+Example of an exchange destination and source shovel:
+
+```json
+    "exchanges": [ 
+        { 
+            "name": "my-downstream-exchange", 
+            "type": "fanout",
+            "shovel": {
+                "ackMode": "on-publish",
+                "prefetch": "1000",
+                "reconnectDelaySeconds": "5",
+                "srcBroker": "upstream",
+                "srcType": "exchange",
+                "srcName": "my-upstream-exchange"
+            } 
+        }
+    ],
+```
+
+Example of an queue destination and source shovel, where the group is scaled out to 10 queues, creating 10 shovels. Each shovel has a queue with the same name as its source.
+
+```json
+"queueGroups": [
+    { "group": "q1",
+        "scale": "3",
+        "shovel": {
+            "ackMode": "on-confirm",
+            "prefetch": "500",
+            "reconnectDelaySeconds": "10",
+            "srcBroker": "upstream",
+            "srcType": "queue",
+            "srcName": "counterpart"
+        }
+    }
+],
+```
+
+The above would create the following shovels:
+
+- queue source: q1_00001, queue destination: q1_00001
+- queue source: q1_00002, queue destination: q1_00002
+- queue source: q1_00003, queue destination: q1_00003
 
 ### Dimensions Fields
 
