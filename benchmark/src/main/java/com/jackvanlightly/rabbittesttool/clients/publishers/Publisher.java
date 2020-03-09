@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
@@ -15,11 +16,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class Publisher implements Runnable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("PUBLISHER");
+    private BenchmarkLogger logger;
 
     private String publisherId;
     private MessageModel messageModel;
@@ -27,9 +29,9 @@ public class Publisher implements Runnable {
     private ConnectionSettings connectionSettings;
     private ConnectionFactory factory;
     private QueueHosts queueHosts;
-    private ExecutorService executorService;
+    //private ExecutorService executorService;
     private PublisherSettings publisherSettings;
-    private boolean isCancelled;
+    private AtomicBoolean isCancelled;
     private int routingKeyIndex;
     private PublisherStats publisherStats;
     private Broker currentHost;
@@ -73,6 +75,8 @@ public class Publisher implements Runnable {
                      QueueHosts queueHosts,
                      PublisherSettings publisherSettings,
                      List<String> queuesInGroup) {
+        this.logger = new BenchmarkLogger("PUBLISHER");
+        this.isCancelled = new AtomicBoolean();
         this.publisherId = publisherId;
         this.messageModel = messageModel;
         this.stats = stats;
@@ -95,7 +99,7 @@ public class Publisher implements Runnable {
             this.routingKeyCount = publisherSettings.getSendToExchange().getRoutingKeys().length;
         }
 
-        this.executorService = Executors.newSingleThreadExecutor(new NamedThreadFactory("Publisher-" + publisherId));
+        //this.executorService = Executors.newSingleThreadExecutor(new NamedThreadFactory("Publisher-" + publisherId));
 
         this.availableMessageHeaderCombinations = initializeHeaders(publisherSettings.getMessageHeadersPerMessage());
         this.availableHeaderCount = this.availableMessageHeaderCombinations.size();
@@ -106,7 +110,7 @@ public class Publisher implements Runnable {
     }
 
     public void signalStop() {
-        this.isCancelled = true;
+        this.isCancelled.set(true);
     }
 
     public void addQueue(String queue) {
@@ -174,7 +178,7 @@ public class Publisher implements Runnable {
         if(publisherSettings.getInitialPublish() == 0)
             return;
 
-        while(!isCancelled) {
+        while(!isCancelled.get()) {
             Connection connection = null;
             Channel channel = null;
             try {
@@ -184,14 +188,14 @@ public class Publisher implements Runnable {
                 Semaphore inflightSemaphore = new Semaphore(1000);
                 PublisherListener listener = new PublisherListener(messageModel, stats, pendingConfirms, inflightSemaphore);
 
-                LOGGER.info("Publisher " + publisherId + " opened channel for initial publish");
+                logger.info("Publisher " + publisherId + " opened channel for initial publish");
 
                 channel.confirmSelect();
                 channel.addConfirmListener(listener);
                 channel.addReturnListener(listener);
 
                 int currentStream = 0;
-                while (!isCancelled) {
+                while (!isCancelled.get()) {
                     inflightSemaphore.acquire();
 
                     publish(channel, currentStream, pendingConfirms, true);
@@ -205,12 +209,12 @@ public class Publisher implements Runnable {
                         break;
                 }
 
-                LOGGER.info("Publisher " + publisherId + " stopping initial publish");
+                logger.info("Publisher " + publisherId + " stopping initial publish");
 
                 tryClose(channel);
                 tryClose(connection);
             } catch (Exception e) {
-                LOGGER.error("Publisher" + publisherId + " failed in initial publish", e);
+                logger.error("Publisher" + publisherId + " failed in initial publish", e);
                 tryClose(channel);
                 tryClose(connection);
                 waitFor(5000);
@@ -219,18 +223,18 @@ public class Publisher implements Runnable {
             if(sentCount >= publisherSettings.getInitialPublish())
                 break;
 
-            if(!isCancelled) {
-                LOGGER.info("Publisher" + publisherId + " restarting to complete initial publish");
+            if(!isCancelled.get()) {
+                logger.info("Publisher" + publisherId + " restarting to complete initial publish");
                 waitFor(1000);
             }
         }
 
-        LOGGER.info("Publisher " + publisherId + " completed initial send");
+        logger.info("Publisher " + publisherId + " completed initial send");
     }
 
     @Override
     public void run() {
-        while(!isCancelled) {
+        while(!isCancelled.get()) {
             Connection connection = null;
             Channel channel = null;
             try {
@@ -240,7 +244,7 @@ public class Publisher implements Runnable {
 
                 connection = getConnection();
                 channel = connection.createChannel();
-                LOGGER.info("Publisher " + publisherId + " opened channel to " + currentHost.getNodeName() + ". Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
+                logger.info("Publisher " + publisherId + " opened channel to " + currentHost.getNodeName() + ". Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
 
                 if (this.useConfirms) {
                     channel.confirmSelect();
@@ -271,7 +275,7 @@ public class Publisher implements Runnable {
                 int currentInFlightLimit = publisherSettings.getPublisherMode().getInFlightLimit();
                 int currentStream = 0;
                 boolean reconnect = false;
-                while (!isCancelled && !reconnect) {
+                while (!isCancelled.get() && !reconnect) {
                     if (this.useConfirms) {
                         // is this is a multi-step benchmark with increasing in flight limit, might need to add more slots to the semaphore
                         if(this.inFlightLimit != currentInFlightLimit) {
@@ -282,7 +286,7 @@ public class Publisher implements Runnable {
                         }
 
                         // keep trying to acquire until the cancelation or connection dies
-                        while(!isCancelled && !inflightSemaphore.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
+                        while(!isCancelled.get() && !inflightSemaphore.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
                             if (!channel.isOpen()) {
                                 reconnect = true;
                                 break;
@@ -290,7 +294,7 @@ public class Publisher implements Runnable {
                         }
                     }
 
-                    boolean send = (sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit)) && !reconnect && !isCancelled;
+                    boolean send = (sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit)) && !reconnect && !isCancelled.get();
 
                     if(send) {
                         publish(channel, currentStream, pendingConfirms, false);
@@ -330,24 +334,24 @@ public class Publisher implements Runnable {
                     }
                 }
 
-                LOGGER.info("Publisher " + publisherId + " stopping");
+                logger.info("Publisher " + publisherId + " stopping");
 
                 tryClose(channel);
                 tryClose(connection);
             } catch (Exception e) {
-                LOGGER.error("Publisher" + publisherId + " failed", e);
+                logger.error("Publisher" + publisherId + " failed", e);
                 tryClose(channel);
                 tryClose(connection);
                 waitFor(5000);
             }
 
-            if(!isCancelled) {
-                LOGGER.info("Publisher" + publisherId + " restarting");
+            if(!isCancelled.get()) {
+                logger.info("Publisher" + publisherId + " restarting");
                 waitFor(1000);
             }
         }
 
-        LOGGER.info("Publisher " + publisherId + " stopped successfully");
+        logger.info("Publisher " + publisherId + " stopped successfully");
     }
 
     private void tryClose(Channel channel) {
@@ -444,7 +448,7 @@ public class Publisher implements Runnable {
             factory.setRequestedFrameMax(publisherSettings.getFrameMax());
 
         factory.setRequestedHeartbeat(10);
-        factory.setSharedExecutor(this.executorService);
+        //factory.setSharedExecutor(this.executorService);
         factory.setThreadFactory(r -> {
             Thread t = Executors.defaultThreadFactory().newThread(r);
             t.setDaemon(true);
@@ -458,7 +462,7 @@ public class Publisher implements Runnable {
     }
 
     private Broker getBrokerToConnectTo() {
-        while(!isCancelled) {
+        while(!isCancelled.get()) {
             Broker host = null;
             if(connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.RoundRobin))
                 host = queueHosts.getHostRoundRobin();
@@ -493,7 +497,7 @@ public class Publisher implements Runnable {
                 && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
             Broker host = getBrokerToConnectTo();
             if (!host.getNodeName().equals(currentHost.getNodeName())) {
-                LOGGER.info("Detected change of queue host. No longer: " + currentHost.getNodeName() + " now: " + host.getNodeName());
+                logger.info("Detected change of queue host. No longer: " + currentHost.getNodeName() + " now: " + host.getNodeName());
                 return true;
             }
         }
@@ -501,7 +505,7 @@ public class Publisher implements Runnable {
                 && publisherSettings.getSendToMode() == SendToMode.QueueGroup
                 && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
             if(queueHosts.isQueueHost(connectionSettings.getVhost(), getQueueCounterpart(), currentHost)) {
-                LOGGER.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
+                logger.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
                 return true;
             }
         }

@@ -9,6 +9,7 @@ public class ExchangeConfig {
     private ExchangeType exchangeType;
     private List<BindingConfig> bindings;
     private boolean isDownstream;
+    private ShovelConfig shovelConfig;
 
     public ExchangeConfig() {
         bindings = new ArrayList<>();
@@ -65,5 +66,13 @@ public class ExchangeConfig {
 
     public void setDownstream(boolean downstream) {
         isDownstream = downstream;
+    }
+
+    public ShovelConfig getShovelConfig() {
+        return shovelConfig;
+    }
+
+    public void setShovelConfig(ShovelConfig shovelConfig) {
+        this.shovelConfig = shovelConfig;
     }
 }

@@ -1,8 +1,7 @@
 package com.jackvanlightly.rabbittesttool.comparer;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class StepComparison {
     private String topology;
@@ -226,54 +225,129 @@ public class StepComparison {
     }
 
     public static String getCsvHeader() {
-        return "Topology|Ordinal|Topology Description|Dimensions|Step|StepValue|BenchmarkType|Duration|Measurement|C1 Runs|C2 Run|C1 Avg|C2 Avg|Change %|C1 StdDev|C2 StdDev|Change %|C1 Min|C2 Min|Change %|C1 Max|C2 Max|Change %";
+        return "Topology|Ordinal|Description|Variables|Dimensions|Step|StepValue|BenchmarkType|Duration|Measurement|C1 Runs|C2 Run|C1 Avg|C2 Avg|Change %|C1 StdDev|C2 StdDev|Change %|C1 Min|C2 Min|Change %|C1 Max|C2 Max|Change %";
     }
 
+    public static String getOneSidedCsvHeader() {
+        return "Topology|Ordinal|Description|Variables|Dimensions|Step|StepValue|BenchmarkType|Duration|Measurement|C1 Runs|C1 Avg|C1 StdDev|C1 Min|C1 Max";
+    }
 
-    public List<String> toCsv() {
+    public List<String> toOneSidedCsv(List<String> descVarList) {
+        StringBuilder sb = new StringBuilder();
+        for(String variable : this.topologyDescription.toLowerCase().split(",")) {
+            String[] parts = variable.split("=");
+            if(descVarList.contains(parts[0].trim())) {
+                sb.append(variable + ",");
+            }
+        }
+
+        String description = sb.toString();
+
         List<String> lines = new ArrayList<>();
-        //lines.add(getLine(sendRateMin));
-        lines.add(getLine(sendRateAvg));
-        lines.add(getLine(sendRateStdDev));
-        //lines.add(getLine(sendRateMax));
-        //lines.add(getLine(receiveRateMin));
-        lines.add(getLine(receiveRateAvg));
-        lines.add(getLine(receiveRateStdDev));
-        lines.add(getLine(sendVsReceiveDiffAvg));
-        lines.add(getLine(sendVsReceiveDiffStdDev));
-        //lines.add(getLine(receiveRateMax));
-//        lines.add(getLine(sentCount));
-//        lines.add(getLine(receiveCount));
-//        lines.add(getLine(sentBytesCount));
-//        lines.add(getLine(receiveBytesCount));
-        lines.add(getLine(latencyMin));
-        lines.add(getLine(latency50));
-        lines.add(getLine(latency75));
-        lines.add(getLine(latency95));
-        lines.add(getLine(latency99));
-        lines.add(getLine(latency999));
-        lines.add(getLine(latencyMax));
+        lines.add(getOneSidedLine(sendRateAvg, description));
+        lines.add(getOneSidedLine(sendRateStdDev, description));
+        lines.add(getOneSidedLine(receiveRateAvg, description));
+        lines.add(getOneSidedLine(receiveRateStdDev, description));
+        lines.add(getOneSidedLine(sendVsReceiveDiffAvg, description));
+        lines.add(getOneSidedLine(sendVsReceiveDiffStdDev, description));
+        lines.add(getOneSidedLine(latencyMin, description));
+        lines.add(getOneSidedLine(latency50, description));
+        lines.add(getOneSidedLine(latency75, description));
+        lines.add(getOneSidedLine(latency95, description));
+        lines.add(getOneSidedLine(latency99, description));
+        lines.add(getOneSidedLine(latency999, description));
+        lines.add(getOneSidedLine(latencyMax, description));
 
         confirmLatencyMax.compare();
         if(confirmLatencyMax.getMeasurement1().getMaxValue() > 0 || confirmLatencyMax.getMeasurement2().getMaxValue() > 0) {
-            lines.add(getLine(confirmLatencyMin));
-            lines.add(getLine(confirmLatency50));
-            lines.add(getLine(confirmLatency75));
-            lines.add(getLine(confirmLatency95));
-            lines.add(getLine(confirmLatency99));
-            lines.add(getLine(confirmLatency999));
-            lines.add(getLine(confirmLatencyMax));
+            lines.add(getOneSidedLine(confirmLatencyMin, description));
+            lines.add(getOneSidedLine(confirmLatency50, description));
+            lines.add(getOneSidedLine(confirmLatency75, description));
+            lines.add(getOneSidedLine(confirmLatency95, description));
+            lines.add(getOneSidedLine(confirmLatency99, description));
+            lines.add(getOneSidedLine(confirmLatency999, description));
+            lines.add(getOneSidedLine(confirmLatencyMax, description));
         }
 
         return lines;
     }
 
-    private String getLine(Comparison comparison) {
+    public List<String> toTwoSidedCsv(List<String> descVarList) {
+        StringBuilder sb = new StringBuilder();
+        for(String variable : this.topologyDescription.split(",")) {
+            String[] parts = variable.split("=");
+            if(descVarList.contains(parts[0])) {
+                sb.append(variable + ",");
+            }
+        }
+
+        String description = sb.toString();
+
+        List<String> lines = new ArrayList<>();
+        //lines.add(getLine(sendRateMin));
+        lines.add(getTwoSidedLine(sendRateAvg, description));
+        lines.add(getTwoSidedLine(sendRateStdDev, description));
+        //lines.add(getLine(sendRateMax, description));
+        //lines.add(getLine(receiveRateMin, description));
+        lines.add(getTwoSidedLine(receiveRateAvg, description));
+        lines.add(getTwoSidedLine(receiveRateStdDev, description));
+        lines.add(getTwoSidedLine(sendVsReceiveDiffAvg, description));
+        lines.add(getTwoSidedLine(sendVsReceiveDiffStdDev, description));
+        //lines.add(getLine(receiveRateMax, description));
+//        lines.add(getLine(sentCount, description));
+//        lines.add(getLine(receiveCount, description));
+//        lines.add(getLine(sentBytesCount, description));
+//        lines.add(getLine(receiveBytesCount, description));
+        lines.add(getTwoSidedLine(latencyMin, description));
+        lines.add(getTwoSidedLine(latency50, description));
+        lines.add(getTwoSidedLine(latency75, description));
+        lines.add(getTwoSidedLine(latency95, description));
+        lines.add(getTwoSidedLine(latency99, description));
+        lines.add(getTwoSidedLine(latency999, description));
+        lines.add(getTwoSidedLine(latencyMax, description));
+
+        confirmLatencyMax.compare();
+        if(confirmLatencyMax.getMeasurement1().getMaxValue() > 0 || confirmLatencyMax.getMeasurement2().getMaxValue() > 0) {
+            lines.add(getTwoSidedLine(confirmLatencyMin, description));
+            lines.add(getTwoSidedLine(confirmLatency50, description));
+            lines.add(getTwoSidedLine(confirmLatency75, description));
+            lines.add(getTwoSidedLine(confirmLatency95, description));
+            lines.add(getTwoSidedLine(confirmLatency99, description));
+            lines.add(getTwoSidedLine(confirmLatency999, description));
+            lines.add(getTwoSidedLine(confirmLatencyMax, description));
+        }
+
+        return lines;
+    }
+
+    private String getOneSidedLine(Comparison comparison, String description) {
         comparison.compare();
 
-        return MessageFormat.format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}|{9}|{10,number,#.####}|{11,number,#.####}|{12,number,#.####}|{13,number,#.####}|{14,number,#.####}|{15,number,#.####}|{16,number,#.####}|{17,number,#.####}|{18,number,#.####}|{19,number,#.####}|{20,number,#.####}|{21,number,#.####}|{22,number,#.####}",
+        return MessageFormat.format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}|{9}|{10}|{11,number,#.####}|{12,number,#.####}|{13,number,#.####}|{14,number,#.####}",
                 this.topology,
                 this.runOrdinal,
+                description,
+                this.topologyDescription,
+                this.dimensions,
+                this.step,
+                this.stepValues,
+                this.benchmarkType,
+                this.recordingSeconds,
+                comparison.getMeasurementName(),
+                comparison.getMeasurement1().getValues().size(),
+                comparison.getMeasurement1().getAvgValue(),
+                comparison.getMeasurement1().getStdDevValue(),
+                comparison.getMeasurement1().getMinValue(),
+                comparison.getMeasurement1().getMaxValue());
+    }
+
+    private String getTwoSidedLine(Comparison comparison, String description) {
+        comparison.compare();
+
+        return MessageFormat.format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}|{9}|{10}|{11,number,#.####}|{12,number,#.####}|{13,number,#.####}|{14,number,#.####}|{15,number,#.####}|{16,number,#.####}|{17,number,#.####}|{18,number,#.####}|{19,number,#.####}|{20,number,#.####}|{21,number,#.####}|{22,number,#.####}|{23,number,#.####}",
+                this.topology,
+                this.runOrdinal,
+                description,
                 this.topologyDescription,
                 this.dimensions,
                 this.step,

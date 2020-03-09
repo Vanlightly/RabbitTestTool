@@ -25,10 +25,11 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class Orchestrator {
-    private static final Logger LOGGER = LoggerFactory.getLogger("ORCHESTRATOR");
+    private BenchmarkLogger logger;
     private BenchmarkRegister benchmarkRegister;
     private TopologyGenerator topologyGenerator;
     private QueueHosts queueHosts;
@@ -39,8 +40,8 @@ public class Orchestrator {
     private Stats stats;
     private MessageModel messageModel;
     private String mode;
-    private Boolean jumpToCleanup;
-    private Boolean complete;
+    private AtomicBoolean jumpToCleanup;
+    private AtomicBoolean complete;
 
     private List<QueueGroup> queueGroups;
     private List<PublisherGroup> publisherGroups;
@@ -55,6 +56,7 @@ public class Orchestrator {
                         QueueHosts queueHosts,
                         QueueHosts downstreamQueueHosts,
                         String mode) {
+        this.logger = new BenchmarkLogger("ORCHESTRATOR");
         this.benchmarkRegister = benchmarkRegister;
         this.topologyGenerator = topologyGenerator;
         this.queueHosts = queueHosts;
@@ -69,8 +71,8 @@ public class Orchestrator {
         publisherGroups = new ArrayList<>();
         consumerGroups = new ArrayList<>();
 
-        complete = false;
-        jumpToCleanup = false;
+        complete = new AtomicBoolean();
+        jumpToCleanup = new AtomicBoolean();
 
         queueHostsExecutor = Executors.newFixedThreadPool(2);
     }
@@ -96,32 +98,55 @@ public class Orchestrator {
             }
             return true;
         } catch(Exception e) {
-            LOGGER.error("Failed running benchmark", e);
+            logger.error("Failed running benchmark", e);
             return false;
         }
         finally {
-            LOGGER.info("Clean up started");
+            logger.info("Clean up started");
             cleanUp();
-            LOGGER.info("Clean up complete");
-            complete = true;
+            logger.info("Clean up complete");
+            complete.set(true);
         }
     }
 
     public void jumpToCleanup() {
-        jumpToCleanup = true;
+        jumpToCleanup.set(true);
     }
 
-    public boolean isComplete() {
+    public AtomicBoolean isComplete() {
         return complete;
     }
 
     private void initialSetup(Topology topology, BrokerConfiguration brokerConfiguration) {
-        for(VirtualHost vhost : topology.getVirtualHosts()) {
-            if(topology.shouldDeclareArtefacts()) {
+        if (topology.shouldDeclareArtefacts()) {
+            int deletedCount = 0;
+            for(VirtualHost vhost : topology.getVirtualHosts()) {
+                boolean deleted = topologyGenerator.deleteVHost(vhost);
+                if(deleted)
+                    deletedCount++;
+            }
+
+            logger.info("Deleted " + deletedCount + " vhosts");
+            if(deletedCount > 0) {
+                logger.info("Waiting 5 seconds to give extra time for vhost deletion");
+                waitFor(5000);
+            }
+
+            for(VirtualHost vhost : topology.getVirtualHosts()) {
                 topologyGenerator.declareVHost(vhost);
+            }
+        }
+
+        logger.info("Waiting 2 seconds to give extra time for vhost creation");
+        waitFor(2000);
+
+        for(VirtualHost vhost : topology.getVirtualHosts()) {
+            logger.info("Preparing vhost " + vhost.getName() + " on " + (vhost.isDownstream() ? "downstream" : "upstream"));
+
+            if(topology.shouldDeclareArtefacts()) {
                 topologyGenerator.declareExchanges(vhost);
 
-                if(vhost.isDownstream()) {
+                if(vhost.isDownstream() && topology.getFederationUpstream() != null) {
                     topologyGenerator.addUpstream(vhost,
                             topology.getFederationUpstream().getPrefetchCount(),
                             topology.getFederationUpstream().getReconnectDelaySeconds(),
@@ -313,7 +338,7 @@ public class Orchestrator {
                              FixedConfig fixedConfig,
                              Topology topology) {
         int step = 1;
-        while(step <= fixedConfig.getStepRepeat() && !jumpToCleanup) {
+        while(step <= fixedConfig.getStepRepeat() && !jumpToCleanup.get()) {
             // wait for the ramp up time before recording and timing the run
             resetMessageSentCounts();
             waitFor(fixedConfig.getStepRampUpSeconds() * 1000);
@@ -326,7 +351,7 @@ public class Orchestrator {
             sw.start();
 
             // wait for the duration second to pass
-            while (sw.getTime(TimeUnit.SECONDS) < fixedConfig.getDurationSeconds() && !jumpToCleanup) {
+            while (sw.getTime(TimeUnit.SECONDS) < fixedConfig.getDurationSeconds() && !jumpToCleanup.get()) {
                 if(reachedStopCondition())
                     break;
 
@@ -370,7 +395,7 @@ public class Orchestrator {
         // execute each step
         for (int i = 0; i < variableConfig.getStepCount(); i++) {
             int counter = 0;
-            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup) {
+            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup.get()) {
                 // configure step dimension
                 setSingleDimensionStepValue(variableConfig,
                         variableConfig.getDimension(),
@@ -387,7 +412,7 @@ public class Orchestrator {
                 sw.start();
 
                 // wait for step duration seconds to pass
-                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup) {
+                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup.get()) {
                     if(reachedStopCondition())
                         break;
 
@@ -412,7 +437,7 @@ public class Orchestrator {
                                                Topology topology,
                                                Duration gracePeriod) throws IOException {
         List<String> dimStr = Arrays.stream(topology.getVariableConfig().getMultiDimensions()).map(x -> String.valueOf(x)).collect(Collectors.toList());
-        LOGGER.info("Multi-variable with dimensions: " + String.join(" ", dimStr));
+        logger.info("Multi-variable with dimensions: " + String.join(" ", dimStr));
 
         // initialize dimenion values as step 1 values. Acts as an extra ramp up.
         VariableConfig variableConfig = topology.getVariableConfig();
@@ -437,7 +462,7 @@ public class Orchestrator {
         for(int i=0; i< variableConfig.getStepCount(); i++) {
 
             int counter = 0;
-            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup) {
+            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup.get()) {
                 String stepValues = "";
                 for (int vd = 0; vd < variableConfig.getMultiDimensions().length; vd++) {
                     setSingleDimensionStepValue(variableConfig,
@@ -460,7 +485,7 @@ public class Orchestrator {
                 sw.start();
 
                 // wait for step duration seconds to pass
-                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup) {
+                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup.get()) {
                     if(reachedStopCondition())
                         break;
 
@@ -493,7 +518,7 @@ public class Orchestrator {
     }
 
     private void initiateCleanStop(Duration rollingGracePeriod) {
-        LOGGER.info("Signalling publishers to stop");
+        logger.info("Signalling publishers to stop");
         for(PublisherGroup publisherGroup : publisherGroups)
             publisherGroup.stopAllPublishers();
 
@@ -504,35 +529,35 @@ public class Orchestrator {
         messageModel.sendComplete();
 
         if(!rollingGracePeriod.equals(Duration.ZERO)) {
-            LOGGER.info("Started grace period of " + rollingGracePeriod.getSeconds() + " seconds for consumers to catch up");
+            logger.info("Started grace period of " + rollingGracePeriod.getSeconds() + " seconds for consumers to catch up");
 
             int waitCounter = 0;
             while(messageModel.durationSinceLastReceipt().getSeconds() < rollingGracePeriod.getSeconds()) {
                 waitFor(5000);
                 Set<MessagePayload> missing = messageModel.getReceivedMissing();
                 if(missing.isEmpty()) {
-                    LOGGER.info("All messages received");
+                    logger.info("All messages received");
                     break;
                 }
                 else {
-                    LOGGER.info("Waiting for " + missing.size() + " messages to be received");
+                    logger.info("Waiting for " + missing.size() + " messages to be received");
                     if(waitCounter % 12 == 0) {
-                        LOGGER.info("First (up to) 10 missing:");
+                        logger.info("First (up to) 10 missing:");
                         List<String> sample = missing.stream()
                                 .sorted((mp, t1) -> mp.getSequenceNumber())
                                 .map(x -> x.toString())
                                 .limit(10)
                                 .collect(Collectors.toList());
                         for (String missingSample : sample)
-                            LOGGER.info(missingSample);
+                            logger.info(missingSample);
                     }
                 }
                 waitCounter++;
             }
-            LOGGER.info("Grace period complete");
+            logger.info("Grace period complete");
         }
 
-        LOGGER.info("Signalling consumers to stop");
+        logger.info("Signalling consumers to stop");
         for(ConsumerGroup consumerGroup : consumerGroups)
             consumerGroup.stopAllConsumers();
 
@@ -585,13 +610,13 @@ public class Orchestrator {
                 nextProcessingMsStep(variableConfig, (int)value);
                 break;
             default:
-                LOGGER.error("Dimension " + dimension + " has no step implemented");
+                logger.error("Dimension " + dimension + " has no step implemented");
                 break;
         }
     }
 
     private void nextConsumerStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in CONSUMERS variable dimension with value: " + value);
+        logger.info("Next step in CONSUMERS variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
             if(variableConfig.getGroup() == null) {
                 while(consumerGroup.getConsumerCount() < value)
@@ -605,7 +630,7 @@ public class Orchestrator {
     }
 
     private void nextPublisherStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in PUBLISHERS variable dimension with value: " + value);
+        logger.info("Next step in PUBLISHERS variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
             if(variableConfig.getGroup() == null) {
                 while(publisherGroup.getPublisherCount() < value)
@@ -619,7 +644,7 @@ public class Orchestrator {
     }
 
     private void nextQueueStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in QUEUES variable dimension with value: " + value);
+        logger.info("Next step in QUEUES variable dimension with value: " + value);
         for(QueueGroup queueGroup : this.queueGroups) {
             if(variableConfig.getGroup() == null) {
                 while(queueGroup.getQueueCount() < value)
@@ -646,7 +671,7 @@ public class Orchestrator {
     }
 
     private void nextConsumerPrefetchStep(VariableConfig variableConfig, int value) throws IOException{
-        LOGGER.info("Next step in CONSUMER PREFETCH variable dimension with value: " + value);
+        logger.info("Next step in CONSUMER PREFETCH variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
             if(variableConfig.getGroup() == null) {
                 consumerGroup.setConsumerPrefetch(value);
@@ -658,7 +683,7 @@ public class Orchestrator {
     }
 
     private void nextConsumerAckIntervalStep(VariableConfig variableConfig, int value) throws IOException{
-        LOGGER.info("Next step in CONSUMER ACKS variable dimension with value: " + value);
+        logger.info("Next step in CONSUMER ACKS variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
             if(variableConfig.getGroup() == null) {
                 consumerGroup.setAckInterval(value);
@@ -670,7 +695,7 @@ public class Orchestrator {
     }
 
     private void nextMessageHeadersStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in HEADERS variable dimension with value: " + value);
+        logger.info("Next step in HEADERS variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
             if(variableConfig.getGroup() == null)
                 publisherGroup.setMessageHeaders(value);
@@ -680,7 +705,7 @@ public class Orchestrator {
     }
 
     private void nextMessageSizeStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in MESSAGE SIZE variable dimension with value: " + value);
+        logger.info("Next step in MESSAGE SIZE variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
             if(variableConfig.getGroup() == null)
                 publisherGroup.setMessageSize(value);
@@ -690,7 +715,7 @@ public class Orchestrator {
     }
 
     private void nextPublisherInFlightLimitStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in IN FLIGHT LIMIT variable dimension with value: " + value);
+        logger.info("Next step in IN FLIGHT LIMIT variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
             if(variableConfig.getGroup() == null)
                 publisherGroup.setInFlightLimit(value);
@@ -700,7 +725,7 @@ public class Orchestrator {
     }
 
     private void nextRoutingKeyIndexStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in ROUTING KEY INDEX variable dimension with value: " + value);
+        logger.info("Next step in ROUTING KEY INDEX variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
             if(variableConfig.getGroup() == null)
                 publisherGroup.setRoutingKeyIndex(value);
@@ -710,7 +735,7 @@ public class Orchestrator {
     }
 
     private void nextProcessingMsStep(VariableConfig variableConfig, int value) {
-        LOGGER.info("Next step in PROCESSING MS variable dimension with value: " + value);
+        logger.info("Next step in PROCESSING MS variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
             if(variableConfig.getGroup() == null) {
                 consumerGroup.setProcessingMs(value);
@@ -722,7 +747,7 @@ public class Orchestrator {
     }
 
     private void nextPublishRatePerSecondStep(VariableConfig variableConfig, double value) {
-        LOGGER.info("Next step in PUBLISH RATE variable dimension with value: " + value);
+        logger.info("Next step in PUBLISH RATE variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
             if(variableConfig.getGroup() == null) {
                 if(variableConfig.getValueType().equals(ValueType.Value))
@@ -749,14 +774,14 @@ public class Orchestrator {
     private void cleanUp() {
         waitFor(5000);
 
-        LOGGER.info("Shutting down thread pools");
+        logger.info("Shutting down thread pools");
         for(PublisherGroup publisherGroup : this.publisherGroups)
             publisherGroup.shutdown();
 
         for(ConsumerGroup consumerGroup : this.consumerGroups)
             consumerGroup.shutdown();
 
-        LOGGER.info("Waiting for thread pools to terminate");
+        logger.info("Waiting for thread pools to terminate");
         for(PublisherGroup publisherGroup : this.publisherGroups)
             publisherGroup.awaitTermination();
 

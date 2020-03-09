@@ -69,6 +69,7 @@ class AwsRunner(Runner):
                                 str(playlist_entry.grace_period_sec),
                                 str(run_ordinal),
                                 common_conf.tags,
+                                common_conf.attempts,
                                 playlist_entry.get_topology_variables(),
                                 playlist_entry.get_policy_variables(),
                                 federation_args])

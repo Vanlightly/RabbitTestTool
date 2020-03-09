@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.AckMode;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
@@ -13,7 +14,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 public class TopologyLoader {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("TOPOLOGY_LOADER");
+    private BenchmarkLogger logger;
     private Set<String> intFields = new HashSet<>(Arrays.asList("scale", "inFlightLimit", "consumerPrefetch", "ackInterval",
             "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize"));
     private Set<String> boolFields = new HashSet<>(Arrays.asList("useConfirms", "manualAcks"));
@@ -33,7 +33,8 @@ public class TopologyLoader {
                                  Map<String,String> suppliedPolicyVariables,
                                  boolean declareArtefacts,
                                  String suppliedDescription) {
-        LOGGER.info("Loading topology from: " + topologyPath);
+        logger = new BenchmarkLogger("TOPOLOGY_LOADER");
+        logger.info("Loading topology from: " + topologyPath);
         JSONObject topologyJson = loadJson(topologyPath);
         Map<String,String> topologyVariableDefaults = getVariableDefaults(topologyJson);
         makeVariableReplacements(topologyJson, suppliedTopologyVariables, topologyVariableDefaults);
@@ -217,12 +218,12 @@ public class TopologyLoader {
             if (vhostJson.has("exchanges"))
                 vhost.setExchanges(loadExchanges(vhostName, vhostJson.getJSONArray("exchanges"), isDownstream));
             else
-                LOGGER.info("No exchanges defined for vhost " + vhostName + info);
+                logger.info("No exchanges defined for vhost " + vhostName + info);
 
             if(vhostJson.has("queueGroups"))
                 vhost.setQueues(loadQueueGroupConfigs(vhostName, vhostJson.getJSONArray("queueGroups"), isDownstream));
             else
-                LOGGER.info("No queue groups defined for vhost " + vhostName + info);
+                logger.info("No queue groups defined for vhost " + vhostName + info);
 
             if (vhostJson.has("publisherGroups"))
                 vhost.setPublishers(loadPublisherGroupConfigs(vhostName, vhostJson.getJSONArray("publisherGroups"),
@@ -231,12 +232,12 @@ public class TopologyLoader {
                         stepOverride,
                         isDownstream));
             else
-                LOGGER.info("No publisher groups defined  for vhost " + vhostName + info);
+                logger.info("No publisher groups defined  for vhost " + vhostName + info);
 
             if (vhostJson.has("consumerGroups"))
                 vhost.setConsumers(loadConsumerGroupConfigs(vhostName, vhostJson.getJSONArray("consumerGroups"), vhost.getQueues(), isDownstream));
             else
-                LOGGER.info("No consumer groups defined vhost " + vhostName + info);
+                logger.info("No consumer groups defined vhost " + vhostName + info);
 
             virtualHosts.add(vhost);
         }
@@ -427,6 +428,10 @@ public class TopologyLoader {
                 if (qJson.has("bindings"))
                     qConfig.setBindings(getBindings(qJson.getJSONArray("bindings"), qConfig.getGroup()));
 
+                if(qJson.has("shovel")) {
+                    qConfig.setShovelConfig(loadShovelConfig(qJson));
+                }
+
                 queueConfigs.add(qConfig);
             }
         }
@@ -449,10 +454,33 @@ public class TopologyLoader {
             if(exJson.has("bindings"))
                 exConfig.setBindings(getBindings(exJson.getJSONArray("bindings"), exConfig.getName()));
 
+            if(exJson.has("shovel")) {
+                exConfig.setShovelConfig(loadShovelConfig(exJson));
+            }
+
             exchangeConfigs.add(exConfig);
         }
 
         return exchangeConfigs;
+    }
+
+    private ShovelConfig loadShovelConfig(JSONObject json) {
+        JSONObject sJson = json.getJSONObject("shovel");
+        ShovelConfig shovel = new ShovelConfig();
+
+        shovel.setSrcIsDownstream(getMandatoryStrValue(sJson, "srcBroker").toLowerCase().equals("downstream"));
+
+        if(getMandatoryStrValue(sJson, "srcType").toLowerCase().equals("queue"))
+            shovel.setSrcTargetType(ShovelTarget.Queue);
+        else
+            shovel.setSrcTargetType(ShovelTarget.Exchange);
+
+        shovel.setSrcTargetName(getMandatoryStrValue(sJson, "srcName"));
+        shovel.setAckMode(getMandatoryStrValue(sJson,"ackMode"));
+        shovel.setPrefetch(getMandatoryIntValue(sJson, "prefetch"));
+        shovel.setReconnectDelaySeconds(getOptionalIntValue(sJson, "reconnectDelaySeconds", 5));
+
+        return shovel;
     }
 
     private FixedConfig getFixedConfig(JSONObject fixedJson, StepOverride stepOverride) {
@@ -507,7 +535,7 @@ public class TopologyLoader {
         variableConfig.setStepRampUpSeconds(getMandatoryIntValue(varJson, "rampUpSeconds"));
 
         if(varJson.has("applyToGroup"))
-            LOGGER.warn("applyToGroup ignored in multi-dimensional topologies");
+            logger.warn("applyToGroup ignored in multi-dimensional topologies");
 
         return variableConfig;
     }

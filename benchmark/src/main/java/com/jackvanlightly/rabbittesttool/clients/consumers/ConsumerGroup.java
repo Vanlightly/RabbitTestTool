@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.consumers;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
@@ -21,7 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class ConsumerGroup {
-    private static final Logger LOGGER = LoggerFactory.getLogger("CONSUMER_GROUP");
+    private BenchmarkLogger logger;
     private List<Consumer> consumers;
     private ConnectionSettings connectionSettings;
     private ConsumerConfig consumerConfig;
@@ -39,6 +40,7 @@ public class ConsumerGroup {
                          MessageModel messageModel,
                          QueueHosts queueHosts,
                          int maxScale) {
+        this.logger = new BenchmarkLogger("CONSUMER_GROUP");
         this.connectionSettings = connectionSettings;
         this.consumerConfig = consumerConfig;
         this.stats = stats;
@@ -75,7 +77,7 @@ public class ConsumerGroup {
 
     public void startInitialConsumers() {
         for(Consumer consumer : this.consumers) {
-            ClientUtils.waitFor(100, false);
+            ClientUtils.waitFor(100);
             this.executorService.execute(consumer);
         }
     }
@@ -119,7 +121,7 @@ public class ConsumerGroup {
 
     public void addAndStartConsumer() {
         Consumer consumer = addConsumer();
-        ClientUtils.waitFor(100, false);
+        ClientUtils.waitFor(100);
         this.executorService.execute(consumer);
     }
 
@@ -170,7 +172,7 @@ public class ConsumerGroup {
         try {
             boolean shutdown = this.executorService.awaitTermination(10, TimeUnit.SECONDS);
             if(!shutdown)
-                LOGGER.info("Could not shutdown thread pool of publisher group");
+                logger.info("Could not shutdown thread pool of publisher group");
         } catch(InterruptedException e) {
             Thread.currentThread().interrupt();
         }

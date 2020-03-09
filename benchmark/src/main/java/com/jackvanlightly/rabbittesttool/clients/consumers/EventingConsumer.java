@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.consumers;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.clients.publishers.MessageGenerator;
@@ -15,7 +16,7 @@ import java.io.IOException;
 
 public class EventingConsumer extends DefaultConsumer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("CONSUMER");
+    private BenchmarkLogger logger;
     private String consumerId;
     private String vhost;
     private String queue;
@@ -40,6 +41,7 @@ public class EventingConsumer extends DefaultConsumer {
                             int ackInterval,
                             int processingMs) {
         super(channel);
+        this.logger = new BenchmarkLogger("CONSUMER");
         this.consumerId = consumerId;
         this.vhost = vhost;
         this.queue = queue;
@@ -65,7 +67,7 @@ public class EventingConsumer extends DefaultConsumer {
                     getChannel().basicAck(delTagLastReceived, true);
                 }
                 catch(IOException e) {
-                    LOGGER.warn("Failed to ack on shutdown", e);
+                    logger.warn("Failed to ack on shutdown", e);
                 }
             }
         }
@@ -83,7 +85,7 @@ public class EventingConsumer extends DefaultConsumer {
                 waitFor(processingMs);
         }
         catch(AlreadyClosedException e) {
-            LOGGER.info("Could not ack message as connection was lost");
+            logger.info("Could not ack message as connection was lost");
             delTagLastAcked = -1;
         }
     }
@@ -115,20 +117,20 @@ public class EventingConsumer extends DefaultConsumer {
 
     @Override
     public void handleCancel(String consumerTag) throws IOException {
-        LOGGER.info("Consumer cancelled with tag: " + consumerTag);
+        logger.info("Consumer cancelled with tag: " + consumerTag);
         consumerCancelled = true;
     }
 
     @Override
     public void handleRecoverOk(String consumerTag) {
-        LOGGER.info("Consumer recovered with tag: " + consumerTag);
+        logger.info("Consumer recovered with tag: " + consumerTag);
     }
 
     @Override
     public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
         if(sig.isHardError() && !sig.isInitiatedByApplication())
             this.stats.handleConnectionError();
-        LOGGER.info("Consumer shutdown with tag: " + consumerTag + " for reason: " + sig.getMessage());
+        logger.info("Consumer shutdown with tag: " + consumerTag + " for reason: " + sig.getMessage());
     }
 
     public boolean isConsumerCancelled() {

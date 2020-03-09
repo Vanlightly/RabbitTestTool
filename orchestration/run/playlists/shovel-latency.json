@@ -1,0 +1,16 @@
+{
+    "benchmarks": [
+        { "topology": "shovel/src-queue-dest-queue.json"},
+        { "topology": "shovel/src-queue-dest-exchange.json"},
+        { "topology": "shovel/src-exchange-dest-queue.json"},
+        { "topology": "shovel/src-exchange-dest-exchange.json"}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "shovelPrefetch": 10000, 
+            "shovelAckMode": "on-publish",
+            "publishRate": 100
+        }
+    }
+}

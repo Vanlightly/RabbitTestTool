@@ -15,11 +15,13 @@ public class Topology {
     private VariableConfig variableConfig;
     private List<Policy> policies;
     private FederationUpstream federationUpstream;
+    private List<ShovelConfig> shovels;
     private boolean declareArtefacts;
 
     public Topology() {
         policies = new ArrayList<>();
         declareArtefacts = true;
+        shovels = new ArrayList<>();
     }
 
     public String getTopologyName() {

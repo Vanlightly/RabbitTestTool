@@ -65,7 +65,7 @@ def get_playlist_entries(playlist_file):
         entry = PlaylistEntry()
         entry.topology = get_entry_mandatory_field(playlist_entry, common_attr, "topology")
         entry.topology_variables = get_variables(playlist_entry, common_attr, "topologyVariables")
-        entry.policy = get_entry_mandatory_field(playlist_entry, common_attr, "policy")
+        entry.policy = get_entry_optional_field(playlist_entry, common_attr, "policy", "")
         entry.policy_variables = get_variables(playlist_entry, common_attr, "policyVariables")
         
         entry.has_broker_actions = get_entry_optional_field(playlist_entry, common_attr, "hasBrokerActions", False)

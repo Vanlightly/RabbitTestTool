@@ -1,0 +1,101 @@
+{
+  "topologyName": "src-queue-dest-exchange",
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "vhostCount", "default": "1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "16" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "100" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "shovelAckMode", "default": "on-publish" },
+    { "name": "shovelPrefetch", "default": "1000" },
+    { "name": "shovelReconnectSec", "default": "5" }
+  ],
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.vhostCount }}",
+      "federation": "upstream",
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToQueueGroup": {
+            "queueGroup": "q1",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        }
+      ],
+      "queueGroups": [
+        { "group": "q1",
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "benchmark",
+      "scale": "{{ var.vhostCount }}",
+      "federation": "downstream",
+      "exchanges": [ 
+        { "name": "ex1", 
+          "type": "fanout",
+          "shovel": {
+            "ackMode": "{{ var.shovelAckMode }}",
+            "prefetch": "{{ var.shovelPrefetch }}",
+            "reconnectDelaySeconds": "{{ var.shovelReconnectSec }}",
+            "srcBroker": "upstream",
+            "srcType": "queue",
+            "srcName": "q1_00001"
+          } 
+        }],
+      "queueGroups": [
+        { "group": "q1",
+          "scale": "{{ var.queueCount }}",
+          "bindings": [{ "from": "ex1" }],
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        }
+      ],
+      "consumerGroups": [
+        {
+          "group": "c1",
+          "scale": "{{ var.consumerCount }}",
+          "queueGroup": "q1",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}"
+          }
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

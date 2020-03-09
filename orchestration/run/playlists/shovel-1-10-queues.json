@@ -1,0 +1,54 @@
+{
+    "benchmarks": [
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 1 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 2 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 3 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 4 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 5 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 6 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 7 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 8 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 9 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 10 }},
+        
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 1 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 2 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 3 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 4 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 5 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 6 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 7 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 8 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 9 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "vhostCount": 10 }},
+        
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 1 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 2 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 3 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 4 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 5 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 6 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 7 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 8 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 9 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 10 }},
+
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 1 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 2 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 3 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 4 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 5 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 6 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 7 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 8 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 9 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "vhostCount": 10 }}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "shovelPrefetch": 10000, 
+            "shovelAckMode": "on-publish"
+        }
+    }
+}

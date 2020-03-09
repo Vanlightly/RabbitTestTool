@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 
 public class NamesGetter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("NAMES_GETTER");
     private String baseUrl;
     private String user;
     private String password;

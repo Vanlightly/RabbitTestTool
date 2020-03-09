@@ -98,15 +98,26 @@ public class AMQPBenchmarker {
 
             StatisticsComparer comparer = new StatisticsComparer(benchmarkRegister);
 
-            comparer.generateReport(arguments.getStr("--report-dir"),
-                    arguments.getStr("--run-id1"),
-                    arguments.getStr("--technology1"),
-                    arguments.getStr("--version1"),
-                    arguments.getStr("--config-tag1"),
-                    arguments.getStr("--run-id2"),
-                    arguments.getStr("--technology2"),
-                    arguments.getStr("--version2"),
-                    arguments.getStr("--config-tag2"));
+            if(arguments.hasKey("--run-id2")) {
+                comparer.generateReport(arguments.getStr("--report-dir"),
+                        arguments.getStr("--run-id1"),
+                        arguments.getStr("--technology1"),
+                        arguments.getStr("--version1"),
+                        arguments.getStr("--config-tag1"),
+                        arguments.getStr("--run-id2"),
+                        arguments.getStr("--technology2"),
+                        arguments.getStr("--version2"),
+                        arguments.getStr("--config-tag2"),
+                        arguments.getStr("--desc-vars"));
+            }
+            else {
+                comparer.generateReport(arguments.getStr("--report-dir"),
+                        arguments.getStr("--run-id1"),
+                        arguments.getStr("--technology1"),
+                        arguments.getStr("--version1"),
+                        arguments.getStr("--config-tag1"),
+                        arguments.getStr("--desc-vars"));
+            }
         }
         catch(CmdArgumentException e) {
             LOGGER.error(e.getMessage());
@@ -119,9 +130,14 @@ public class AMQPBenchmarker {
     }
 
     private static void runModelDrivenTest(CmdArguments arguments) {
+        String principleBroker = "";
         try {
             String runId = arguments.getStr("--run-id", UUID.randomUUID().toString());
             BrokerConfiguration brokerConfig = getBrokerConfig(arguments);
+            principleBroker = brokerConfig.getHosts().get(0).getNodeName();
+            BenchmarkLogger.SetBrokerName(principleBroker);
+            BenchmarkLogger mainLogger = new BenchmarkLogger("MAIN");
+
             BenchmarkRegister benchmarkRegister = null;
             InfluxMetrics metrics = new InfluxMetrics();
 
@@ -162,7 +178,8 @@ public class AMQPBenchmarker {
                     brokerConfig,
                     arguments.hasMetrics(),
                     messageModel,
-                    gracePeriod);
+                    gracePeriod,
+                    mainLogger);
 
             messageModel.stopMonitoring();
             modelExecutor.shutdown();
@@ -173,19 +190,19 @@ public class AMQPBenchmarker {
             long duplicationViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.NonRedeliveredDuplicate).count();
             List<ConsumeInterval> consumeIntervals = messageModel.getConsumeIntervals();
 
-            LOGGER.info("-------------------------------------------------------");
-            LOGGER.info("---------- SUMMARY ------------------------------------");
-            LOGGER.info("Run ID: " + runId + ", BenchmarkId: " + benchmarkId);
-            LOGGER.info("Published Count: " + messageModel.getPublishedCount());
-            LOGGER.info("Consumed Count: " + messageModel.getConsumedCount());
-            LOGGER.info("Ordering Property Violations: " + orderingViolations);
-            LOGGER.info("Data Loss Property Violations: " + dataLossViolations);
-            LOGGER.info("Non-Redelivered Duplicate Property Violations: " + duplicationViolations);
-            LOGGER.info("Unavailability Periods: " + consumeIntervals.size());
-            LOGGER.info("-------------------------------------------------------");
+            mainLogger.info("-------------------------------------------------------");
+            mainLogger.info("---------- SUMMARY ------------------------------------");
+            mainLogger.info("Run ID: " + runId + ", BenchmarkId: " + benchmarkId);
+            mainLogger.info("Published Count: " + messageModel.getPublishedCount());
+            mainLogger.info("Consumed Count: " + messageModel.getConsumedCount());
+            mainLogger.info("Ordering Property Violations: " + orderingViolations);
+            mainLogger.info("Data Loss Property Violations: " + dataLossViolations);
+            mainLogger.info("Non-Redelivered Duplicate Property Violations: " + duplicationViolations);
+            mainLogger.info("Unavailability Periods: " + consumeIntervals.size());
+            mainLogger.info("-------------------------------------------------------");
 
             if(!consumeIntervals.isEmpty()) {
-                LOGGER.info("Max Unavailability ms: " + consumeIntervals.stream()
+                mainLogger.info("Max Unavailability ms: " + consumeIntervals.stream()
                         .map(x -> x.getEndMessage().getReceiveTimestamp() - x.getStartMessage().getReceiveTimestamp())
                         .max(Long::compareTo)
                         .get());
@@ -205,11 +222,11 @@ public class AMQPBenchmarker {
                 System.exit(6);
         }
         catch(CmdArgumentException e) {
-            LOGGER.error(e.getMessage());
+            LOGGER.error(principleBroker + " : " + e.getMessage());
             System.exit(1);
         }
         catch(Exception e) {
-            LOGGER.error("Exited due to error.", e);
+            LOGGER.error(principleBroker + " : " + "Exited due to error.", e);
             System.exit(2);
         }
     }
@@ -227,11 +244,15 @@ public class AMQPBenchmarker {
     }
 
     private static void runBenchmark(CmdArguments arguments) {
+        String principleBroker = "";
         try {
             BenchmarkRegister benchmarkRegister = null;
             InfluxMetrics metrics = new InfluxMetrics();
 
             BrokerConfiguration brokerConfig = getBrokerConfig(arguments);
+            principleBroker = brokerConfig.getHosts().get(0).getNodeName();
+            BenchmarkLogger.SetBrokerName(principleBroker);
+            BenchmarkLogger mainLogger = new BenchmarkLogger("MAIN");
 
             if(arguments.hasMetrics())
                 metrics.configure(arguments);
@@ -257,14 +278,15 @@ public class AMQPBenchmarker {
                     brokerConfig,
                     arguments.hasMetrics(),
                     new MessageModel(false),
-                    Duration.ZERO);
+                    Duration.ZERO,
+                    mainLogger);
         }
         catch(CmdArgumentException e) {
-            LOGGER.error(e.getMessage());
+            LOGGER.error(principleBroker + " : " + e.getMessage());
             System.exit(1);
         }
         catch(Exception e) {
-            LOGGER.error("Exited due to error.", e);
+            LOGGER.error(principleBroker + " : " + "Exited due to error.", e);
             System.exit(2);
         }
     }
@@ -276,8 +298,10 @@ public class AMQPBenchmarker {
                                        BrokerConfiguration brokerConfig,
                                        boolean publishRealTimeMetrics,
                                        MessageModel messageModel,
-                                       Duration gracePeriod) {
+                                       Duration gracePeriod,
+                                       BenchmarkLogger logger) {
 
+        int attemptLimit = arguments.getInt("--attempts", 1);
         String benchmarkTags = arguments.getStr("--benchmark-tags","");
         String topologyPath = arguments.getStr("--topology");
         int ordinal = arguments.getInt("--run-ordinal", 1);
@@ -290,92 +314,137 @@ public class AMQPBenchmarker {
         String argumentsStr = arguments.getArgsStr(",");
         ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig.getHosts());
         ConnectionSettings downstreamConnectionSettings = getConnectionSettings(arguments, brokerConfig.getDownstreamHosts());
-        String description = arguments.getStr("--description", "");
 
-        String benchmarkId = UUID.randomUUID().toString();
+        String description = getDescription(arguments, topologyVariables, policyVariables);
 
-        Stats stats = null;
-        boolean loggedStart = false;
+        int attempts = 0;
+        boolean success = false;
+        String benchmarkId = "";
 
-        try {
-            TopologyLoader topologyLoader = new TopologyLoader();
-            Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables, declareArtefacts, description);
+        while(success == false && attempts <= attemptLimit) {
+            attempts++;
+            if(attempts > 1)
+                waitFor(10000);
 
-            boolean unsafe = topology.getVirtualHosts().stream().anyMatch(x ->
-                                    x.getPublishers().stream().anyMatch(p -> !p.getPublisherMode().isUseConfirms())
-                                    || x.getConsumers().stream().anyMatch(c -> !c.getAckMode().isManualAcks()));
+            benchmarkId = UUID.randomUUID().toString();
 
-            if(unsafe && mode.equals("model"))
-                LOGGER.warn("!!!WARNING!!! Model mode with unsafe clients detected. There are publishers and/or consumers without confirms/acks. Model mode may report data loss");
+            Stats stats = null;
+            boolean loggedStart = false;
 
-            TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings, brokerConfig);
+            try {
+                TopologyLoader topologyLoader = new TopologyLoader();
+                Topology topology = topologyLoader.loadTopology(topologyPath, policyPath, stepOverride, topologyVariables, policyVariables, declareArtefacts, description);
 
-            int sampleIntervalMs = 10000;
+                boolean unsafe = topology.getVirtualHosts().stream().anyMatch(x ->
+                        x.getPublishers().stream().anyMatch(p -> !p.getPublisherMode().isUseConfirms())
+                                || x.getConsumers().stream().anyMatch(c -> !c.getAckMode().isManualAcks()));
 
-            if(publishRealTimeMetrics) {
-                String instanceTag = instanceConfig.getInstanceType() + "-" + instanceConfig.getVolume() + "-" + instanceConfig.getFileSystem() + "-" + instanceConfig.getTenancy();
-                stats = new Stats(sampleIntervalMs,
-                        brokerConfig,
-                        instanceTag,
-                        metrics.getRegistry(),
-                        "amqp_");
-            }
-            else {
-                stats = new Stats(sampleIntervalMs, brokerConfig);
-            }
+                if (unsafe && mode.equals("model"))
+                    logger.warn("!!!WARNING!!! Model mode with unsafe clients detected. There are publishers and/or consumers without confirms/acks. Model mode may report data loss");
 
-            QueueHosts queueHosts = new QueueHosts(topologyGenerator);
-            queueHosts.addHosts(brokerConfig);
+                TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings, brokerConfig);
 
-            QueueHosts downstreamHosts = new QueueHosts(topologyGenerator);
-            downstreamHosts.addDownstreamHosts(brokerConfig);
+                int sampleIntervalMs = 10000;
 
-            Orchestrator orchestrator = new Orchestrator(topologyGenerator,
-                    benchmarkRegister,
-                    connectionSettings,
-                    downstreamConnectionSettings,
-                    stats,
-                    messageModel,
-                    queueHosts,
-                    downstreamHosts,
-                    mode);
+                if (publishRealTimeMetrics) {
+                    String instanceTag = instanceConfig.getInstanceType() + "-" + instanceConfig.getVolume() + "-" + instanceConfig.getFileSystem() + "-" + instanceConfig.getTenancy();
+                    stats = new Stats(sampleIntervalMs,
+                            brokerConfig,
+                            instanceTag,
+                            metrics.getRegistry(),
+                            "amqp_");
+                } else {
+                    stats = new Stats(sampleIntervalMs, brokerConfig);
+                }
+
+                QueueHosts queueHosts = new QueueHosts(topologyGenerator);
+                queueHosts.addHosts(brokerConfig);
+
+                QueueHosts downstreamHosts = new QueueHosts(topologyGenerator);
+                downstreamHosts.addDownstreamHosts(brokerConfig);
+
+                Orchestrator orchestrator = new Orchestrator(topologyGenerator,
+                        benchmarkRegister,
+                        connectionSettings,
+                        downstreamConnectionSettings,
+                        stats,
+                        messageModel,
+                        queueHosts,
+                        downstreamHosts,
+                        mode);
 
 
-            benchmarkRegister.logBenchmarkStart(benchmarkId, ordinal, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology, argumentsStr, benchmarkTags);
-            loggedStart = true;
+                benchmarkRegister.logBenchmarkStart(benchmarkId, ordinal, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology, argumentsStr, benchmarkTags);
+                loggedStart = true;
 
-            // this strategy prevents a second Ctrl+C from terminating
-            // also since making grace period a rolling period, triggering an early shutdown is less useful
+                // this strategy prevents a second Ctrl+C from terminating
+                // also since making grace period a rolling period, triggering an early shutdown is less useful
 //            Runtime.getRuntime().addShutdownHook(new Thread() {
 //                public void run() {
 //                    skipToCleanUp(orchestrator, mode);
 //                }
 //            });
 
-            orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod);
-
-            waitFor(10000);
-
-            if(topology.shouldDeclareArtefacts()) {
-                for (VirtualHost vhost : topology.getVirtualHosts()) {
-                    LOGGER.info("Deleting vhost: " + vhost.getName());
-                    topologyGenerator.deleteVHost(vhost);
+                success = orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod);
+                if(!success) {
+                    if (attempts < attemptLimit)
+                        logger.info("Benchmark failed, will retry. On node " + String.join(",", brokerConfig.getNodeNames()));
+                    else
+                        logger.info("Benchmark failed, no more retries. On node " + String.join(",", brokerConfig.getNodeNames()));
                 }
+
+                waitFor(10000);
+
+                if (topology.shouldDeclareArtefacts()) {
+                    for (VirtualHost vhost : topology.getVirtualHosts()) {
+                        logger.info("Deleting vhost: " + vhost.getName());
+                        try {
+                            topologyGenerator.deleteVHost(vhost);
+                        }
+                        catch(Exception vhostEx) {
+                            logger.error("Could not delete vhost " + vhost.getName() + " on clean up", vhostEx);
+                        }
+                    }
+                }
+            } finally {
+                if (loggedStart)
+                    benchmarkRegister.logBenchmarkEnd(benchmarkId);
+
+                metrics.close();
+
+                if (stats != null)
+                    stats.close();
             }
         }
-        finally {
-            if(loggedStart)
-                benchmarkRegister.logBenchmarkEnd(benchmarkId);
 
-            metrics.close();
-
-            if(stats != null)
-                stats.close();
-        }
-        LOGGER.info("Benchmark complete on node " + String.join(",", brokerConfig.getNodeNames()));
+        logger.info("Benchmark complete on node " + String.join(",", brokerConfig.getNodeNames()));
         //printThreads(node);
 
         return benchmarkId;
+    }
+
+    private static String getDescription(CmdArguments arguments,
+                                  Map<String,String> topologyVariables,
+                                  Map<String,String> policyVariables) {
+        String descVars = arguments.getStr("--desc-vars", "");
+        String description = arguments.getStr("--description", "");
+        if(!descVars.isEmpty() && description.isEmpty()) {
+            String[] descVarsArr = descVars.split(",");
+            for(String descVar : descVarsArr) {
+                String first = descVar.split(".")[0];
+                String second = descVar.split(".")[1];
+
+                if(first.equals("--tvar")) {
+                    if(topologyVariables.containsKey(second))
+                        description += second + "=" + topologyVariables.get(second)+",";
+                } else if(first.equals("--pvar")) {
+                    if(policyVariables.containsKey(second))
+                        description += second + "=" + policyVariables.get(second)+",";
+                }
+            }
+        }
+
+        return description;
     }
 
     private static InstanceConfiguration getInstanceConfiguration(CmdArguments arguments) {

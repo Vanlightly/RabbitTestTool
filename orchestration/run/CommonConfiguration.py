@@ -26,6 +26,7 @@ class CommonConfiguration:
         self.override_step_msg_limit = int(get_optional_arg(args, "--override-step-msg-limit", "", "0"))
         self.override_broker_hosts = get_optional_arg(args, "--override-broker-hosts", "", "")
         self.federation_enabled = is_true(get_optional_arg(args, "--federation-enabled", "", "false"))
+        self.attempts = get_optional_arg(args, "--attempts", "", "1")
         
         self.username = "benchmark"
         self.password = get_mandatory_arg(args, "--password", "")

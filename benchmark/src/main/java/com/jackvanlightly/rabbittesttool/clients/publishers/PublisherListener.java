@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.clients.consumers.Consumer;
@@ -18,7 +19,7 @@ import java.util.concurrent.Semaphore;
 
 public class PublisherListener implements ConfirmListener, ReturnListener, BlockedListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PublisherListener.class);
+    private BenchmarkLogger logger;
     private MessageModel messageModel;
     private Stats stats;
     private ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
@@ -26,6 +27,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     private Set<MessagePayload> undeliverable;
 
     public PublisherListener(MessageModel messageModel, Stats stats, ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms, Semaphore inflightSemaphore) {
+        this.logger = new BenchmarkLogger("PUBLISHER");
         this.messageModel = messageModel;
         this.stats = stats;
         this.pendingConfirms = pendingConfirms;
@@ -108,7 +110,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
             undeliverable.add(mp);
         }
         catch(Exception e) {
-            LOGGER.error("Failed registering basic return", e);
+            logger.error("Failed registering basic return", e);
         }
         stats.handleReturn();
     }

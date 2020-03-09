@@ -117,6 +117,14 @@
   delay: 20
   register: result
   until: result.rc == 0
+
+- name: Enable RabbitMQ Shovel
+  command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_shovel
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
+  
   
 - name: Create benchmark user
   command: "/rabbitmq/sbin/rabbitmqctl add_user {{ rabbitmq_user.name }} {{ rabbitmq_user.password }}"

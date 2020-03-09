@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
@@ -18,10 +19,10 @@ public class MessageModel {
     private Map<String, ReceivedMessage> consumerMessages;
     private List<Violation> violations;
     private List<ConsumeInterval> consumeIntervals;
-    private boolean sendComplete;
-    private boolean isCancelled;
-    private boolean monitoringStopped;
-    private boolean enabled;
+    private AtomicBoolean sendComplete;
+    private AtomicBoolean isCancelled;
+    private AtomicBoolean monitoringStopped;
+    private AtomicBoolean enabled;
     private int unavailabilityThresholdMs;
     private Instant lastReceivedTime;
     private Instant lastReceivedPrinted = Instant.MIN;
@@ -45,7 +46,11 @@ public class MessageModel {
                         boolean checkOrdering,
                         boolean checkDataLoss,
                         boolean checkDuplicates) {
-        this.enabled = enabled;
+        this.enabled = new AtomicBoolean(enabled);
+        this.sendComplete = new AtomicBoolean();
+        isCancelled = new AtomicBoolean();
+        monitoringStopped  = new AtomicBoolean();
+
         receiveQueue = new LinkedBlockingQueue<>();
         expectsToReceive = new HashSet<>();
         actualReceived = new HashSet<>();
@@ -62,14 +67,14 @@ public class MessageModel {
     }
 
     public void stopMonitoring() {
-        isCancelled = true;
+        isCancelled.set(true);
 
-        while(!monitoringStopped)
-            ClientUtils.waitFor(1000, false);
+        while(!monitoringStopped.get())
+            ClientUtils.waitFor(1000);
     }
 
     public void received(ReceivedMessage messagePayload) {
-        if(enabled) {
+        if(enabled.get()) {
             receiveQueue.add(messagePayload);
             lastReceivedTime = Instant.now();
             if(lastReceivedTime.getEpochSecond()-lastReceivedPrinted.getEpochSecond() > 10) {
@@ -80,7 +85,7 @@ public class MessageModel {
     }
 
     public void sent(MessagePayload messagePayload) {
-        if(enabled) {
+        if(enabled.get()) {
             expLock.writeLock().lock();
             try {
                 expectsToReceive.add(messagePayload);
@@ -96,11 +101,11 @@ public class MessageModel {
     }
 
     public void sendComplete() {
-        sendComplete = true;
+        sendComplete.set(true);
     }
 
     public boolean allMessagesReceived() {
-        if(sendComplete)
+        if(sendComplete.get())
             return getReceivedMissing().isEmpty();
         else
             return false;
@@ -111,7 +116,7 @@ public class MessageModel {
         Map<Integer, ReceivedMessage> streamMessages = new HashMap<>();
 
         // detect ordering and duplication in real-time
-        while(!isCancelled) {
+        while(!isCancelled.get()) {
             ReceivedMessage msg = receiveQueue.poll();
             if(msg == null) {
                 ClientUtils.waitFor(100, this.isCancelled);
@@ -163,7 +168,7 @@ public class MessageModel {
                 violations.add(new Violation(ViolationType.Missing, mp));
         }
 
-        monitoringStopped = true;
+        monitoringStopped.set(true);
         monitorStop = Instant.now();
 
         // calculate availability based on streams. Assumed that one stream is one queue.

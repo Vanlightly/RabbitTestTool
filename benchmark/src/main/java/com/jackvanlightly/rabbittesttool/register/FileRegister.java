@@ -103,6 +103,11 @@ public class FileRegister implements BenchmarkRegister {
     }
 
     @Override
+    public List<BenchmarkMetaData> getBenchmarkMetaData(String runId, String technology, String version, String configTag) {
+        return null;
+    }
+
+    @Override
     public void logViolations(String benchmarkId, List<Violation> violations) {
         if(violations.isEmpty()) {
             printWriter.println("No property violations detected");

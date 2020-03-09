@@ -12,6 +12,7 @@ public class QueueConfig {
     private int scale;
     private List<Property> properties;
     private List<BindingConfig> bindings;
+    private ShovelConfig shovelConfig;
 
     public QueueConfig() {
         properties = new ArrayList<>();
@@ -82,5 +83,13 @@ public class QueueConfig {
 
     public String getQueueName(int ordinal) {
         return this.group + "_" + StringUtils.leftPad(String.valueOf(ordinal), 5, "0");
+    }
+
+    public ShovelConfig getShovelConfig() {
+        return shovelConfig;
+    }
+
+    public void setShovelConfig(ShovelConfig shovelConfig) {
+        this.shovelConfig = shovelConfig;
     }
 }

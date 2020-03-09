@@ -1,0 +1,33 @@
+{
+    "benchmarks": [
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 10 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 20 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 30 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 40 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 50 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 60 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 70 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 80 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 90 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "vhostCount": 100 }},
+        
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 10 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 20 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 30 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 40 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 50 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 60 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 70 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 80 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 90 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "vhostCount": 100 }}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "publishRate": 100,
+            "shovelPrefetch": 10000, 
+            "shovelAckMode": "on-publish"
+        }
+    }
+}

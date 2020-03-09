@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.consumers;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
@@ -16,16 +17,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Consumer implements Runnable {
-    private static final Logger LOGGER = LoggerFactory.getLogger("CONSUMER");
-
+    private BenchmarkLogger logger;
     private String consumerId;
     private ConnectionSettings connectionSettings;
     private ConnectionFactory factory;
     private QueueHosts queueHosts;
-    private ExecutorService executorService;
-    private boolean isCancelled;
+    //private ExecutorService executorService;
+    private AtomicBoolean isCancelled;
     private Integer step;
     private Stats stats;
     private MessageModel messageModel;
@@ -40,7 +41,8 @@ public class Consumer implements Runnable {
                     ConsumerSettings consumerSettings,
                     Stats stats,
                     MessageModel messageModel) {
-
+        this.logger = new BenchmarkLogger("CONSUMER");
+        this.isCancelled = new AtomicBoolean();
         this.consumerId = consumerId;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
@@ -49,13 +51,13 @@ public class Consumer implements Runnable {
         this.messageModel = messageModel;
         this.consumerSettings = consumerSettings;
         this.step = 0;
-        this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
+        //this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
         this.consumerStats = new ConsumerStats();
     }
 
     public void signalStop() {
-        isCancelled = true;
-        this.executorService.shutdown();
+        isCancelled.set(true);
+        //this.executorService.shutdown();
     }
 
     public void setAckInterval(int ackInterval) {
@@ -86,16 +88,16 @@ public class Consumer implements Runnable {
 
     @Override
     public void run() {
-        while(!isCancelled) {
+        while(!isCancelled.get()) {
             try {
                 Connection connection = null;
                 try {
                     connection = getConnection();
                     if(connection.isOpen()) {
-                        LOGGER.info("Consumer " + consumerId + " opened connection");
+                        logger.info("Consumer " + consumerId + " opened connection");
 
                         int exitReason = 0;
-                        while (!isCancelled && exitReason != 3) {
+                        while (!isCancelled.get() && exitReason != 3) {
                             int currentStep = step;
                             exitReason = startChannel(connection, currentStep);
                         }
@@ -104,47 +106,47 @@ public class Consumer implements Runnable {
                 finally {
                     if (connection != null && connection.isOpen()) {
                         connection.close(AMQP.REPLY_SUCCESS, "Closed by RabbitTestTool", 3000);
-                        LOGGER.info("Consumer " + consumerId + " closed connection");
+                        logger.info("Consumer " + consumerId + " closed connection");
                     }
                 }
             } catch (IOException e) {
-                if(!isCancelled)
+                if(!isCancelled.get())
                     stats.handleConnectionError();
-                LOGGER.error("Consumer " + consumerId + " has failed in step " + step, e);
+                logger.error("Consumer " + consumerId + " has failed in step " + step, e);
             } catch (TimeoutException e) {
-                if(!isCancelled)
+                if(!isCancelled.get())
                     stats.handleConnectionError();
-                LOGGER.error("Consumer " + consumerId + " failed to connect in step " + step, e);
+                logger.error("Consumer " + consumerId + " failed to connect in step " + step, e);
             } catch (Exception e) {
-                if(!isCancelled)
+                if(!isCancelled.get())
                     stats.handleConnectionError();
-                LOGGER.error("Consumer " + consumerId + " has failed unexpectedly in step " + step, e);
+                logger.error("Consumer " + consumerId + " has failed unexpectedly in step " + step, e);
             }
 
-            if(!isCancelled) {
+            if(!isCancelled.get()) {
                 recreateConsumerExecutor();
             }
         }
     }
 
     private void recreateConsumerExecutor() {
-        try {
-            this.executorService.shutdown();
-            this.executorService.awaitTermination(10, TimeUnit.SECONDS);
-            LOGGER.info("Consumer " + consumerId + " connection thread pool stopped");
-        }
-        catch (InterruptedException e) {
-            LOGGER.info("Could not stop consumer " + consumerId + " connection thread pool");
-            Thread.currentThread().interrupt();
+//        try {
+////            this.executorService.shutdown();
+////            this.executorService.awaitTermination(10, TimeUnit.SECONDS);
+//            LOGGER.info("Consumer " + consumerId + " connection thread pool stopped");
+//        }
+//        catch (InterruptedException e) {
+//            LOGGER.info("Could not stop consumer " + consumerId + " connection thread pool");
+//            Thread.currentThread().interrupt();
+//
+//            if(isCancelled.get())
+//                return;
+//        }
 
-            if(isCancelled)
-                return;
-        }
-
-        LOGGER.info("Consumer " + consumerId + " will restart in 5 seconds");
+        logger.info("Consumer " + consumerId + " will restart in 5 seconds");
         ClientUtils.waitFor(5000, isCancelled);
 
-        this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
+//        this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
 
     }
 
@@ -164,7 +166,7 @@ public class Consumer implements Runnable {
     private int startChannel(Connection connection, Integer currentStep) throws IOException, TimeoutException {
         int exitReason = 0;
         Channel channel = connection.createChannel();
-        LOGGER.info("Consumer " + consumerId + " opened channel");
+        logger.info("Consumer " + consumerId + " opened channel");
         try {
             boolean noAck = false;
 
@@ -190,9 +192,9 @@ public class Consumer implements Runnable {
                     consumerSettings.getProcessingMs());
 
             String consumerTag = channel.basicConsume(consumerSettings.getQueue(), noAck, eventingConsumer);
-            LOGGER.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());
+            logger.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());
 
-            while (!isCancelled && currentStep.equals(step) && channel.isOpen() && !eventingConsumer.isConsumerCancelled()) {
+            while (!isCancelled.get() && currentStep.equals(step) && channel.isOpen() && !eventingConsumer.isConsumerCancelled()) {
                 ClientUtils.waitFor(1000, this.isCancelled);
 
                 if(reconnectToNewHost()) {
@@ -201,11 +203,11 @@ public class Consumer implements Runnable {
                 }
             }
 
-            if(isCancelled)
+            if(isCancelled.get())
                 eventingConsumer.tryAcknowledgeRemaining();
 
             if(exitReason == 0) {
-                if (isCancelled)
+                if (isCancelled.get())
                     exitReason = 1;
                 else if (!currentStep.equals(step))
                     exitReason = 2;
@@ -214,17 +216,17 @@ public class Consumer implements Runnable {
             }
         }
         catch(Exception e) {
-            LOGGER.error("Failed setting up a consumer", e);
+            logger.error("Failed setting up a consumer", e);
             throw e;
         }
         finally {
             if(channel.isOpen()) {
                 try {
                     channel.close();
-                    LOGGER.info("Consumer " + consumerId + " closed channel to " + currentHost.getNodeName() + " with exit reason " + exitReason);
+                    logger.info("Consumer " + consumerId + " closed channel to " + currentHost.getNodeName() + " with exit reason " + exitReason);
                 }
                 catch(Exception e) {
-                    LOGGER.error("Consumer " + consumerId + " could not close channel to " + currentHost.getNodeName() + " with exit reason " + exitReason, e);
+                    logger.error("Consumer " + consumerId + " could not close channel to " + currentHost.getNodeName() + " with exit reason " + exitReason, e);
                 }
             }
             else {
@@ -256,7 +258,7 @@ public class Consumer implements Runnable {
             factory.setRequestedFrameMax(consumerSettings.getFrameMax());
 
         factory.setRequestedHeartbeat(10);
-        factory.setSharedExecutor(this.executorService);
+        //factory.setSharedExecutor(this.executorService);
         factory.setThreadFactory(r -> {
             Thread t = Executors.defaultThreadFactory().newThread(r);
             t.setDaemon(true);
@@ -271,7 +273,7 @@ public class Consumer implements Runnable {
     }
 
     private Broker getBrokerToConnectTo() {
-        while(!isCancelled) {
+        while(!isCancelled.get()) {
             Broker host = null;
             if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.RoundRobin))
                 host = queueHosts.getHostRoundRobin();
@@ -297,13 +299,13 @@ public class Consumer implements Runnable {
         if(connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Local)) {
             Broker host = getBrokerToConnectTo();
             if (!host.getNodeName().equals(currentHost.getNodeName())) {
-                LOGGER.info("Detected change of queue host. No longer: " + currentHost.getNodeName() + " now: " + host.getNodeName());
+                logger.info("Detected change of queue host. No longer: " + currentHost.getNodeName() + " now: " + host.getNodeName());
                 return true;
             }
         }
         else if(connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.NonLocal)) {
             if(queueHosts.isQueueHost(connectionSettings.getVhost(), consumerSettings.getQueue(), currentHost)) {
-                LOGGER.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
+                logger.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
                 return true;
             }
         }

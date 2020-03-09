@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.comparer;
 
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
+import com.jackvanlightly.rabbittesttool.register.BenchmarkMetaData;
 import com.jackvanlightly.rabbittesttool.register.BenchmarkRegister;
 import com.jackvanlightly.rabbittesttool.register.StepStatistics;
 import org.slf4j.Logger;
@@ -25,8 +26,106 @@ public class StatisticsComparer {
     }
 
     public void generateReport(String reportFileDirectory,
-                        String runId1, String technology1, String version1, String configTag1,
-                        String runId2, String technology2, String version2, String configTag2) {
+                               String runId1,
+                               String technology1,
+                               String version1,
+                               String configTag1,
+                               String descVars) {
+        InstanceConfiguration ic1 = benchmarkRegister.getInstanceConfiguration(runId1, technology1, version1, configTag1);
+
+        if(ic1 == null)
+            throw new RuntimeException("No instance configuration could be found for config tag: " + configTag1);
+
+        List<StepStatistics> stepStatistics1 = benchmarkRegister.getStepStatistics(runId1, technology1, version1, configTag1)
+                .stream()
+                .sorted(Comparator.comparing(StepStatistics::getTopology).thenComparing(StepStatistics::getStep).thenComparing(StepStatistics::getNode))
+                .collect(Collectors.toList());
+
+        List<StepComparison> stepComparisons = generateOneSidedComparisons(stepStatistics1);
+
+        List<String> reportLines = new ArrayList<>();
+        reportLines.add(StepComparison.getOneSidedCsvHeader());
+
+        List<String> descVarsList = Arrays.stream(descVars.split(",")).map(x -> x.toLowerCase()).collect(Collectors.toList());
+        for(StepComparison comparison : stepComparisons) {
+            reportLines.addAll(comparison.toOneSidedCsv(descVarsList));
+        }
+
+        try {
+            File reportDir = new File(reportFileDirectory);
+            if(!reportDir.exists())
+                reportDir.mkdir();
+
+            long filePrefix = Instant.now().getEpochSecond();
+            File headerFile = new File(Paths.get(reportFileDirectory, filePrefix + "-header.txt").toString());
+            headerFile.createNewFile();
+            FileWriter hdrWriter = new FileWriter(headerFile.getAbsoluteFile());
+            hdrWriter.write("RunId=" + runId1 + System.lineSeparator());
+            hdrWriter.write("\n");
+            hdrWriter.write("Run Configuration:" + System.lineSeparator());
+            hdrWriter.write("    ConfigTag=" + configTag1 + System.lineSeparator());
+            hdrWriter.write("    Technology=" + technology1 + System.lineSeparator());
+            hdrWriter.write("    Version=" + version1 + System.lineSeparator());
+            hdrWriter.write("    Hosting=" + ic1.getHosting() + System.lineSeparator());
+            hdrWriter.write("    InstanceType=" + ic1.getInstanceType() + System.lineSeparator());
+            hdrWriter.write("    Volume=" + ic1.getVolume() + System.lineSeparator());
+            hdrWriter.write("    FileSystem=" + ic1.getFileSystem() + System.lineSeparator());
+            hdrWriter.write("    Tenancy=" + ic1.getTenancy() + System.lineSeparator());
+            hdrWriter.write("    CoreCount=" + ic1.getCoreCount() + System.lineSeparator());
+            hdrWriter.write("    ThreadsPerCore=" + ic1.getThreadsPerCore() + System.lineSeparator());
+            hdrWriter.write("\n");
+
+            hdrWriter.write("\n");
+            hdrWriter.write("Benchmark metadata:" + System.lineSeparator());
+
+            List<BenchmarkMetaData> metaDataList = benchmarkRegister.getBenchmarkMetaData(runId1, technology1, version1, configTag1);
+            for(BenchmarkMetaData md : metaDataList) {
+                hdrWriter.write("\n");
+                hdrWriter.write("---------------- Benchmark #" + md.getRunOrdinal() + "----------------" + System.lineSeparator());
+                hdrWriter.write("Topology = " + md.getTopology() + System.lineSeparator());
+                hdrWriter.write("Policies = " + md.getPolicy() + System.lineSeparator());
+                hdrWriter.write("Arguments = " + md.getArguments() + System.lineSeparator());
+            }
+
+            hdrWriter.write("\n");
+            hdrWriter.write("\n");
+            hdrWriter.write("----------- Steps executed ---------------\n");
+
+            stepStatistics1 = stepStatistics1
+                    .stream()
+                    .sorted(Comparator.comparing(StepStatistics::getStartMs).thenComparing(StepStatistics::getStep).thenComparing(StepStatistics::getNode))
+                    .collect(Collectors.toList());
+
+            for(StepStatistics sStats : stepStatistics1) {
+                hdrWriter.write(MessageFormat.format("    Ordinal={0}, Topology={1}, Step={2}, Node={3}, StartMs={4,number,#}, EndMs={5,number,#}\n",
+                        sStats.getRunOrdinal(),
+                        sStats.getTopology(),
+                        sStats.getStep(),
+                        sStats.getNode(),
+                        sStats.getStartMs(),
+                        sStats.getEndMs()));
+            }
+
+            hdrWriter.close();
+            LOGGER.info("Created header file: " + headerFile.getAbsolutePath());
+
+            File csvFile = new File(Paths.get(reportFileDirectory, filePrefix + "-stats.csv").toString());
+            csvFile.createNewFile();
+            FileWriter writer = new FileWriter(csvFile.getAbsoluteFile());
+            for (String str : reportLines) {
+                writer.write(str + System.lineSeparator());
+            }
+            writer.close();
+            LOGGER.info("Created CSV file: " + csvFile.getAbsolutePath());
+        } catch(IOException e) {
+            throw new RuntimeException("Failed generating comparison report", e);
+        }
+    }
+
+    public void generateReport(String reportFileDirectory,
+                               String runId1, String technology1, String version1, String configTag1,
+                               String runId2, String technology2, String version2, String configTag2,
+                               String descVars) {
         InstanceConfiguration ic1 = benchmarkRegister.getInstanceConfiguration(runId1, technology1, version1, configTag1);
         InstanceConfiguration ic2 = benchmarkRegister.getInstanceConfiguration(runId2, technology2, version2, configTag2);
 
@@ -48,10 +147,11 @@ public class StatisticsComparer {
 
         List<StepComparison> stepComparisons = generateComparisons(stepStatistics1, stepStatistics2);
 
+        List<String> descVarsList = Arrays.stream(descVars.split(",")).map(x -> x.toLowerCase()).collect(Collectors.toList());
         List<String> reportLines = new ArrayList<>();
         reportLines.add(StepComparison.getCsvHeader());
         for(StepComparison comparison : stepComparisons) {
-            reportLines.addAll(comparison.toCsv());
+            reportLines.addAll(comparison.toTwoSidedCsv(descVarsList));
         }
 
         try {
@@ -95,7 +195,8 @@ public class StatisticsComparer {
                     .collect(Collectors.toList());
 
             for(StepStatistics sStats : stepStatistics1) {
-                hdrWriter.write(MessageFormat.format("    Topology={0}, Step={1}, Node={2}, StartMs={3,number,#}, EndMs={4,number,#}\n",
+                hdrWriter.write(MessageFormat.format("    Ordinal={0}, Topology={1}, Step={2}, Node={3}, StartMs={4,number,#}, EndMs={5,number,#}\n",
+                        sStats.getRunOrdinal(),
                         sStats.getTopology(),
                         sStats.getStep(),
                         sStats.getNode(),
@@ -112,7 +213,8 @@ public class StatisticsComparer {
                     .collect(Collectors.toList());
 
             for(StepStatistics sStats : stepStatistics2) {
-                hdrWriter.write(MessageFormat.format("    Topology={0}, Step={1}, Node={2}, StartMs={3,number,#}, EndMs={4,number,#}\n",
+                hdrWriter.write(MessageFormat.format("    Ordinal={0}, Topology={1}, Step={2}, Node={3}, StartMs={4,number,#}, EndMs={5,number,#}\n",
+                        sStats.getRunOrdinal(),
                         sStats.getTopology(),
                         sStats.getStep(),
                         sStats.getNode(),
@@ -134,6 +236,17 @@ public class StatisticsComparer {
         } catch(IOException e) {
             throw new RuntimeException("Failed generating comparison report", e);
         }
+    }
+
+    private List<StepComparison> generateOneSidedComparisons(List<StepStatistics> stepStatistics1) {
+        Map<String,StepComparison> comparisons = new HashMap<>();
+        addComparisons(comparisons, stepStatistics1, 1);
+
+        return comparisons.entrySet()
+                .stream()
+                .map(x -> x.getValue())
+                .sorted(Comparator.comparing(StepComparison::getRunOrdinal).thenComparing(StepComparison::getStep))
+                .collect(Collectors.toList());
     }
 
     private List<StepComparison> generateComparisons(List<StepStatistics> stepStatistics1, List<StepStatistics> stepStatistics2) {

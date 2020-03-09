@@ -166,6 +166,11 @@ public class ConsoleRegister implements BenchmarkRegister {
     }
 
     @Override
+    public List<BenchmarkMetaData> getBenchmarkMetaData(String runId, String technology, String version, String configTag) {
+        return null;
+    }
+
+    @Override
     public void logViolations(String benchmarkId, List<Violation> violations) {
         this.out.println("");
         this.out.println("----------------------------------------------------");

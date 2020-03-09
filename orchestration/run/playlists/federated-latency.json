@@ -1,0 +1,19 @@
+{
+    "benchmarks": [
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "policyVariables": { "fedAckMode": "no-ack" }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "policyVariables": { "fedAckMode": "on-publish" }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "policyVariables": { "fedAckMode": "on-confirm" }},
+
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "policyVariables": { "fedAckMode": "on-publish" }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "policyVariables": { "fedAckMode": "on-confirm" }}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "publishRate": 100
+        },
+        "policyVariables": { 
+            "fedPrefetch": 1000
+        }
+    }
+}

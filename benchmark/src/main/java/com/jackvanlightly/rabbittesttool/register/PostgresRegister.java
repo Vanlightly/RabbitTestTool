@@ -1,6 +1,5 @@
 package com.jackvanlightly.rabbittesttool.register;
 
-import com.jackvanlightly.rabbittesttool.CmdArguments;
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
 import com.jackvanlightly.rabbittesttool.model.Violation;
@@ -15,6 +14,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.groupingBy;
 
 public class PostgresRegister implements BenchmarkRegister {
     private String jdbcUrl;
@@ -506,6 +507,79 @@ public class PostgresRegister implements BenchmarkRegister {
         }
 
         return null;
+    }
+
+    @Override
+    public List<BenchmarkMetaData> getBenchmarkMetaData(String runId, String technology, String version, String configTag) {
+        List<BenchmarkMetaData> metaDataList = new ArrayList<>();
+
+        String query = "SELECT \n" +
+                "       INSTANCE,\n" +
+                "       VOLUME,\n" +
+                "       FILESYSTEM,\n" +
+                "       TENANCY,\n" +
+                "       CORE_COUNT,\n" +
+                "       THREADS_PER_CORE,\n" +
+                "       HOSTING,\n" +
+                "       RUN_ORDINAL,\n" +
+                "       TOPOLOGY,\n" +
+                "       POLICIES,\n" +
+                "       ARGUMENTS,\n" +
+                "       TAGS\n" +
+                "FROM BENCHMARK\n" +
+                "WHERE CONFIG_TAG = ?\n" +
+                "AND TECHNOLOGY = ?\n" +
+                "AND BROKER_VERSION = ?\n" +
+                "AND RUN_ID = ?";
+
+        try (Connection con = tryGetConnection();
+             PreparedStatement pst = con.prepareStatement(query)) {
+
+            pst.setString(1, configTag);
+            pst.setString(2, technology);
+            pst.setString(3, version);
+            pst.setObject(4, runId);
+
+            ResultSet rs = pst.executeQuery();
+
+            while (rs.next()) {
+                InstanceConfiguration ic = new InstanceConfiguration(
+                        rs.getString("instance"),
+                        rs.getString("volume"),
+                        rs.getString("filesystem"),
+                        rs.getString("tenancy"),
+                        rs.getString("hosting"),
+                        rs.getShort("core_count"),
+                        rs.getShort("threads_per_core")
+                );
+
+                BenchmarkMetaData md = new BenchmarkMetaData();
+                md.setArguments(rs.getString("arguments"));
+                md.setBenchmarkTag(rs.getString("arguments"));
+                md.setConfigTag(configTag);
+                md.setInstanceConfig(ic);
+                md.setPolicy(rs.getString("policies"));
+                md.setRunId(runId);
+                md.setRunOrdinal(rs.getInt("run_ordinal"));
+                md.setTechnology(technology);
+                md.setVersion(version);
+                md.setTopology(rs.getString("topology"));
+                md.setBenchmarkTag(rs.getString("tags"));
+
+                metaDataList.add(md);
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed retrieving benchmark meta data", e);
+        }
+
+        return metaDataList.stream()
+                .collect(groupingBy(BenchmarkMetaData::getRunOrdinal))
+                .values()
+                .stream()
+                .map(x -> x.get(0))
+                .sorted(Comparator.comparing(BenchmarkMetaData::getRunOrdinal))
+                .collect(Collectors.toList());
     }
 
     @Override

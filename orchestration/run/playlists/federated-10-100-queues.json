@@ -1,0 +1,38 @@
+{
+    "benchmarks": [
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 10 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 20 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 30 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 40 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 50 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 60 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 70 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 80 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 90 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "vhostCount": 100 }},
+        
+
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 10 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 20 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 30 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 40 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 50 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 60 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 70 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 80 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 90 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "vhostCount": 100 }}
+    ],
+    "commonAttributes": {
+        "topology": "federation/federated-queue.json",
+        "policy": "federated-queues.json",
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "publishRate": 100
+        },
+        "policyVariables": {
+            "fedPrefetch": 10000, 
+            "fedAckMode": "on-publish"
+        }
+    }
+}

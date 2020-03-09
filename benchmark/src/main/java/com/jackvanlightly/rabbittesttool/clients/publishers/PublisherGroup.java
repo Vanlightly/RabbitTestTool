@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
@@ -20,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 
 public class PublisherGroup {
-    private static final Logger LOGGER = LoggerFactory.getLogger("PUBLISHER_GROUP");
+    private BenchmarkLogger logger;
     private List<Publisher> publishers;
     private List<String> currentQueuesInGroup;
     private ConnectionSettings connectionSettings;
@@ -38,6 +39,7 @@ public class PublisherGroup {
                           MessageModel messageModel,
                           QueueHosts queueHosts,
                           int maxScale) {
+        this.logger = new BenchmarkLogger("PUBLISHER_GROUP");
         this.connectionSettings = connectionSettings;
         this.publisherConfig = publisherConfig;
         this.stats = stats;
@@ -73,12 +75,12 @@ public class PublisherGroup {
             publishExecutor.submit(() -> publisher.performInitialSend());
         }
 
-        LOGGER.info("Waiting for initial publish to complete");
+        logger.info("Waiting for initial publish to complete");
         publishExecutor.shutdown();
 
         try {
             if (!publishExecutor.awaitTermination(3600, TimeUnit.SECONDS)) {
-                LOGGER.info("Timed out waiting for initial publish to complete. Forcing shutdown of initial publish");
+                logger.info("Timed out waiting for initial publish to complete. Forcing shutdown of initial publish");
                 publishExecutor.shutdownNow();
                 return false;
             }
@@ -87,7 +89,7 @@ public class PublisherGroup {
             Thread.currentThread().interrupt();
             return false;
         }
-        LOGGER.info("Initial publish complete.");
+        logger.info("Initial publish complete.");
         return true;
     }
 
@@ -231,7 +233,7 @@ public class PublisherGroup {
         try {
             boolean shutdown = this.executorService.awaitTermination(10, TimeUnit.SECONDS);
             if(!shutdown)
-                LOGGER.info("Could not shutdown thread pool of publisher group");
+                logger.info("Could not shutdown thread pool of publisher group");
         } catch(InterruptedException e) {
             Thread.currentThread().interrupt();
         }

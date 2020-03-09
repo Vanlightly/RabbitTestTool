@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import org.json.JSONArray;
@@ -8,37 +9,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 public class QueueHosts {
-    private static final Logger LOGGER = LoggerFactory.getLogger("QUEUE_HOSTS");
+    private BenchmarkLogger logger;
 
     private boolean isDownstream = false;
     private List<Broker> brokers;
     private Map<String, Broker> brokersMap;
     private Map<String, Broker> queueHosts;
     private Random rand;
-    private Boolean isCancelled;
+    private AtomicBoolean isCancelled;
     private ReadWriteLock lock = new ReentrantReadWriteLock();
     private AtomicInteger currentIndex;
 
     private TopologyGenerator topologyGenerator;
 
     public QueueHosts(TopologyGenerator topologyGenerator) {
+        this.logger = new BenchmarkLogger("QUEUE_HOSTS");
         this.topologyGenerator = topologyGenerator;
         this.brokers = new ArrayList<>();
         this.brokersMap = new HashMap<>();
         this.queueHosts = new HashMap<>();
         this.rand = new Random();
-        this.isCancelled = false;
+        this.isCancelled = new AtomicBoolean();
         this.currentIndex = new AtomicInteger();
     }
 
     public void monitorQueueHosts(List<String> vhosts) {
-        while(!isCancelled) {
+        while(!isCancelled.get()) {
             updateQueueHosts(vhosts);
             ClientUtils.waitFor(30000, this.isCancelled);
         }
@@ -67,10 +70,10 @@ public class QueueHosts {
                             if(queueHosts.containsKey(queueKey)) {
                                 String current = queueHosts.get(queueKey).getNodeName();
                                 if(!current.equals(nodeName))
-                                    LOGGER.info("Detected host change for " + queueKey + ", was on: " + current + " now on: " + broker.getNodeName());
+                                    logger.info("Detected host change for " + queueKey + ", was on: " + current + " now on: " + broker.getNodeName());
                             }
                             else {
-                                LOGGER.info(queueKey + " hosted on: " + broker.getNodeName());
+                                logger.info(queueKey + " hosted on: " + broker.getNodeName());
                             }
 
                             queueHosts.put(queueKey, broker);
@@ -83,12 +86,12 @@ public class QueueHosts {
             }
         }
         catch (Exception e) {
-            LOGGER.error("Failed updating queue hosts", e);
+            logger.error("Failed updating queue hosts", e);
         }
     }
 
     public void stopMonitoring() {
-        this.isCancelled = true;
+        this.isCancelled.set(true);
     }
 
     public void addHosts(BrokerConfiguration brokerConfiguration) {

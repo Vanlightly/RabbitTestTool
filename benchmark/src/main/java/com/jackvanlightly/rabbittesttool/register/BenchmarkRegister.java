@@ -1,6 +1,5 @@
 package com.jackvanlightly.rabbittesttool.register;
 
-import com.jackvanlightly.rabbittesttool.CmdArguments;
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
 import com.jackvanlightly.rabbittesttool.model.Violation;
@@ -31,6 +30,10 @@ public interface BenchmarkRegister {
                                                    String technology,
                                                    String version,
                                                    String configTag);
+    List<BenchmarkMetaData> getBenchmarkMetaData(String runId,
+                                                 String technology,
+                                                 String version,
+                                                 String configTag);
     void logViolations(String benchmarkId, List<Violation> violations);
     void logConsumeIntervals(String benchmarkId,
                              List<ConsumeInterval> consumeIntervals,

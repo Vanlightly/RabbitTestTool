@@ -1,6 +1,8 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
+import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
 import org.apache.commons.lang3.StringUtils;
@@ -24,21 +26,21 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class TopologyGenerator {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("TOPOLOGY_GEN");
+    private BenchmarkLogger logger;
     private ConnectionSettings connectionSettings;
     private BrokerConfiguration brokerConfig;
     private String baseUrl;
     private String baseAmqpUri;
     private String downstreamBaseUrl;
     private Random rand;
+    private int retryBudget=30;
 
     public TopologyGenerator(ConnectionSettings connectionSettings,
                              BrokerConfiguration brokerConfig) {
+        this.logger = new BenchmarkLogger("TOPOLOGY_GEN");
         this.connectionSettings = connectionSettings;
         this.brokerConfig = brokerConfig;
         this.baseUrl = "http://" + brokerConfig.getHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
@@ -52,18 +54,24 @@ public class TopologyGenerator {
 
     public void declareVHost(VirtualHost vhost) {
         String vhostUrl = getVHostUrl(vhost.getName(), vhost.isDownstream());
-        delete(vhostUrl, true);
         put(vhostUrl, "{}");
 
         String permissionsJson = "{\"configure\":\".*\",\"write\":\".*\",\"read\":\".*\"}";
         put(getVHostUserPermissionsUrl(vhost.getName(), connectionSettings.getUser(), vhost.isDownstream()), permissionsJson);
 
-        LOGGER.info("Added vhost " + vhost.getName()+ " and added permissions to user " + connectionSettings.getUser());
+        logger.info("Added vhost " + vhost.getName() + " on " +
+                (vhost.isDownstream() ? "downstream" : "upstream")
+                + " and added permissions to user " + connectionSettings.getUser());
     }
 
-    public void deleteVHost(VirtualHost vhost) {
+    public boolean deleteVHost(VirtualHost vhost) {
         String vhostUrl = getVHostUrl(vhost.getName(), vhost.isDownstream());
-        delete(vhostUrl, true);
+        boolean deleted = delete(vhostUrl, true);
+
+        if(deleted)
+            logger.info("Deleted vhost " + vhost.getName() + " on " + (vhost.isDownstream() ? "downstream" : "upstream"));
+
+        return deleted;
     }
 
     public void declareExchanges(VirtualHost vhost) {
@@ -78,6 +86,22 @@ public class TopologyGenerator {
         String exchangeTemplate = "{\"type\":\"[ex]\",\"auto_delete\":false,\"durable\":true,\"internal\":false,\"arguments\":{}}";
         String exchangeJson = exchangeTemplate.replace("[ex]", exchangeConfig.getExchangeTypeName());
         put(getExchangeUrl(exchangeConfig.getVhostName(), exchangeConfig.getName(), exchangeConfig.isDownstream()), exchangeJson);
+
+        // if this exchange has a shovel that feeds it, declare here
+        if(exchangeConfig.getShovelConfig() != null) {
+            ShovelConfig sc = exchangeConfig.getShovelConfig();
+
+            addShovel(exchangeConfig.getVhostName(),
+                    sc.isSrcIsDownstream(),
+                    sc.getSrcTargetType(),
+                    sc.getSrcTargetName(),
+                    exchangeConfig.isDownstream(),
+                    ShovelTarget.Exchange,
+                    exchangeConfig.getName(),
+                    sc.getPrefetch(),
+                    sc.getReconnectDelaySeconds(),
+                    sc.getAckMode());
+        }
     }
 
     private void declareExchangeBindings(ExchangeConfig exchangeConfig) {
@@ -107,6 +131,7 @@ public class TopologyGenerator {
     public void declareQueuesAndBindings(QueueConfig queueConfig) {
         int nodeIndex = rand.nextInt(brokerConfig.getHosts().size());
         for(int i = 1; i<= queueConfig.getScale(); i++) {
+
             declareQueue(queueConfig, i, nodeIndex);
             declareQueueBindings(queueConfig, i);
 
@@ -146,6 +171,10 @@ public class TopologyGenerator {
         queue.put("node", nodeName);
         queue.put("arguments", arguments);
 
+        boolean deleted = deleteQueue(queueConfig.getVhostName(), queueName, queueConfig.isDownstream());
+        if(deleted)
+            ClientUtils.waitFor(1000);
+
         put(getQueueUrl(queueConfig.getVhostName(), queueName, queueConfig.isDownstream()), queue.toString());
 
         // if this has HA queue properties, declare a separate policy for that
@@ -169,6 +198,36 @@ public class TopologyGenerator {
                     queueConfig.isDownstream()),
                     policyJson.toString());
         }
+
+        // if this queue has a shovel that feeds it, declare here
+        if(queueConfig.getShovelConfig() != null) {
+            ShovelConfig sc = queueConfig.getShovelConfig();
+
+            String srcName = "";
+            if(sc.getSrcTargetType() == ShovelTarget.Queue
+                    && sc.getSrcTargetName().toLowerCase().equals("counterpart")) {
+                    srcName = queueName;
+            }
+            else {
+                srcName = sc.getSrcTargetName();
+            }
+
+
+            addShovel(queueConfig.getVhostName(),
+                    sc.isSrcIsDownstream(),
+                    sc.getSrcTargetType(),
+                    srcName,
+                    queueConfig.isDownstream(),
+                    ShovelTarget.Queue,
+                    queueName,
+                    sc.getPrefetch(),
+                    sc.getReconnectDelaySeconds(),
+                    sc.getAckMode());
+        }
+    }
+
+    private boolean deleteQueue(String vhost, String queueName, boolean isDownstream) {
+        return delete(getQueueUrl(vhost, queueName, isDownstream), true);
     }
 
     public void declareQueueBindings(QueueConfig queueConfig, int ordinal) {
@@ -340,85 +399,193 @@ public class TopologyGenerator {
         }
     }
 
+    private void addShovel(String vhost,
+                           boolean srcIsDownstream,
+                           ShovelTarget srcType,
+                           String srcName,
+                           boolean destIsDownstream,
+                           ShovelTarget destType,
+                           String destName,
+                           int prefetch,
+                           int reconnectDelaySeconds,
+                           String ackMode) {
+        String url = getShovelUrl(vhost + "-" + destName, vhost, destIsDownstream);
+
+        JSONObject json = new JSONObject();
+
+        if(srcIsDownstream)
+            json.put("src-uri", getDownstreamUri()+"/"+vhost);
+        else
+            json.put("src-uri", getUpstreamUri()+"/"+vhost);
+
+        if(destIsDownstream)
+            json.put("dest-uri", getDownstreamUri()+"/"+vhost);
+        else
+            json.put("dest-uri", getUpstreamUri()+"/"+vhost);
+
+        if(srcType == ShovelTarget.Queue)
+            json.put("src-queue", srcName);
+        else
+            json.put("src-exchange", srcName);
+
+        if(destType == ShovelTarget.Queue)
+            json.put("dest-queue", destName);
+        else
+            json.put("dest-exchange", destName);
+
+        json.put("src-prefetch-count", prefetch);
+        json.put("reconnect-delay", reconnectDelaySeconds);
+        json.put("ack-mode", ackMode);
+        json.put("src-protocol", "amqp091");
+        json.put("dest-protocol", "amqp091");
+
+        JSONObject wrapper = new JSONObject();
+        wrapper.put("value", json);
+
+        put(url, wrapper.toString());
+    }
+
     private void post(String url, String json) {
+        boolean success = false;
+        int attempts = 0;
+        int lastResponseCode = 0;
+        CloseableHttpResponse lastResponse = null;
+
         try {
-            CloseableHttpClient client = HttpClients.createDefault();
-            HttpPost httpPost = new HttpPost(url);
+            while(!success && attempts <= 3 && retryBudget > 0) {
+                attempts++;
 
-            StringEntity entity = new StringEntity(json);
-            httpPost.setEntity(entity);
-            httpPost.setHeader("Accept", "application/json");
-            httpPost.setHeader("Content-type", "application/json");
-            UsernamePasswordCredentials creds
-                    = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
-            httpPost.addHeader(new BasicScheme().authenticate(creds, httpPost, null));
+                if (attempts > 1) {
+                    retryBudget--;
+                    ClientUtils.waitFor(2000);
+                }
 
-            CloseableHttpResponse response = client.execute(httpPost);
-            int responseCode = response.getStatusLine().getStatusCode();
-            client.close();
+                CloseableHttpClient client = HttpClients.createDefault();
+                HttpPost httpPost = new HttpPost(url);
 
-            if(responseCode != 201 && responseCode != 204)
-                throw new TopologyException("Received a non success response code executing POST " + url
-                        + " Code:" + responseCode
-                        + " Response: " + response.toString());
+                StringEntity entity = new StringEntity(json);
+                httpPost.setEntity(entity);
+                httpPost.setHeader("Accept", "application/json");
+                httpPost.setHeader("Content-type", "application/json");
+                UsernamePasswordCredentials creds
+                        = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
+                httpPost.addHeader(new BasicScheme().authenticate(creds, httpPost, null));
+
+                CloseableHttpResponse response = client.execute(httpPost);
+                lastResponseCode = response.getStatusLine().getStatusCode();
+                client.close();
+
+                success = lastResponseCode == 201 || lastResponseCode == 204;
+            }
         }
         catch(Exception e) {
             throw new TopologyException("An exception occurred executing POST " + url, e);
         }
+
+        if(!success) {
+            String responseMsg = lastResponse != null ? lastResponse.toString() : "";
+            throw new TopologyException("Received a non success response code executing POST " + url
+                    + " Code:" + lastResponseCode
+                    + " Response: " + responseMsg);
+        }
     }
 
     private void put(String url, String json) {
+        boolean success = false;
+        int attempts = 0;
+        int lastResponseCode = 0;
+        CloseableHttpResponse lastResponse = null;
+
         try {
-            CloseableHttpClient client = HttpClients.createDefault();
-            HttpPut httpPut = new HttpPut(url);
+            while(!success && attempts <= 3 && retryBudget > 0) {
+                attempts++;
 
-            StringEntity entity = new StringEntity(json);
-            httpPut.setEntity(entity);
-            httpPut.setHeader("Accept", "application/json");
-            httpPut.setHeader("Content-type", "application/json");
-            UsernamePasswordCredentials creds
-                    = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
-            httpPut.addHeader(new BasicScheme().authenticate(creds, httpPut, null));
+                if (attempts > 1) {
+                    retryBudget--;
+                    ClientUtils.waitFor(2000);
+                }
 
-            CloseableHttpResponse response = client.execute(httpPut);
-            int responseCode = response.getStatusLine().getStatusCode();
-            client.close();
+                CloseableHttpClient client = HttpClients.createDefault();
+                HttpPut httpPut = new HttpPut(url);
 
-            if(responseCode != 201 && responseCode != 204)
-                throw new TopologyException("Received a non success response code executing PUT " + url
-                        + " Code:" + responseCode
-                        + " Response: " + response.toString());
+                StringEntity entity = new StringEntity(json);
+                httpPut.setEntity(entity);
+                httpPut.setHeader("Accept", "application/json");
+                httpPut.setHeader("Content-type", "application/json");
+                UsernamePasswordCredentials creds
+                        = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
+                httpPut.addHeader(new BasicScheme().authenticate(creds, httpPut, null));
+
+                lastResponse = client.execute(httpPut);
+                lastResponseCode = lastResponse.getStatusLine().getStatusCode();
+                client.close();
+
+                success = lastResponseCode == 201 || lastResponseCode == 204;
+            }
         }
         catch(Exception e) {
             throw new TopologyException("An exception occurred executing PUT " + url, e);
         }
+
+        if(!success) {
+            String responseMsg = lastResponse != null ? lastResponse.toString() : "";
+            throw new TopologyException("Received a non success response code executing PUT " + url
+                    + " Code:" + lastResponseCode
+                    + " Response: " + responseMsg);
+        }
     }
 
-    private void delete(String url, boolean allow404) {
+    private boolean delete(String url, boolean allow404) {
+        boolean deleted = false;
+        boolean success = false;
+        int attempts = 0;
+        int lastResponseCode = 0;
+        CloseableHttpResponse lastResponse = null;
+
         try {
-            CloseableHttpClient client = HttpClients.createDefault();
-            HttpDelete httpDelete = new HttpDelete(url);
+            while(!success && attempts <= 3 && retryBudget > 0) {
+                attempts++;
 
-            UsernamePasswordCredentials creds
-                    = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
-            httpDelete.addHeader(new BasicScheme().authenticate(creds, httpDelete, null));
+                if (attempts > 1) {
+                    retryBudget--;
+                    ClientUtils.waitFor(2000);
+                }
 
-            CloseableHttpResponse response = client.execute(httpDelete);
-            int responseCode = response.getStatusLine().getStatusCode();
-            client.close();
+                CloseableHttpClient client = HttpClients.createDefault();
+                HttpDelete httpDelete = new HttpDelete(url);
 
-            if(responseCode != 200 && responseCode != 204) {
-                if(responseCode == 404 && allow404)
-                    return;
+                UsernamePasswordCredentials creds
+                        = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
+                httpDelete.addHeader(new BasicScheme().authenticate(creds, httpDelete, null));
 
-                throw new TopologyException("Received a non success response code executing DELETE " + url
-                        + " Code:" + responseCode
-                        + " Response: " + response.toString());
+                lastResponse = client.execute(httpDelete);
+                lastResponseCode = lastResponse.getStatusLine().getStatusCode();
+                client.close();
+
+                if (lastResponseCode != 200 && lastResponseCode != 204) {
+                    if (lastResponseCode == 404 && allow404) {
+                        success = true;
+                        deleted = false;
+                    }
+                }
+                else {
+                    success = true;
+                    deleted = true;
+                }
             }
         }
         catch(Exception e) {
             throw new TopologyException("An exception occurred executing DELETE " + url, e);
         }
+
+        if(!success) {
+            String responseMsg = lastResponse != null ? lastResponse.toString() : "";
+            throw new TopologyException("Received a non success response code executing DELETE " + url
+                    + " Code:" + lastResponseCode
+                    + " Response: " + responseMsg);
+        }
+
+        return deleted;
     }
 
     private String getVHostUrl(String vhost, boolean isDownstream) {
@@ -460,6 +627,15 @@ public class TopologyGenerator {
     private String getUpstreamUri() {
         // for now just get random broker from upstream cluster
         return baseAmqpUri+brokerConfig.getHosts().get(rand.nextInt(brokerConfig.getHosts().size())).getIp();
+    }
+
+    private String getDownstreamUri() {
+        // for now just get random broker from downstream cluster
+        return baseAmqpUri+brokerConfig.getDownstreamHosts().get(rand.nextInt(brokerConfig.getDownstreamHosts().size())).getIp();
+    }
+
+    private String getShovelUrl(String shovelName, String vhost, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/parameters/shovel/" + vhost + "/"+shovelName;
     }
 
     private String getFederationUrl(String name, String vhost) {
