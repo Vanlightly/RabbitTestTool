@@ -12,7 +12,7 @@
     report_active = false
 [[inputs.disk]]
     ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
-[[inputs.io]]
+[[inputs.diskio]]
 [[inputs.mem]]
 [[inputs.net]]
 [[inputs.system]]
@@ -23,6 +23,12 @@
 [[inputs.rabbitmq]]
   username = "{{ rabbitmq_user.name }}"
   password = "{{ rabbitmq_user.password }}"
+
+[[inputs.prometheus]]
+  ## An array of urls to scrape metrics from.
+  urls = ["http://localhost:15692/metrics"]
+  interval = "30s"
+  response_timeout = "25s"
 
 # Output Plugin InfluxDB
 [[outputs.influxdb]]
