@@ -13,6 +13,7 @@ public class ConnectionSettings {
     private ConnectToNode publisherConnectToNode;
     private ConnectToNode consumerConnectToNode;
     private boolean noTcpDelay;
+    private boolean isDownstream;
 
     public List<Broker> getHosts() {
         return hosts;
@@ -78,6 +79,14 @@ public class ConnectionSettings {
         this.consumerConnectToNode = consumerConnectToNode;
     }
 
+    public boolean isDownstream() {
+        return isDownstream;
+    }
+
+    public void setDownstream(boolean downstream) {
+        isDownstream = downstream;
+    }
+
     public ConnectionSettings getClone(String vhostName) {
         ConnectionSettings cs = new ConnectionSettings();
         cs.setNoTcpDelay(noTcpDelay);
@@ -88,6 +97,7 @@ public class ConnectionSettings {
         cs.setHosts(hosts);
         cs.setPublisherConnectToNode(publisherConnectToNode);
         cs.setConsumerConnectToNode(consumerConnectToNode);
+        cs.setDownstream(isDownstream);
 
         return cs;
     }

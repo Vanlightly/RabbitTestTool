@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool;
 
+import com.jackvanlightly.rabbittesttool.actions.ActionSupervisor;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
@@ -37,6 +38,8 @@ public class Orchestrator {
     private ExecutorService queueHostsExecutor;
     private ConnectionSettings connectionSettingsBase;
     private ConnectionSettings downstreamConnectionSettingsBase;
+    private ActionSupervisor actionSupervisor;
+    private ExecutorService actionSupervisorExecutor;
     private Stats stats;
     private MessageModel messageModel;
     private String mode;
@@ -55,6 +58,7 @@ public class Orchestrator {
                         MessageModel messageModel,
                         QueueHosts queueHosts,
                         QueueHosts downstreamQueueHosts,
+                        ActionSupervisor actionSupervisor,
                         String mode) {
         this.logger = new BenchmarkLogger("ORCHESTRATOR");
         this.benchmarkRegister = benchmarkRegister;
@@ -63,6 +67,7 @@ public class Orchestrator {
         this.downstreamQueueHosts = downstreamQueueHosts;
         this.connectionSettingsBase = connectionSettings;
         this.downstreamConnectionSettingsBase = downstreamConnectionSettings;
+        this.actionSupervisor = actionSupervisor;
         this.stats = stats;
         this.mode = mode;
 
@@ -75,6 +80,7 @@ public class Orchestrator {
         jumpToCleanup = new AtomicBoolean();
 
         queueHostsExecutor = Executors.newFixedThreadPool(2);
+        actionSupervisorExecutor = Executors.newSingleThreadExecutor();
     }
 
     public boolean runBenchmark(String runId,
@@ -83,6 +89,7 @@ public class Orchestrator {
                                 Duration gracePeriod) {
         try {
             initialSetup(topology, brokerConfiguration);
+            startActionSupervisor(topology);
             switch(topology.getTopologyType()) {
                 case Fixed:
                     performFixedBenchmark(runId, topology, gracePeriod);
@@ -167,7 +174,11 @@ public class Orchestrator {
         List<String> vhosts = topology.getVirtualHosts().stream().map(x -> x.getName()).collect(Collectors.toList());
         queueHosts.updateQueueHosts(vhosts);
         queueHostsExecutor.submit(() -> queueHosts.monitorQueueHosts(vhosts));
-        queueHostsExecutor.submit(() -> downstreamQueueHosts.monitorQueueHosts(vhosts));
+
+        if(downstreamQueueHosts.clusterExists()) {
+            downstreamQueueHosts.updateQueueHosts(vhosts);
+            queueHostsExecutor.submit(() -> downstreamQueueHosts.monitorQueueHosts(vhosts));
+        }
     }
 
     private void addQueueGroups(VirtualHost vhost, Topology topology, List<String> nodes, boolean declareQueues) {
@@ -269,6 +280,14 @@ public class Orchestrator {
             consumerGroup.createInitialConsumers();
             consumerGroups.add(consumerGroup);
         }
+    }
+
+    private void startActionSupervisor(Topology topology) {
+        actionSupervisorExecutor.submit(() -> actionSupervisor.runActions(topology));
+    }
+
+    private void stopActionSupervisor() {
+        actionSupervisor.signalStop();
     }
 
     private void setCountStats() {
@@ -772,6 +791,8 @@ public class Orchestrator {
 
 
     private void cleanUp() {
+        stopActionSupervisor();
+
         waitFor(5000);
 
         logger.info("Shutting down thread pools");

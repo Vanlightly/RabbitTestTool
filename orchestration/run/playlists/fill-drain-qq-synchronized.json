@@ -1,0 +1,24 @@
+{
+    "benchmarks": [
+        { 
+            "topology": "actions/queue-fill-drain.json", 
+            "topologyVariables": { 
+                "messageSize": "16", 
+                "messageCount": "100000",
+                "queueCount": "20"
+             } 
+        }
+    ],
+    "commonAttributes": {
+        "topologyVariables": { 
+            "durationSeconds": "1800",
+            "executeMode": "synchronized",
+            "executeDelaySeconds": "0",
+            "actionDelaySeconds": "60"
+        },
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "10000"
+        } 
+    }
+}

@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EventingConsumer extends DefaultConsumer {
 
@@ -28,7 +29,7 @@ public class EventingConsumer extends DefaultConsumer {
     private int prefetch;
     private int processingMs;
     private ConsumerStats consumerStats;
-    private boolean consumerCancelled;
+    private AtomicBoolean consumerCancelled;
 
     public EventingConsumer(String consumerId,
                             String vhost,
@@ -52,6 +53,7 @@ public class EventingConsumer extends DefaultConsumer {
         this.processingMs = processingMs;
         this.consumerStats = consumerStats;
 
+        consumerCancelled = new AtomicBoolean();
         delTagLastAcked = -1;
     }
 
@@ -118,7 +120,7 @@ public class EventingConsumer extends DefaultConsumer {
     @Override
     public void handleCancel(String consumerTag) throws IOException {
         logger.info("Consumer cancelled with tag: " + consumerTag);
-        consumerCancelled = true;
+        consumerCancelled.set(true);
     }
 
     @Override
@@ -134,7 +136,7 @@ public class EventingConsumer extends DefaultConsumer {
     }
 
     public boolean isConsumerCancelled() {
-        return consumerCancelled;
+        return consumerCancelled.get();
     }
 
     private void waitFor(int milliseconds) {

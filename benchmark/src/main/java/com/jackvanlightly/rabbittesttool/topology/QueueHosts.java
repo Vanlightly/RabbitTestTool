@@ -40,6 +40,10 @@ public class QueueHosts {
         this.currentIndex = new AtomicInteger();
     }
 
+    public boolean clusterExists() {
+        return !brokers.isEmpty();
+    }
+
     public void monitorQueueHosts(List<String> vhosts) {
         while(!isCancelled.get()) {
             updateQueueHosts(vhosts);

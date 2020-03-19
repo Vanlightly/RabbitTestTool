@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Consumer implements Runnable {
+public class Consumer implements Runnable  {
     private BenchmarkLogger logger;
     private String consumerId;
     private ConnectionSettings connectionSettings;

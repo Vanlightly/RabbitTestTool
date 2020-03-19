@@ -1,0 +1,22 @@
+{
+    "benchmarks": [
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 1, "consumerCount": 1 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 5, "consumerCount": 5 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 10, "consumerCount": 10 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 15, "consumerCount": 15 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 20, "consumerCount": 20 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 25, "consumerCount": 25 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 30, "consumerCount": 30 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 35, "consumerCount": 35 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 40, "consumerCount": 40 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 45, "consumerCount": 45 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "queueCount": 50, "consumerCount": 50 }}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "shovelPrefetch": 10000, 
+            "shovelAckMode": "on-confirm"
+        }
+    }
+}

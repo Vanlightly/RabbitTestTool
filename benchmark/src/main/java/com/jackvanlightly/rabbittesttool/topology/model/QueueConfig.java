@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.topology.model;
 
+import com.jackvanlightly.rabbittesttool.topology.model.actions.ActionListConfig;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ public class QueueConfig {
     private List<Property> properties;
     private List<BindingConfig> bindings;
     private ShovelConfig shovelConfig;
+    private ActionListConfig actionList;
 
     public QueueConfig() {
         properties = new ArrayList<>();
@@ -91,5 +93,13 @@ public class QueueConfig {
 
     public void setShovelConfig(ShovelConfig shovelConfig) {
         this.shovelConfig = shovelConfig;
+    }
+
+    public ActionListConfig getActionListConfig() {
+        return actionList;
+    }
+
+    public void setActionList(ActionListConfig actionList) {
+        this.actionList = actionList;
     }
 }

@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
+import com.jackvanlightly.rabbittesttool.topology.model.actions.*;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.AckMode;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
@@ -16,14 +17,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TopologyLoader {
 
     private BenchmarkLogger logger;
     private Set<String> intFields = new HashSet<>(Arrays.asList("scale", "inFlightLimit", "consumerPrefetch", "ackInterval",
-            "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize"));
+            "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize",
+            "messageCount", "thresholdSeconds"));
     private Set<String> boolFields = new HashSet<>(Arrays.asList("useConfirms", "manualAcks"));
 
     public Topology loadTopology(String topologyPath,
@@ -432,11 +432,91 @@ public class TopologyLoader {
                     qConfig.setShovelConfig(loadShovelConfig(qJson));
                 }
 
+                qConfig.setActionList(getQueueActionList(qJson, qConfig.getInitialQueues()));
+
                 queueConfigs.add(qConfig);
             }
         }
 
         return queueConfigs;
+    }
+
+    private ActionListConfig getQueueActionList(JSONObject qJson, List<String> queueNames) {
+        QueueActionListConfig actionListConfig = new QueueActionListConfig(queueNames);
+        if(qJson.has("actions")) {
+            JSONObject configJson = qJson.getJSONObject("actions");
+            actionListConfig.setActionListExecution(getActionListExecuteCount(configJson));
+            actionListConfig.setExecuteMode(getActionListExecuteMode(configJson));
+            actionListConfig.setActionListDelay(getActionDelay(configJson));
+
+            JSONArray actionsArr = configJson.getJSONArray("orderedActions");
+            for (int i = 0; i < actionsArr.length(); i++) {
+                JSONObject actionJson = actionsArr.getJSONObject(i);
+                String actionType = actionJson.getString("type").toLowerCase();
+                ActionDelay actionDelay = getActionDelay(actionJson);
+                ActionConfig actionConfig = null;
+                switch (actionType) {
+                    case "fill":
+                        actionConfig = new QueueFillActionConfig(actionDelay,
+                                getMandatoryIntValue(actionJson, "messageSize"),
+                                getMandatoryIntValue(actionJson, "messageCount"));
+                        break;
+                    case "drain":
+                        actionConfig = new QueueDrainActionConfig(actionDelay,
+                                getMandatoryIntValue(actionJson, "thresholdSeconds"));
+                        break;
+                    case "purge":
+                        actionConfig = new QueuePurgeActionConfig(actionDelay);
+                        break;
+                    default:
+                        throw new TopologyException("Invalid queue action type. Allowed: fill and drain");
+                }
+
+                actionListConfig.getActions().add(actionConfig);
+            }
+        }
+
+        return actionListConfig;
+    }
+
+    private ActionDelay getActionDelay(JSONObject json) {
+        ActionDelay actionDelay = new ActionDelay();
+
+        String startDelayValue = getOptionalStrValue(json, "startDelaySeconds", "");
+        if(startDelayValue.isEmpty()) {
+            actionDelay.setActionStartDelayType(ActionStartDelayType.None);
+        }
+        else if(startDelayValue.contains("-")) {
+            actionDelay.setActionStartDelayType(ActionStartDelayType.Random);
+            String[] parts = startDelayValue.split("-");
+            actionDelay.setActionLowerStartValue(Integer.valueOf(parts[0]));
+            actionDelay.setActionUpperStartValue(Integer.valueOf(parts[1]));
+        }
+        else {
+            actionDelay.setActionStartDelayType(ActionStartDelayType.Fixed);
+            actionDelay.setActionUpperStartValue(Integer.valueOf(startDelayValue));
+        }
+
+        return actionDelay;
+    }
+
+    private ActionListExecution getActionListExecuteCount(JSONObject configJson) {
+        String value = configJson.getString("executeCount").toLowerCase();
+        switch (value) {
+            case "execute-once": return ActionListExecution.ExecuteOnce;
+            case "repeat-forever": return ActionListExecution.RepeatForever;
+            default: throw new TopologyException("Invalid value for 'executeCount' field. Allowed values: execute-once, repeat-forever");
+        }
+    }
+
+    private ExecuteMode getActionListExecuteMode(JSONObject configJson) {
+        String value = configJson.getString("executeMode").toLowerCase();
+        switch (value) {
+            case "synchronized": return ExecuteMode.Synchronized;
+            case "all-at-once": return ExecuteMode.IndependentAllAtOnce;
+            case "staggered": return ExecuteMode.IndependentStaggered;
+            default: throw new TopologyException("Invalid value for 'executeMode' field. Allowed values: synchronized, all-at-once, staggered");
+        }
     }
 
     public List<ExchangeConfig> loadExchanges(String vhostName, JSONArray exJsonArr, boolean isDownstream) {

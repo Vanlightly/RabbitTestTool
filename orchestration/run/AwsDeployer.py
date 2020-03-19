@@ -265,5 +265,3 @@ class AwsDeployer(Deployer):
                         str(common_conf.run_tag),
                         "rabbitmq",
                         target_dir ])
-
-    

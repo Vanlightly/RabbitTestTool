@@ -399,6 +399,10 @@ public class TopologyGenerator {
         }
     }
 
+    public void purgeQueue(String vhost, String queueName, boolean isDownstream) {
+        delete(getPurgeQueueUrl(vhost, queueName, isDownstream), false);
+    }
+
     private void addShovel(String vhost,
                            boolean srcIsDownstream,
                            ShovelTarget srcType,
@@ -606,6 +610,10 @@ public class TopologyGenerator {
 
     private String getQueueUrl(String vhost, String queue, boolean isDownstream) {
         return chooseUrl(isDownstream) + "/api/queues/" + vhost + "/" + queue;
+    }
+
+    private String getPurgeQueueUrl(String vhost, String queue, boolean isDownstream) {
+        return chooseUrl(isDownstream) + "/api/queues/" + vhost + "/" + queue + "/contents";
     }
 
     private String getQueuesUrl(String vhost, boolean isDownstream) {

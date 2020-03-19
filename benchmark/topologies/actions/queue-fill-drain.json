@@ -1,0 +1,57 @@
+{
+  "topologyName": "queue_fill_drain",
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "vhostCount", "default": "1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "1800" },
+    { "name": "messageSize", "default": "1024"},
+    { "name": "messageCount", "default": "1000000"},
+    { "name": "executeMode", "default": "synchronized"},
+    { "name": "executeDelaySeconds", "default": "0"},
+    { "name": "actionDelaySeconds", "default": "60"}
+  ],
+  "description": "fill-drain",
+  "vhosts": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.vhostCount }}",
+      "queueGroups": [ 
+        { 
+          "group": "q1", 
+          "scale": "{{ var.queueCount }}", 
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ],
+          "actions": {
+            "executeCount": "repeat-forever",
+            "executeMode": "{{ var.executeMode }}",
+            "startDelaySeconds": "{{ var.executeDelaySeconds }}",
+            "orderedActions" : [
+              {
+                "type": "fill",
+                "startDelaySeconds": "{{ var.actionDelaySeconds }}",
+                "messageSize": "{{ var.messageSize }}",
+                "messageCount": "{{ var.messageCount }}"
+              },
+              {
+                "type": "drain",
+                "startDelaySeconds": "{{ var.actionDelaySeconds }}",
+                "thresholdSeconds": 15
+              }
+            ]
+          }
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

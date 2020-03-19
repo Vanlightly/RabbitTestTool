@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool;
 
+import com.jackvanlightly.rabbittesttool.actions.ActionSupervisor;
 import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.comparer.StatisticsComparer;
@@ -312,8 +313,8 @@ public class AMQPBenchmarker {
         StepOverride stepOverride = getStepOverride(arguments);
         InstanceConfiguration instanceConfig = getInstanceConfiguration(arguments);
         String argumentsStr = arguments.getArgsStr(",");
-        ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig.getHosts());
-        ConnectionSettings downstreamConnectionSettings = getConnectionSettings(arguments, brokerConfig.getDownstreamHosts());
+        ConnectionSettings connectionSettings = getConnectionSettings(arguments, brokerConfig.getHosts(), false);
+        ConnectionSettings downstreamConnectionSettings = getConnectionSettings(arguments, brokerConfig.getDownstreamHosts(), false);
 
         String description = getDescription(arguments, topologyVariables, policyVariables);
 
@@ -363,6 +364,12 @@ public class AMQPBenchmarker {
                 QueueHosts downstreamHosts = new QueueHosts(topologyGenerator);
                 downstreamHosts.addDownstreamHosts(brokerConfig);
 
+                ActionSupervisor actionSupervisor = new ActionSupervisor(connectionSettings,
+                        downstreamConnectionSettings,
+                        queueHosts,
+                        downstreamHosts,
+                        topologyGenerator);
+
                 Orchestrator orchestrator = new Orchestrator(topologyGenerator,
                         benchmarkRegister,
                         connectionSettings,
@@ -371,6 +378,7 @@ public class AMQPBenchmarker {
                         messageModel,
                         queueHosts,
                         downstreamHosts,
+                        actionSupervisor,
                         mode);
 
 
@@ -518,7 +526,8 @@ public class AMQPBenchmarker {
     }
 
     private static ConnectionSettings getConnectionSettings(CmdArguments cmdArguments,
-                                                            List<Broker> hosts) {
+                                                            List<Broker> hosts,
+                                                            boolean isDownstream) {
         ConnectionSettings connectionSettings = new ConnectionSettings();
         connectionSettings.setHosts(hosts);
         connectionSettings.setManagementPort(Integer.valueOf(cmdArguments.getStr("--broker-mgmt-port")));
@@ -527,6 +536,7 @@ public class AMQPBenchmarker {
         connectionSettings.setNoTcpDelay(cmdArguments.getBoolean("--tcp-no-delay", true));
         connectionSettings.setPublisherConnectToNode(getConnectToNode(cmdArguments.getStr("--pub-connect-to-node", "roundrobin")));
         connectionSettings.setConsumerConnectToNode(getConnectToNode(cmdArguments.getStr("--con-connect-to-node", "roundrobin")));
+        connectionSettings.setDownstream(isDownstream);
 
         return connectionSettings;
     }
