@@ -19,6 +19,14 @@
     dev: "/dev/{{ volume1_name.stdout }}"
   when: volume1|int > 0
 
+- name: Mount EBS volume1
+  mount:
+    path: /volume1
+    src: "/dev/{{ volume1_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
+  when: volume1|int > 0
+
 - name: Get UUID of volume1
   shell: blkid -s UUID -o value $( df /volume1 )
   register: volume1_uuid
@@ -54,6 +62,14 @@
     dev: "/dev/{{ volume2_name.stdout }}"
   when: volume2|int > 0
 
+- name: Mount EBS volume2
+  mount:
+    path: /volume2
+    src: "/dev/{{ volume2_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
+  when: volume2|int > 0
+
 - name: Get UUID of volume2
   shell: blkid -s UUID -o value $( df /volume2 )
   register: volume2_uuid
@@ -87,6 +103,14 @@
   filesystem:
     fstype: "{{ filesystem }}"
     dev: "/dev/{{ volume3_name.stdout }}"
+  when: volume3|int > 0
+
+- name: Mount EBS volume3
+  mount:
+    path: /volume3
+    src: "/dev/{{ volume3_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
   when: volume3|int > 0
 
 - name: Get UUID of volume3
@@ -127,16 +151,3 @@
     owner: ubuntu 
     group: ubuntu
   become: true
-
-- name: Add RabbitMQ directories to /etc/environment
-  lineinfile:
-    dest: "/etc/environment"
-    state: present
-    regexp: "^{{ item.key }}"
-    line: "{{ item.key }}={{ item.value }}"
-  with_items:
-    - { key: "RABBITMQ_MNESIA_DIR", value: "/{{ data_volume }}/data" }
-    - { key: "RABBITMQ_LOG_BASE", value: "/{{ logs_volume }}/logs" }
-
-- name: Reboot the machine with all defaults
-  reboot:

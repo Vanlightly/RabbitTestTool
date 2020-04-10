@@ -29,7 +29,8 @@
             "manualAcks": "true", 
             "consumerPrefetch": "1000", 
             "ackInterval": "1",
-            "durationSeconds": "300"
+            "durationSeconds": "300",
+            "messageSize": "1024"
         },
         "policy": "quorum-queue.json",
         "policyVariables": { 

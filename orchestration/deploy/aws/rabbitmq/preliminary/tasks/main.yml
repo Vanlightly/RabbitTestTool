@@ -43,3 +43,16 @@
     state: latest
     update_cache: yes
     force_apt_get: true
+
+- name: Add RabbitMQ directories to /etc/environment
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: "RABBITMQ_MNESIA_DIR", value: "/{{ data_volume }}/data" }
+    - { key: "RABBITMQ_LOG_BASE", value: "/{{ logs_volume }}/logs" }
+
+- name: Reboot the machine with all defaults
+  reboot:

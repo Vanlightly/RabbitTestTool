@@ -1,16 +1,17 @@
 {
     "benchmarks": [
-        { 
-            "topology": "actions/queue-fill-drain.json", 
-            "topologyVariables": { 
-                "messageSize": "16", 
-                "messageCount": "100000",
-                "queueCount": "20"
-             } 
-        }
+        { "topologyVariables": { "queueCount": "1" } },
+        { "topologyVariables": { "queueCount": "2" } },
+        { "topologyVariables": { "queueCount": "4" } },
+        { "topologyVariables": { "queueCount": "6" } },
+        { "topologyVariables": { "queueCount": "8" } },
+        { "topologyVariables": { "queueCount": "10" } }
     ],
     "commonAttributes": {
+        "topology": "actions/queue-fill-drain.json", 
         "topologyVariables": { 
+            "messageSize": "1024", 
+            "messageCount": "1000000",
             "durationSeconds": "1800",
             "executeMode": "synchronized",
             "executeDelaySeconds": "0",
@@ -18,7 +19,7 @@
         },
         "policy": "quorum-queue.json",
         "policyVariables": { 
-            "maxInMemoryLength": "10000"
+            "maxInMemoryLength": "100000"
         } 
     }
 }
