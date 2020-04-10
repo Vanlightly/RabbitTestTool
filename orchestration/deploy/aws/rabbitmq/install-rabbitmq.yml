@@ -6,5 +6,6 @@
     - .variables/telegraf-vars.yml
   roles:
     - preliminary
+    - volumes
     - rabbitmq
     - telegraf

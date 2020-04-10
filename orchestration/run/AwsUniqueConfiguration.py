@@ -7,4 +7,4 @@ class AwsUniqueConfiguration(UniqueConfiguration):
 
         self.generic_unix_url = get_mandatory_arg(args, "--generic-unix-url", self.suffix)
         self.instance = get_mandatory_arg(args, "--instance", self.suffix)
-        self.volume = get_mandatory_arg_validated(args, "--volume", self.suffix, ["ebs-io1","ebs-st1","ebs-gp2","local-nvme"])
+        self.volume = get_mandatory_arg_validated(args, "--volume-type", self.suffix, ["ebs-io1","ebs-st1","ebs-gp2","local-nvme"])

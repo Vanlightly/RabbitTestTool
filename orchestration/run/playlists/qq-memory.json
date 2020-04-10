@@ -1,6 +1,5 @@
 {
     "benchmarks": [
-        { "topologyVariables": { "initialPublish": "3500000" } },
         { "topologyVariables": { "initialPublish": "1000000" } },
         { "topologyVariables": { "initialPublish": "2000000" } },
         { "topologyVariables": { "initialPublish": "3000000" } },

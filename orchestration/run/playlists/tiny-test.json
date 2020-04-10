@@ -1,11 +1,9 @@
 {
     "benchmarks": [
-        { 
-            "topology": "point-to-point/point-to-point.json", 
-            "topologyVariables": { "consumerCount": "10" } 
-        }
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }}
     ],
     "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json", 
         "topologyVariables": {
             "useConfirms": "true", 
             "inflightLimit": "1000", 

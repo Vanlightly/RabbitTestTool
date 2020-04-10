@@ -201,7 +201,12 @@ Arguments that can be applied to all or specific configurations. When running mu
 | --container-env | None (optional) | Additional env vars to be passed to rabbitmq containers (GCP only) |
 | --machine-type | None (mandatory) | The GCP machine type of the broker instances |
 | --volume | None (mandatory) | The volume type. When EBS must be like ebs-io1 or ebs-st1 or ebs-gp2, pd-ssd or standard for GCP |
-| --volume-size | None (mandatory) | The size in MB of the volume |
+| --volume1-size | 50 | The size in MB of the volume 1 |
+| --volume2-size | 0 | The size in MB of the volume 2. Zero signifies no volume. |
+| --volume3-size | 0 | The size in MB of the volume 3. Zero signifies no volume. |
+| --data-volume | volume1 | Which volume mnesia and message store data resides on |
+| --logs-volume | volume1 | Which volume logs resides on |
+| --wal-volume | volume1 | Which volume the WAL files resides on |
 | --filesystem | None (mandatory) | xfs or ext4 |
 | --tenancy | None (mandatory) | Default or Dedicated |
 | --core-count | None (mandatory) | The number of cores will be half the vCPU count |
@@ -213,7 +218,7 @@ Arguments that can be applied to all or specific configurations. When running mu
 | --con-connect-to-node | roundrobin | Which node will a consumer connect to. "roundrobin", "local", "non-local", "random". Local refers to the node which hosts the queue (when mirrored or quorum means the master/leader) |
 | --pub-connect-to-node | roundrobin | Which node will a publisher connect to. "roundrobin", "local", "non-local", "random". Local refers to the node which hosts the queue (only valid when using the default exchange for point-to-point messaging). |
 
-Example with a single configuration:
+Example with a single configuration with one volume:
 
 ```bash
 python3.6 run-logged-aws-playlist.py \
@@ -230,15 +235,49 @@ python3.6 run-logged-aws-playlist.py \
 --config-tag c1 \
 --technology rabbitmq \
 --instance r5.4xlarge \
---volume ebs-io1 \
---volume-size 200 \
+--volume-type ebs-io1 \
+--volume1-size 200 \
 --filesystem xfs \
 --tenancy default \
 --core-count 8 \
 --threads-per-core 2 \
 --cluster-size 3 \
 --pub-connect-to-node local \
---version 3.8.0 \
+--version 3.8.3 \
+--generic-unix-url https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.0/rabbitmq-server-generic-unix-3.8.0.tar.xz
+```
+
+Example with a single configuration with three volumes for data, logs and wal:
+
+```bash
+python3.6 run-logged-aws-playlist.py \
+--mode benchmark \
+--playlist-file playlists/point-to-point-safe.json \
+--aws-config-file path/to/aws-config.json \
+--loadgen-instance c4.4xlarge \
+--gap-seconds 120 \
+--repeat 1 \
+--parallel 1 \
+--tags tag1,tag2 \
+--override-step-seconds 300 \
+--config-count 1 \
+--config-tag c1 \
+--technology rabbitmq \
+--instance r5.4xlarge \
+--volume-type ebs-io1 \
+--volume1-size 200 \
+--volume2-size 20 \
+--volume3-size 50 \
+--data-volume volume1 \
+--logs-volume volume2 \
+--wal-volume volume3 \
+--filesystem xfs \
+--tenancy default \
+--core-count 8 \
+--threads-per-core 2 \
+--cluster-size 3 \
+--pub-connect-to-node local \
+--version 3.8.3 \
 --generic-unix-url https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.0/rabbitmq-server-generic-unix-3.8.0.tar.xz
 ```
 
@@ -258,8 +297,8 @@ python3.6 run-logged-aws-playlist.py \
 --config-count 2 \
 --technology rabbitmq \
 --instance r5.4xlarge \
---volume ebs-io1 \
---volume-size 200 \
+--volume-type ebs-io1 \
+--volume1-size 200 \
 --filesystem xfs \
 --tenancy default \
 --core-count 8 \
@@ -293,8 +332,8 @@ python3.6 run-logged-aws-playlist.py \
 --config-tag c1 \
 --technology rabbitmq \
 --instance r5.4xlarge \
---volume ebs-io1 \
---volume-size 200 \
+--volume-type ebs-gp2 \
+--volume1-size 200 \
 --filesystem xfs \
 --tenancy default \
 --core-count 8 \
@@ -327,9 +366,9 @@ When running benchmarks on EC2, there are arguments related to EC2 such as subne
 
 ### Notes on local storage and EBS volumes
 
-A separate EBS volume is created and dedicated for data/logs of the broker. You can specify the size using the --volume-size argument. If the volume will be a provisioned IOPS io1 volume with 50 IOPS per GB configured.
+Up to 3 EBS volumes can be provisioned. The data, logs and wal files can be configured to use those volumes as required. Currently all volumes will share the same filesystem and volume type. io1 volumes are provisioned with 50 IOPS per GB.
 
-When using c5d and z1d class instances, things work differently. An extra EBS volume is not created and mounted. Instead the NVMe local storage volume is used. The volume-size argument is used to identify the volume to be mounted, for c5d.large, the volume size is 46.6. If you set it to 50, as described in AS docs, it will fail to mount (a better way is needed of identifying the volume to mount).
+When using c5d and z1d class instances, things work differently. An extra EBS volume is not created and mounted. Instead the NVMe local storage volume is used. The volume-size argument is used to identify the volume to be mounted, for c5d.large, the volume size is 46.6. If you set it to 50, as described in AS docs, it will fail to mount (a better way is needed of identifying the volume to mount). Data, logs and wal are all on this single NVMe volume.
 
 
 ### Notes on AWS CLI and Ansible
@@ -363,6 +402,8 @@ There are three dashboards:
 - One Node
 - Node A vs Node B
 - Broker Server Metrics
+- Broker Server
+- RabbitMQ Overview
 
 Find the json dashboard files under deployment/grafana-dashboards.
 

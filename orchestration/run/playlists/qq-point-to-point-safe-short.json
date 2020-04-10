@@ -1,0 +1,39 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "publisherCount": "2", "queueCount": "2", "consumerCount": "2" } },
+        { "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4" } },
+        { "topologyVariables": { "publisherCount": "6", "queueCount": "6", "consumerCount": "6" } },
+        { "topologyVariables": { "publisherCount": "8", "queueCount": "8", "consumerCount": "8" } },
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "publishRate": "100", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "2", "queueCount": "2", "consumerCount": "2", "publishRate": "100", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4", "publishRate": "100", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "6", "queueCount": "6", "consumerCount": "6", "publishRate": "100", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "8", "queueCount": "8", "consumerCount": "8", "publishRate": "100", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "10", "publishRate": "100", "benchmarkType": "latency" } },
+
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "publishRate": "1000", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "2", "queueCount": "2", "consumerCount": "2", "publishRate": "1000", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4", "publishRate": "1000", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "6", "queueCount": "6", "consumerCount": "6", "publishRate": "1000", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "8", "queueCount": "8", "consumerCount": "8", "publishRate": "1000", "benchmarkType": "latency" } },
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "10", "publishRate": "1000", "benchmarkType": "latency" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "100000" 
+        }
+    }
+}

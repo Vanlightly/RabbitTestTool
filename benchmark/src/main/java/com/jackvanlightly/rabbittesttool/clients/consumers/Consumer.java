@@ -96,8 +96,8 @@ public class Consumer implements Runnable  {
                     if(connection.isOpen()) {
                         logger.info("Consumer " + consumerId + " opened connection");
 
-                        int exitReason = 0;
-                        while (!isCancelled.get() && exitReason != 3) {
+                        ConsumerExitReason exitReason = ConsumerExitReason.None;
+                        while (!isCancelled.get() && exitReason != ConsumerExitReason.ConnectionFailed) {
                             int currentStep = step;
                             exitReason = startChannel(connection, currentStep);
                         }
@@ -130,41 +130,12 @@ public class Consumer implements Runnable  {
     }
 
     private void recreateConsumerExecutor() {
-//        try {
-////            this.executorService.shutdown();
-////            this.executorService.awaitTermination(10, TimeUnit.SECONDS);
-//            LOGGER.info("Consumer " + consumerId + " connection thread pool stopped");
-//        }
-//        catch (InterruptedException e) {
-//            LOGGER.info("Could not stop consumer " + consumerId + " connection thread pool");
-//            Thread.currentThread().interrupt();
-//
-//            if(isCancelled.get())
-//                return;
-//        }
-
         logger.info("Consumer " + consumerId + " will restart in 5 seconds");
         ClientUtils.waitFor(5000, isCancelled);
-
-//        this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
-
     }
 
-//    private void closeConnection(Connection connection) throws IOException {
-//        boolean closed = false;
-//        while (!closed) {
-//            try {
-//                connection.close();
-//                closed = true;
-//            } catch (AlreadyClosedException e) {
-//                LOGGER.info("Waiting for connection to auto-recover in order to cleanly close");
-//                ClientUtils.waitFor(100, false);
-//            }
-//        }
-//    }
-
-    private int startChannel(Connection connection, Integer currentStep) throws IOException, TimeoutException {
-        int exitReason = 0;
+    private ConsumerExitReason startChannel(Connection connection, Integer currentStep) throws IOException, TimeoutException {
+        ConsumerExitReason exitReason = ConsumerExitReason.None;
         Channel channel = connection.createChannel();
         logger.info("Consumer " + consumerId + " opened channel");
         try {
@@ -198,7 +169,7 @@ public class Consumer implements Runnable  {
                 ClientUtils.waitFor(1000, this.isCancelled);
 
                 if(reconnectToNewHost()) {
-                    exitReason = 3;
+                    exitReason = ConsumerExitReason.Cancelled;
                     break;
                 }
             }
@@ -206,13 +177,13 @@ public class Consumer implements Runnable  {
             if(isCancelled.get())
                 eventingConsumer.tryAcknowledgeRemaining();
 
-            if(exitReason == 0) {
+            if(exitReason == ConsumerExitReason.None) {
                 if (isCancelled.get())
-                    exitReason = 1;
+                    exitReason = ConsumerExitReason.Cancelled;
                 else if (!currentStep.equals(step))
-                    exitReason = 2;
+                    exitReason = ConsumerExitReason.NextStep;
                 else
-                    exitReason = 3;
+                    exitReason = ConsumerExitReason.ConnectionFailed;
             }
         }
         catch(Exception e) {
@@ -230,7 +201,7 @@ public class Consumer implements Runnable  {
                 }
             }
             else {
-                exitReason = 3;
+                exitReason = ConsumerExitReason.ConnectionFailed;
             }
 
             ClientUtils.waitFor(1000, isCancelled);

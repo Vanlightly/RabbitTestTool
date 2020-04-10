@@ -38,9 +38,19 @@ TPC="${17}"
 echo "TPC=$TPC"
 VARS_FILE="${18}"
 echo "VARS_FILE=$VARS_FILE"
-VOL_SIZE="${19}"
-echo "VOL_SIZE=$VOL_SIZE"
-VOL_TYPE="${20}"
+VOLUME_DATA="${19}"
+echo "VOLUME_DATA=$VOLUME_DATA"
+VOLUME_LOGS="${20}"
+echo "VOLUME_LOGS=$VOLUME_LOGS"
+VOLUME_WAL="${21}"
+echo "VOLUME_WAL=$VOLUME_WAL"
+VOL1_SIZE="${22}"
+echo "VOL1_SIZE=$VOL1_SIZE"
+VOL2_SIZE="${23}"
+echo "VOL2_SIZE=$VOL2_SIZE"
+VOL3_SIZE="${24}"
+echo "VOL3_SIZE=$VOL3_SIZE"
+VOL_TYPE="${25}"
 echo "VOL_TYPE=$VOL_TYPE"
 echo "---------------------------"
 
@@ -61,7 +71,7 @@ if [ -z $RUNNING ]; then
     if [[ $INSTANCE == c5d* ]] || [[ $INSTANCE == i3* ]]; then
         bash deploy-local-storage-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INSTANCE $LG_SG $NODE_NUMBER $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC
     else
-        bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR "true" $LG_INSTANCE $LG_SG $NODE_NUMBER $RUN_TAG $SG $SN $TECHNOLOGY $TENANCY $TPC $VOL_SIZE $VOL_TYPE
+        bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR "true" $LG_INSTANCE $LG_SG $NODE_NUMBER $RUN_TAG $SG $SN $TECHNOLOGY $TENANCY $TPC $VOL1_SIZE $VOL2_SIZE $VOL3_SIZE $VOL_TYPE
     fi
 else
     echo "Node $NODE_NUMBER: Instance already exists, skipping EC2 instance creation"
@@ -81,28 +91,26 @@ sleep 60
 echo "Node $NODE_NUMBER: Configuring $TECHNOLOGY EC2 instance $NODE_NUMBER"
 cd $ROOT_PATH/$TECHNOLOGY
 
-if (( $VOL_SIZE > 1999 )); then 
-    DATA_VOLUME_SIZE_LABEL=$(($VOL_SIZE/1000))T
+if (( $VOL1_SIZE > 1999 )); then 
+    VOL1_SIZE_LABEL=$(($VOL1_SIZE/1000))T
 else
-    DATA_VOLUME_SIZE_LABEL="${VOL_SIZE}G"
+    VOL1_SIZE_LABEL="${VOL1_SIZE}G"
 fi
-echo "DATA_VOLUME_SIZE_LABEL is $DATA_VOLUME_SIZE_LABEL"
+echo "VOL1_SIZE_LABEL is $VOL1_SIZE_LABEL"
 
-WAL_VOLUME_SIZE=$(($VOL_SIZE / 2))
-if (( $WAL_VOLUME_SIZE > 1999 )); then 
-    WAL_VOLUME_SIZE_LABEL=$(($WAL_VOLUME_SIZE/1000))T
+if (( $VOL2_SIZE > 1999 )); then 
+    VOL2_SIZE_LABEL=$(($VOL2_SIZE/1000))T
 else
-    WAL_VOLUME_SIZE_LABEL="${WAL_VOLUME_SIZE}G"
+    VOL2_SIZE_LABEL="${VOL2_SIZE}G"
 fi
-echo "WAL_VOLUME_SIZE_LABEL is $WAL_VOLUME_SIZE_LABEL"
+echo "VOL2_SIZE_LABEL is $VOL2_SIZE_LABEL"
 
-LOGS_VOLUME_SIZE=$(($VOL_SIZE / 5))
-if (( $LOGS_VOLUME_SIZE > 1999 )); then 
-    LOGS_VOLUME_SIZE_LABEL=$(($LOGS_VOLUME_SIZE/1000))T
+if (( $VOL3_SIZE > 1999 )); then 
+    VOL3_SIZE_LABEL=$(($VOL3_SIZE/1000))T
 else
-    LOGS_VOLUME_SIZE_LABEL="${LOGS_VOLUME_SIZE}G"
+    VOL3_SIZE_LABEL="${VOL3_SIZE}G"
 fi
-echo "LOGS_VOLUME_SIZE_LABEL is $LOGS_VOLUME_SIZE_LABEL"
+echo "VOL3_SIZE_LABEL is $VOL3_SIZE_LABEL"
 
 
 SUCCESS="false"
@@ -117,9 +125,15 @@ do
     --extra-vars "node=$NODE_NUMBER" \
     --extra-vars "volume_size=$VOL_SIZE" \
     --extra-vars "run_tag=$RUN_TAG" \
-    --extra-vars "data_volume_size_label=$DATA_VOLUME_SIZE_LABEL" \
-    --extra-vars "logs_volume_size_label=$LOGS_VOLUME_SIZE_LABEL" \
-    --extra-vars "wal_volume_size_label=$WAL_VOLUME_SIZE_LABEL" \
+    --extra-vars "volume1=$VOL1_SIZE" \
+    --extra-vars "volume1_size_label=$VOL1_SIZE_LABEL" \
+    --extra-vars "volume2=$VOL2_SIZE" \
+    --extra-vars "volume2_size_label=$VOL2_SIZE_LABEL" \
+    --extra-vars "volume3=$VOL3_SIZE" \
+    --extra-vars "volume3_size_label=$VOL3_SIZE_LABEL" \
+    --extra-vars "data_volume=$VOLUME_DATA" \
+    --extra-vars "logs_volume=$VOLUME_LOGS" \
+    --extra-vars "wal_volume=$VOLUME_WAL" \
     --extra-vars "generic_unix_url=$GENERIC_UNIX_URL" \
     --extra-vars "@${VARS_FILE}" \
     --extra-vars "log_level=${LOG_LEVEL}"

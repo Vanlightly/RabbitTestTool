@@ -7,5 +7,7 @@ allocation_strategy: rss
 disk_limit: 1000000000
 log_level: info
 use_config: default
-wal_data_dir: /wal
 raft_segment_max_entries: 32768
+data_volume: volume1
+logs_volume: volume1
+wal_volume: volume1

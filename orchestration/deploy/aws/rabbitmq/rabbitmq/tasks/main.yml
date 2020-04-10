@@ -5,9 +5,6 @@
     block: |
       {{ item.ip }} {{ item.host }}
     marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.host }}"
-    # owner: root
-    # group: root
-    # mode: 0644
   with_items: "{{ rabbitmq_hosts }}"
   when: rabbitmq_hosts is defined
 
@@ -30,14 +27,8 @@
   apt:
     deb: "/tmp/{{ erlang_deb_file }}"
 
-- include_tasks: install_from_deb.yml
-  when: install_from == 'deb'
-
 - include_tasks: install_from_generic.yml
   when: install_from == 'generic'
   
-- include_tasks: join_cluster.yml
-  when: node_role == "joinee" and install_from == 'deb'
-
 - include_tasks: join_cluster_generic.yml
   when: node_role == "joinee" and install_from == 'generic'

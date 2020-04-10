@@ -1,5 +1,13 @@
 ---
 
+- name: create rabbitmq directory
+  file: 
+    path: /rabbitmq
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
 - name: download tarball
   command: "wget -O /tmp/rabbit.tar.xz {{ generic_unix_url }} "
 
@@ -28,8 +36,6 @@
     path: /rabbitmq/var/lib/rabbitmq/
     state: directory
     recurse: yes
-    # owner: ubuntu
-    # group: ubuntu
     mode: 0775
 
 - name: Set rabbitmq erlang cookie

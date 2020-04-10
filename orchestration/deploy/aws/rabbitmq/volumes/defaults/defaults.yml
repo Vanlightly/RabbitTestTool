@@ -1,0 +1,6 @@
+volume1: 200
+volume2: 0
+volume3: 0
+data_volume: volume1
+logs_volume: volume1
+wal_volume: volume1

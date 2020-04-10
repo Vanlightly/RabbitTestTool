@@ -28,9 +28,13 @@ TENANCY="${12}"
 echo "TENANCY=$TENANCY"
 TPC="${13}"
 echo "TPC=$TPC"
-VOL_SIZE="${14}"
-echo "VOL_SIZE=$VOL_SIZE"
-VOL_TYPE="${15}"
+VOL1_SIZE="${14}"
+echo "VOL1_SIZE=$VOL1_SIZE"
+VOL2_SIZE="${15}"
+echo "VOL2_SIZE=$VOL2_SIZE"
+VOL3_SIZE="${16}"
+echo "VOL3_SIZE=$VOL3_SIZE"
+VOL_TYPE="${17}"
 echo "VOL_TYPE=$VOL_TYPE"
 echo "------------------------------"
 
@@ -63,7 +67,7 @@ do
         if [[ $INSTANCE == c5d* ]] || [[ $INSTANCE == i3* ]]; then
             bash deploy-local-storage-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INSTANCE $LG_SG $NODE $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC
         else
-            bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INCLUDED $LG_INSTANCE $LG_SG $NODE $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC $VOL_SIZE $VOL_TYPE
+            bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INCLUDED $LG_INSTANCE $LG_SG $NODE $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC $VOL1_SIZE $VOL2_SIZE $VOL3_SIZE $VOL_TYPE
         fi
     else
         echo "Node $NODE: Instance already exists, skipping EC2 instance creation"

@@ -30,34 +30,66 @@ TENANCY="${13}"
 echo "TENANCY=$TENANCY"
 TPC="${14}"
 echo "TPC=$TPC"
-VOL_SIZE="${15}"
-echo "VOL_SIZE=$VOL_SIZE"
-VOL_TYPE="${16}"
+VOL1_SIZE="${15}"
+echo "VOL1_SIZE=$VOL1_SIZE"
+VOL2_SIZE="${16}"
+echo "VOL2_SIZE=$VOL2_SIZE"
+VOL3_SIZE="${17}"
+echo "VOL3_SIZE=$VOL3_SIZE"
+VOL_TYPE="${18}"
 echo "VOL_TYPE=$VOL_TYPE"
 echo "------------------------------"
 
 
-IOPS=$(($VOL_SIZE * 50))
-WAL_VOLUME_SIZE=$(($VOL_SIZE / 2))
-WAL_IOPS=$(($WAL_VOLUME_SIZE * 50))
-LOGS_VOLUME_SIZE=$(($VOL_SIZE / 5))
+VOL1_IOPS=$(($VOL1_SIZE * 50))
+VOL2_IOPS=$(($VOL2_SIZE * 50))
+VOL3_IOPS=$(($VOL3_SIZE * 50))
+
 echo "Node $NODE_NUMBER: Deploying EBS backed $INSTANCE EC2 instance"
 TAG=benchmarking_${TECHNOLOGY}${NODE_NUMBER}_${RUN_TAG}
 
 # deploy broker instance
 if [[ $VOL_TYPE == "io1" ]];then
+
+    BLOCK_DEVICE1=""
+    BLOCK_DEVICE2=""
+    BLOCK_DEVICE3=""
+    if (( $VOL3_SIZE > 0 ));then
+        BLOCK_DEVICE3="DeviceName=/dev/sdd,Ebs={VolumeType=io1,Iops=$VOL3_IOPS,VolumeSize=$VOL2_SIZE,DeleteOnTermination=true}"
+    fi
+
+    if (( $VOL2_SIZE > 0 ));then
+        BLOCK_DEVICE2="DeviceName=/dev/sdc,Ebs={VolumeType=io1,Iops=$VOL2_IOPS,VolumeSize=$VOL2_SIZE,DeleteOnTermination=true}"
+    fi
+
+    BLOCK_DEVICE1="DeviceName=/dev/sdb,Ebs={VolumeType=io1,Iops=$VOL1_IOPS,VolumeSize=$VOL1_SIZE,DeleteOnTermination=true}"
+
     aws ec2 run-instances \
-    --image-id "$AMI" \
-    --count 1 \
-    --instance-type "$INSTANCE" \
-    --key-name "$KEY_PAIR" \
-    --security-group-ids "$SG" \
-    --subnet-id "$SN" \
-    --placement "Tenancy=$TENANCY" \
-    --block-device-mappings "DeviceName=/dev/sdb,Ebs={VolumeType=io1,Iops=$IOPS,VolumeSize=$VOL_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdc,Ebs={VolumeType=gp2,VolumeSize=$LOGS_VOLUME_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdd,Ebs={VolumeType=io1,Iops=$WAL_IOPS,VolumeSize=$WAL_VOLUME_SIZE,DeleteOnTermination=true}" \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" \
-    --cpu-options "CoreCount=${CORE_COUNT},ThreadsPerCore=${TPC}"
+        --image-id "$AMI" \
+        --count 1 \
+        --instance-type "$INSTANCE" \
+        --key-name "$KEY_PAIR" \
+        --security-group-ids "$SG" \
+        --subnet-id "$SN" \
+        --placement "Tenancy=$TENANCY" \
+        --block-device-mappings $BLOCK_DEVICE1 $BLOCK_DEVICE2 $BLOCK_DEVICE3 \
+        --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" \
+        --cpu-options "CoreCount=${CORE_COUNT},ThreadsPerCore=${TPC}"
 else
+
+    BLOCK_DEVICE1=""
+    BLOCK_DEVICE2=""
+    BLOCK_DEVICE3=""
+    if (( $VOL3_SIZE > 0 ));then
+        BLOCK_DEVICE3="DeviceName=/dev/sdd,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL3_SIZE,DeleteOnTermination=true}"
+    fi
+
+    if (( $VOL2_SIZE > 0 ));then
+        BLOCK_DEVICE2="DeviceName=/dev/sdc,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL2_SIZE,DeleteOnTermination=true}"
+    fi
+
+    BLOCK_DEVICE1="DeviceName=/dev/sdb,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL1_SIZE,DeleteOnTermination=true}"
+
     aws ec2 run-instances \
     --image-id "$AMI" \
     --count 1 \
@@ -66,7 +98,7 @@ else
     --security-group-ids "$SG" \
     --subnet-id "$SN" \
     --placement "Tenancy=$TENANCY" \
-    --block-device-mappings "DeviceName=/dev/sdb,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdc,Ebs={VolumeType=gp2,VolumeSize=$LOGS_VOLUME_SIZE,DeleteOnTermination=true}" "DeviceName=/dev/sdd,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$WAL_VOLUME_SIZE,DeleteOnTermination=true}" \
+    --block-device-mappings $BLOCK_DEVICE1 $BLOCK_DEVICE2 $BLOCK_DEVICE3 \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" \
     --cpu-options "CoreCount=${CORE_COUNT},ThreadsPerCore=${TPC}"
 fi
