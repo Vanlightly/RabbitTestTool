@@ -54,5 +54,25 @@
     - { key: "RABBITMQ_MNESIA_DIR", value: "/{{ data_volume }}/data" }
     - { key: "RABBITMQ_LOG_BASE", value: "/{{ logs_volume }}/logs" }
 
+- name: Set quorum directory
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: "RABBITMQ_QUORUM_DIR", value: "/{{ quorum_volume }}/quorum" }
+  when: quorum_volume != data_volume
+
+- name: Set IO Thread pool size
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: "RABBITMQ_IO_THREAD_POOL_SIZE", value: "{{ io_thread_pool_size }}" }
+  when: io_thread_pool_size|int > 0
+
 - name: Reboot the machine with all defaults
   reboot:

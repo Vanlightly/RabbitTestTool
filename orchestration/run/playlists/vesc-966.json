@@ -1,0 +1,79 @@
+{
+    "benchmarks": [
+        { 
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" },
+            "topologyVariables": { "messageSize": "70000" }
+        },
+        { 
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" },
+            "topologyVariables": { "messageSize": "80000" }
+        },
+        { 
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" },
+            "topologyVariables": { "messageSize": "90000" }
+        },
+        { 
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" },
+            "topologyVariables": { "messageSize": "70000" }
+        },
+        { 
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" },
+            "topologyVariables": { "messageSize": "80000" }
+        },
+        { 
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" },
+            "topologyVariables": { "messageSize": "90000" }
+        },
+        { 
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" },
+            "topologyVariables": { "messageSize": "100000" }
+        },
+        { 
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" },
+            "topologyVariables": { "messageSize": "110000" }
+        },
+        { 
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" },
+            "topologyVariables": { "messageSize": "120000" }
+        },
+        { 
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" },
+            "topologyVariables": { "messageSize": "100000" }
+        },
+        { 
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" },
+            "topologyVariables": { "messageSize": "110000" }
+        },
+        { 
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" },
+            "topologyVariables": { "messageSize": "120000" }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "inflightLimit": "100", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "10", 
+            "ackInterval": "1",
+            "durationSeconds": "300",
+            "publisherCount": "120", 
+            "publishRate": "50",
+            "queueCount": "120", 
+            "consumerCount": "240"
+        }
+    }
+}

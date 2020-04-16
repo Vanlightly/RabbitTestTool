@@ -32,3 +32,7 @@
   
 - include_tasks: join_cluster_generic.yml
   when: node_role == "joinee" and install_from == 'generic'
+
+# hack because when quorum dir is set, feature flags don't turn on
+- include_tasks: feature_flags.yml
+  when: quorum_volume != data_volume

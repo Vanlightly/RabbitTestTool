@@ -55,7 +55,7 @@ if [[ $VOL_TYPE == "io1" ]];then
     BLOCK_DEVICE2=""
     BLOCK_DEVICE3=""
     if (( $VOL3_SIZE > 0 ));then
-        BLOCK_DEVICE3="DeviceName=/dev/sdd,Ebs={VolumeType=io1,Iops=$VOL3_IOPS,VolumeSize=$VOL2_SIZE,DeleteOnTermination=true}"
+        BLOCK_DEVICE3="DeviceName=/dev/sdd,Ebs={VolumeType=io1,Iops=$VOL3_IOPS,VolumeSize=$VOL3_SIZE,DeleteOnTermination=true}"
     fi
 
     if (( $VOL2_SIZE > 0 ));then

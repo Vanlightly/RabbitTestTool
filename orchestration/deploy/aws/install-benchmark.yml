@@ -23,3 +23,40 @@
         update_cache: yes
         install_recommends: yes
         state: present
+
+    - name: Increase file descriptor limit for root
+      pam_limits:
+        domain: 'root'
+        limit_type: '-'
+        limit_item: nofile
+        value: "500000"
+
+    - name: Increase file descriptor limit for ubuntu
+      pam_limits:
+        domain: 'ubuntu'
+        limit_type: 'soft'
+        limit_item: nofile
+        value: "500000"
+
+    - name: Increase proc limit for root
+      pam_limits:
+        domain: 'root'
+        limit_type: '-'
+        limit_item: nproc
+        value: "500000"
+
+    - name: Increase proc limit for ubuntu
+      pam_limits:
+        domain: 'ubuntu'
+        limit_type: 'soft'
+        limit_item: nproc
+        value: "500000"
+
+    - name: Enable pam_limits.so
+      lineinfile:
+        path: /etc/pam.d/common-session
+        insertafter: EOF
+        line: 'session required pam_limits.so'
+
+    - name: Reboot the machine with all defaults
+      reboot:

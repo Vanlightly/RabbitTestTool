@@ -40,9 +40,9 @@ do
     BROKER_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=benchmarking_${TECHNOLOGY}${NODE}_${RUN_TAG}" --query "Reservations[*].Instances[*].PrivateIpAddress" --output=text)
 
     if [[ $NODE != $LAST_NODE ]]; then
-        BROKER_IPS+="${BROKER_IP},"
+        BROKER_IPS+="${BROKER_IP}:5672,"
     else
-        BROKER_IPS+="${BROKER_IP}"
+        BROKER_IPS+="${BROKER_IP}:5672"
     fi
 done
 
@@ -55,7 +55,6 @@ ssh -i "~/.ssh/$KEY_PAIR.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFi
 --topology "./topologies/${TOPOLOGY}" \
 --policies "./policies/${POLICY}" \
 --technology "$TECHNOLOGY" \
---nodes "$NODES" \
 --version "$VERSION" \
 --broker-hosts "$BROKER_IPS" \
 --broker-mgmt-port 15672 \
@@ -64,7 +63,8 @@ ssh -i "~/.ssh/$KEY_PAIR.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFi
 --broker-password "$BROKER_PASSWORD" \
 --broker-vhost benchmark \
 --override-step-seconds "$OVERRIDE_STEP_SECONDS" \
---override-step-repeat "$OVERRIDE_STEP_REPEAT" 
+--override-step-repeat "$OVERRIDE_STEP_REPEAT" \
+--print-live-stats false
 
 #&> /dev/null
 

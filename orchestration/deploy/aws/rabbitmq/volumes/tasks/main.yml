@@ -1,7 +1,7 @@
 # create, put fs and mount volume1
 - name: create volume1 directory
   file: 
-    path: /volume1 
+    path: "{{ volume1_mountpoint }}"
     state: directory 
     owner: ubuntu 
     group: ubuntu
@@ -21,14 +21,14 @@
 
 - name: Mount EBS volume1
   mount:
-    path: /volume1
+    path: "{{ volume1_mountpoint }}"
     src: "/dev/{{ volume1_name.stdout }}"
     fstype: "{{ filesystem }}"
     state: mounted
   when: volume1|int > 0
 
 - name: Get UUID of volume1
-  shell: blkid -s UUID -o value $( df /volume1 )
+  shell: "blkid -s UUID -o value $( df {{ volume1_mountpoint }} )"
   register: volume1_uuid
   become: true
   when: volume1|int > 0
@@ -44,7 +44,7 @@
 # create, put fs and mount volume2
 - name: create volume2 directory
   file: 
-    path: /volume2
+    path: "{{ volume2_mountpoint }}"
     state: directory 
     owner: ubuntu 
     group: ubuntu
@@ -64,14 +64,14 @@
 
 - name: Mount EBS volume2
   mount:
-    path: /volume2
+    path: "{{ volume2_mountpoint }}"
     src: "/dev/{{ volume2_name.stdout }}"
     fstype: "{{ filesystem }}"
     state: mounted
   when: volume2|int > 0
 
 - name: Get UUID of volume2
-  shell: blkid -s UUID -o value $( df /volume2 )
+  shell: "blkid -s UUID -o value $( df {{ volume2_mountpoint }} )"
   register: volume2_uuid
   become: true
   when: volume2|int > 0
@@ -87,7 +87,7 @@
 # create, put fs and mount volume3
 - name: create volume3 directory
   file: 
-    path: /volume3 
+    path: "{{ volume3_mountpoint }}" 
     state: directory 
     owner: ubuntu 
     group: ubuntu
@@ -107,14 +107,14 @@
 
 - name: Mount EBS volume3
   mount:
-    path: /volume3
+    path: "{{ volume3_mountpoint }}"
     src: "/dev/{{ volume3_name.stdout }}"
     fstype: "{{ filesystem }}"
     state: mounted
   when: volume3|int > 0
 
 - name: Get UUID of volume3
-  shell: blkid -s UUID -o value $( df /volume3 )
+  shell: "blkid -s UUID -o value $( df {{ volume3_mountpoint }} )"
   register: volume3_uuid
   become: true
   when: volume3|int > 0
@@ -139,6 +139,14 @@
 - name: create logs directory
   file: 
     path: "/{{ logs_volume }}/logs"
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create quorum directory
+  file: 
+    path: "/{{ quorum_volume }}/quorum"
     state: directory 
     owner: ubuntu 
     group: ubuntu

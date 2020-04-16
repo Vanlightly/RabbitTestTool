@@ -1,0 +1,44 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "publishRate": "0"}},
+        { "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4", "publishRate": "0"}},
+        { "topologyVariables": { "publisherCount": "40", "queueCount": "40", "consumerCount": "40", "publishRate": "10"}},
+        { "topologyVariables": { "publisherCount": "40", "queueCount": "40", "consumerCount": "40", "publishRate": "50"}},
+        { "topologyVariables": { "publisherCount": "80", "queueCount": "80", "consumerCount": "80", "publishRate": "10"}},
+        { "topologyVariables": { "publisherCount": "80", "queueCount": "80", "consumerCount": "80", "publishRate": "50"}},
+
+        { "bgTopology": "point-to-point/background/bg-40-queues-10-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "publishRate": "0"} },
+        { "bgTopology": "point-to-point/background/bg-40-queues-10-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4", "publishRate": "0"} },
+        { "bgTopology": "point-to-point/background/bg-40-queues-10-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "40", "queueCount": "40", "consumerCount": "40", "publishRate": "10"} },
+        { "bgTopology": "point-to-point/background/bg-40-queues-10-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "40", "queueCount": "40", "consumerCount": "40", "publishRate": "50"} },
+
+        { "bgTopology": "point-to-point/background/bg-40-queues-50-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "publishRate": "0"} },
+        { "bgTopology": "point-to-point/background/bg-40-queues-50-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4", "publishRate": "0"} },
+        { "bgTopology": "point-to-point/background/bg-40-queues-50-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "40", "queueCount": "40", "consumerCount": "40", "publishRate": "10"} },
+        { "bgTopology": "point-to-point/background/bg-40-queues-50-per-sec.json", "bgDelaySeconds": "-30", "bgStepSeconds": "360",
+            "topologyVariables": { "publisherCount": "40", "queueCount": "40", "consumerCount": "40", "publishRate": "50"} }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "durationSeconds": "300",
+            "messageSize": "1024"
+        },
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "10000" 
+        }
+    }
+}

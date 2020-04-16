@@ -1,24 +1,20 @@
 {
     "benchmarks": [
         { 
-            "topology": "actions/queue-fill-drain.json", 
-            "topologyVariables": { 
-                "messageSize": "16", 
-                "messageCount": "100000",
-                "queueCount": "20"
-             } 
+            "topology": "actions/queue-fill-drain.json"
         }
     ],
     "commonAttributes": {
         "topologyVariables": { 
+            "messageSize": "1024", 
+            "messageCount": "10000",
+            "queueCount": "20",
+            "queueMode": "lazy",
             "durationSeconds": "1800",
             "executeMode": "staggered",
-            "executeDelaySeconds": "30",
-            "actionDelaySeconds": "30"
-        },
-        "policy": "quorum-queue.json",
-        "policyVariables": { 
-            "maxInMemoryLength": "10000"
+            "executeDelaySeconds": "10",
+            "actionDelaySeconds": "5",
+            "fillRate": 100
         } 
     }
 }

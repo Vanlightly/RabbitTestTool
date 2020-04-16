@@ -23,22 +23,7 @@ class Runner:
         raise NotImplementedError
 
     def run_background_load_across_runs(self, configurations, common_conf):
-        bg_threads = list()
-
-        for config_tag in configurations:
-            unique_conf_list = configurations[config_tag]
-            
-            for p in range(common_conf.parallel_count):
-                unique_conf = unique_conf_list[p]
-                t1 = threading.Thread(target=self.run_background_load, args=(unique_conf, common_conf,))
-                bg_threads.append(t1)
-
-        for bt in bg_threads:
-            bt.start()
-
-        time.sleep(10)
-        console_out(self.actor, f"Delaying start of benchmark by {common_conf.background_delay} seconds")
-        time.sleep(common_conf.background_delay)
+        raise NotImplementedError
 
     def run_background_load(self, unique_conf, common_conf):
         raise NotImplementedError

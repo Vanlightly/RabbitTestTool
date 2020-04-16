@@ -11,8 +11,12 @@ class UniqueConfiguration:
         self.volume1_size = get_optional_arg(args, "--volume1-size", self.suffix, "50") # for AWS deployment
         self.volume2_size = get_optional_arg(args, "--volume2-size", self.suffix, "0") # for AWS deployment
         self.volume3_size = get_optional_arg(args, "--volume3-size", self.suffix, "0") # for AWS deployment
+        self.volume1_mountpoint = get_optional_arg(args, "--volume1-mountpoint", self.suffix, "/volume1") # for AWS deployment
+        self.volume2_mountpoint = get_optional_arg(args, "--volume2-mountpoint", self.suffix, "/volume2") # for AWS deployment
+        self.volume3_mountpoint = get_optional_arg(args, "--volume3-mountpoint", self.suffix, "/volume3") # for AWS deployment
         self.data_volume = get_optional_arg(args, "--data-volume", self.suffix, "volume1")   # for AWS deployment
         self.logs_volume = get_optional_arg(args, "--logs-volume", self.suffix, "volume1")   # for AWS deployment
+        self.quorum_volume = get_optional_arg(args, "--quorum-volume", self.suffix, "volume1")     # for AWS deployment
         self.wal_volume = get_optional_arg(args, "--wal-volume", self.suffix, "volume1")     # for AWS deployment
         self.filesystem = get_mandatory_arg_validated(args, "--filesystem", self.suffix, ["ext4", "xfs"])
         self.tenancy = get_mandatory_arg_validated(args, "--tenancy", self.suffix, ["default","dedicated"])

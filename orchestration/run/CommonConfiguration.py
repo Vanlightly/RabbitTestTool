@@ -13,11 +13,12 @@ class CommonConfiguration:
         self.no_deploy = is_true(get_optional_arg(args, "--no-deploy", "", "false"))
         self.run_tag = get_optional_arg(args, "--run-tag", "", "none")
         self.playlist_file = get_mandatory_arg(args, "--playlist-file", "")
-        self.background_policies_file = get_optional_arg(args, "--bg-policies-file", "", "none")
-        self.background_topology_file = get_optional_arg(args, "--bg-topology-file", "", "none")
-        self.background_delay = int(get_optional_arg(args, "--bg-delay", "", "0"))
-        self.background_step_seconds = int(get_optional_arg(args, "--bg-step-seconds", "", "0"))
-        self.background_step_repeat = int(get_optional_arg(args, "--bg-step-repeat", "", "0"))
+        # note that for AWS, background load has been moved to playlists. TODO: do same for GCP
+        self.background_policies_file = get_optional_arg(args, "--bg-policies-file", "", "none") # GCP only
+        self.background_topology_file = get_optional_arg(args, "--bg-topology-file", "", "none") # GCP only
+        self.background_delay = int(get_optional_arg(args, "--bg-delay-seconds", "", "0")) # GCP only
+        self.background_step_seconds = int(get_optional_arg(args, "--bg-step-seconds", "", "0")) # GCP only
+        self.background_step_repeat = int(get_optional_arg(args, "--bg-step-repeat", "", "0")) # GCP only
         self.gap_seconds = int(get_mandatory_arg(args, "--gap-seconds", ""))
         self.repeat_count = int(get_optional_arg(args, "--repeat", "", "1"))
         self.parallel_count = int(get_optional_arg(args, "--parallel", "", "1"))

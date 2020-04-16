@@ -1,0 +1,10 @@
+volume1: 200
+volume2: 0
+volume3: 0
+volume1_mountpoint: /volume1
+volume2_mountpoint: /volume2
+volume3_mountpoint: /volume3
+data_volume: volume1
+logs_volume: volume1
+wal_volume: volume1
+quorum_volume: volume1

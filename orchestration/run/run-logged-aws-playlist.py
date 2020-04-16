@@ -75,6 +75,12 @@ def get_playlist_entries(playlist_file):
             entry.trigger_at = get_entry_mandatory_field(playlist_entry, common_attr, "triggerAt")
 
         entry.grace_period_sec = get_entry_optional_field(playlist_entry, common_attr, "gracePeriodSec", 0)
+
+        entry.bg_topology = get_entry_optional_field(playlist_entry, common_attr, "bgTopology", "")
+        entry.bg_policy = get_entry_optional_field(playlist_entry, common_attr, "bgPolicy", "")
+        entry.bg_step_seconds = int(get_entry_optional_field(playlist_entry, common_attr, "bgStepSeconds", "0"))
+        entry.bg_step_repeat = int(get_entry_optional_field(playlist_entry, common_attr, "bgStepRepeat", "0"))
+        entry.bg_delay_seconds = int(get_entry_optional_field(playlist_entry, common_attr, "bgDelaySeconds", "0"))
         
         if not os.path.exists("../../benchmark/topologies/" + entry.topology):
             console_out("RUNNER", f"The topology file {entry.topology} does not exist")
@@ -82,6 +88,14 @@ def get_playlist_entries(playlist_file):
         
         if len(entry.policy) > 0 and not os.path.exists("../../benchmark/policies/" + entry.policy):
             console_out("RUNNER", f"The policy file {entry.policy} does not exist")
+            exit(1)
+
+        if len(entry.bg_topology) > 0 and not os.path.exists("../../benchmark/topologies/" + entry.bg_topology):
+            console_out("RUNNER", f"The background topology file {entry.bg_topology} does not exist")
+            exit(1)
+        
+        if len(entry.bg_policy) > 0 and not os.path.exists("../../benchmark/policies/" + entry.bg_policy):
+            console_out("RUNNER", f"The background policy file {entry.bg_policy} does not exist")
             exit(1)
 
         playlist_entries.append(entry)
@@ -151,6 +165,7 @@ for i in range(common_conf.repeat_count):
 
         # run all instances of the topology benchmark
         b_threads = list()
+        bg_threads = list()
         for config_tag in configurations:
             
             unique_conf_list = configurations[config_tag]
@@ -161,11 +176,27 @@ for i in range(common_conf.repeat_count):
                 if unique_conf_list[0].policies_file == "none":
                     policy = entry.policy
 
+            # run all parallel executions of a background load configuration
+            if entry.bg_topology != "":
+                for p in range(common_conf.parallel_count):
+                    unique_conf = unique_conf_list[p]
+                    bgt1 = threading.Thread(target=runner.run_background_load, args=(unique_conf, common_conf,entry.bg_topology, entry.bg_policy, entry.bg_step_seconds, entry.bg_step_repeat, entry.bg_delay_seconds,))
+                    bg_threads.append(bgt1)
+            
             # run all parallel executions of a single benchmark configuration
             for p in range(common_conf.parallel_count):
                 unique_conf = unique_conf_list[p]
                 t1 = threading.Thread(target=runner.run_benchmark, args=(unique_conf, common_conf, entry, policy, run_ordinal,))
                 b_threads.append(t1)
+
+        if entry.bg_topology != "none":
+            for bgt in bg_threads:
+                bgt.start()
+
+            if entry.bg_delay_seconds < 0:
+                delay_sec = entry.bg_delay_seconds * -1
+                console_out("RUNNER", f"Delaying start of benchmark by {delay_sec} seconds")
+                time.sleep(delay_sec)
 
         for bt in b_threads:
             bt.start()
@@ -194,8 +225,14 @@ for i in range(common_conf.repeat_count):
 
         # wait for the benchmark thread to complete
         try:
+            console_out("RUNNER", "Waiting for benchmark tasks to complete")
             for bt in b_threads:
                 bt.join()
+
+            if entry.bg_topology != "none":
+                console_out("RUNNER", "Waiting for background load tasks to complete")
+                for bgt in bg_threads:
+                    bgt.join()
         except KeyboardInterrupt:
             console_out("RUNNER", "Aborting run...")
             deployer.teardown_all(configurations, common_conf, common_conf.no_destroy)

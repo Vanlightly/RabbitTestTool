@@ -80,16 +80,19 @@ class AwsRunner(Runner):
         else:
             self._benchmark_status[status_id] = "success"
 
-    def run_background_load(self, unique_conf, common_conf):
+    def run_background_load(self, unique_conf, common_conf, topology, policies, step_seconds, step_repeat, delay_seconds):
+        if delay_seconds > 0:
+            console_out(self.actor, f"Delaying start of background load by {delay_seconds} seconds for {unique_conf.node_number}")
+            time.sleep(delay_seconds)
+
         console_out(self.actor, f"Starting background load for {unique_conf.node_number}")
         status_id = unique_conf.technology + unique_conf.node_number
 
         broker_user = "benchmark"
         broker_password = common_conf.password
-        topology = common_conf.background_topology_file
-        policies = common_conf.background_policies_file
-        step_seconds = str(common_conf.background_step_seconds)
-        step_repeat = str(common_conf.background_step_repeat)
+
+        if policies == "":
+            policies = "none"
 
         nodes = ""
         for x in range(int(unique_conf.cluster_size)):
@@ -100,8 +103,7 @@ class AwsRunner(Runner):
             node_number = int(unique_conf.node_number) + x
             nodes = f"{nodes}{comma}{node_number}"
 
-        self._benchmark_status[status_id] = "started"
-        subprocess.Popen(["bash", "run-background-load-aws.sh", 
+        subprocess.call(["bash", "run-background-load-aws.sh", 
                         broker_user, 
                         broker_password, 
                         str(unique_conf.cluster_size), 
@@ -109,8 +111,8 @@ class AwsRunner(Runner):
                         unique_conf.node_number, 
                         nodes, 
                         policies, 
-                        step_seconds, 
-                        step_repeat, 
+                        str(step_seconds), 
+                        str(step_repeat), 
                         common_conf.run_tag, 
                         unique_conf.technology, 
                         topology, 

@@ -1,0 +1,15 @@
+---
+- name: Enable quorum_queue feature flag
+  command: /rabbitmq/sbin/rabbitmqctl enable_feature_flag quorum_queue
+
+- name: Enable drop_unroutable_metric feature flag
+  command: /rabbitmq/sbin/rabbitmqctl enable_feature_flag drop_unroutable_metric
+
+- name: Enable implicit_default_bindings feature flag
+  command: /rabbitmq/sbin/rabbitmqctl enable_feature_flag implicit_default_bindings
+
+- name: Enable empty_basic_get_metric feature flag
+  command: /rabbitmq/sbin/rabbitmqctl enable_feature_flag empty_basic_get_metric
+
+- name: Enable virtual_host_metadata feature flag
+  command: /rabbitmq/sbin/rabbitmqctl enable_feature_flag virtual_host_metadata

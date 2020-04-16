@@ -1,0 +1,30 @@
+{
+    "benchmarks": [
+        { "bgTopology": "point-to-point/background/bg-40-queues-10-per-sec.json" },
+        { "bgTopology": "point-to-point/background/bg-40-queues-20-per-sec.json" },
+        { "bgTopology": "point-to-point/background/bg-40-queues-30-per-sec.json" },
+        { "bgTopology": "point-to-point/background/bg-40-queues-40-per-sec.json" },
+        { "bgTopology": "point-to-point/background/bg-40-queues-50-per-sec.json" }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "publisherCount": "4", 
+            "queueCount": "4", 
+            "consumerCount": "4",
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "durationSeconds": "120",
+            "messageSize": "1024"
+        },
+        "bgDelaySeconds": "-30",
+        "bgStepSeconds": "180",
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "100000" 
+        }
+    }
+}

@@ -78,10 +78,14 @@ class AwsDeployer(Deployer):
                             unique_conf.vars_file, 
                             unique_conf.data_volume,
                             unique_conf.logs_volume,
+                            unique_conf.quorum_volume,
                             unique_conf.wal_volume,
                             unique_conf.volume1_size,
+                            unique_conf.volume1_mountpoint,
                             unique_conf.volume2_size,
+                            unique_conf.volume2_mountpoint,
                             unique_conf.volume3_size,
+                            unique_conf.volume3_mountpoint,
                             volume_type], cwd="../deploy/aws")
 
         if exit_code != 0:
@@ -201,10 +205,14 @@ class AwsDeployer(Deployer):
                                 unique_conf.vars_file, 
                                 unique_conf.data_volume,
                                 unique_conf.logs_volume,
+                                unique_conf.quorum_volume,
                                 unique_conf.wal_volume,
                                 unique_conf.volume1_size,
+                                unique_conf.volume1_mountpoint,
                                 unique_conf.volume2_size,
+                                unique_conf.volume2_mountpoint,
                                 unique_conf.volume3_size,
+                                unique_conf.volume3_mountpoint,
                                 volume_type], cwd="../deploy/aws")
         if exit_code != 0:
             console_out(self.actor, f"deploy of master rabbitmq{node} failed with exit code {exit_code}")
@@ -232,10 +240,14 @@ class AwsDeployer(Deployer):
                                 unique_conf.vars_file,
                                 unique_conf.data_volume,
                                 unique_conf.logs_volume,
+                                unique_conf.quorum_volume,
                                 unique_conf.wal_volume,
                                 unique_conf.volume1_size,
+                                unique_conf.volume1_mountpoint,
                                 unique_conf.volume2_size,
+                                unique_conf.volume2_mountpoint,
                                 unique_conf.volume3_size,
+                                unique_conf.volume3_mountpoint,
                                 volume_type], cwd="../deploy/aws")    
         if exit_code != 0:
             console_out(self.actor, f"deploy of joinee rabbitmq{node} failed with exit code {exit_code}")

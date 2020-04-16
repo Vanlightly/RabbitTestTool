@@ -63,14 +63,13 @@
     src: rabbitmq.conf.j2
     dest: /rabbitmq/etc/rabbitmq/rabbitmq.conf
     mode: 0400
-  when: use_config == 'default' 
 
-- name: Set Raft configuration
+- name: Set advanced raft configuration, location of wal...
   template:
-    src: rabbitmq_raft.conf.j2
-    dest: /rabbitmq/etc/rabbitmq/rabbitmq.conf
+    src: raft.advanced.config.j2
+    dest: /rabbitmq/etc/rabbitmq/advanced.config
     mode: 0400
-  when: use_config == 'raft' 
+  when: use_config == 'raft'
 
 - name: Start RabbitMQ
   command: /rabbitmq/sbin/rabbitmq-server start -detached

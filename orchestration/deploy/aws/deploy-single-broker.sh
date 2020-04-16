@@ -42,15 +42,23 @@ VOLUME_DATA="${19}"
 echo "VOLUME_DATA=$VOLUME_DATA"
 VOLUME_LOGS="${20}"
 echo "VOLUME_LOGS=$VOLUME_LOGS"
-VOLUME_WAL="${21}"
+VOLUME_QUORUM="${21}"
+echo "VOLUME_QUORUM=$VOLUME_QUORUM"
+VOLUME_WAL="${22}"
 echo "VOLUME_WAL=$VOLUME_WAL"
-VOL1_SIZE="${22}"
+VOL1_SIZE="${23}"
 echo "VOL1_SIZE=$VOL1_SIZE"
-VOL2_SIZE="${23}"
+VOL1_MOUNTPOINT="${24}"
+echo "VOL1_MOUNTPOINT=$VOL1_MOUNTPOINT"
+VOL2_SIZE="${25}"
 echo "VOL2_SIZE=$VOL2_SIZE"
-VOL3_SIZE="${24}"
+VOL2_MOUNTPOINT="${26}"
+echo "VOL2_MOUNTPOINT=$VOL2_MOUNTPOINT"
+VOL3_SIZE="${27}"
 echo "VOL3_SIZE=$VOL3_SIZE"
-VOL_TYPE="${25}"
+VOL3_MOUNTPOINT="${28}"
+echo "VOL3_MOUNTPOINT=$VOL3_MOUNTPOINT"
+VOL_TYPE="${29}"
 echo "VOL_TYPE=$VOL_TYPE"
 echo "---------------------------"
 
@@ -112,7 +120,6 @@ else
 fi
 echo "VOL3_SIZE_LABEL is $VOL3_SIZE_LABEL"
 
-
 SUCCESS="false"
 
 while [ "$SUCCESS" == "false" ]
@@ -123,16 +130,19 @@ do
     --extra-vars "hostname=$TECHNOLOGY$NODE_NUMBER" \
     --extra-vars "filesystem=$FS" \
     --extra-vars "node=$NODE_NUMBER" \
-    --extra-vars "volume_size=$VOL_SIZE" \
     --extra-vars "run_tag=$RUN_TAG" \
     --extra-vars "volume1=$VOL1_SIZE" \
     --extra-vars "volume1_size_label=$VOL1_SIZE_LABEL" \
+    --extra-vars "volume1_mountpoint=$VOL1_MOUNTPOINT" \
     --extra-vars "volume2=$VOL2_SIZE" \
     --extra-vars "volume2_size_label=$VOL2_SIZE_LABEL" \
+    --extra-vars "volume2_mountpoint=$VOL2_MOUNTPOINT" \
     --extra-vars "volume3=$VOL3_SIZE" \
     --extra-vars "volume3_size_label=$VOL3_SIZE_LABEL" \
+    --extra-vars "volume3_mountpoint=$VOL3_MOUNTPOINT" \
     --extra-vars "data_volume=$VOLUME_DATA" \
     --extra-vars "logs_volume=$VOLUME_LOGS" \
+    --extra-vars "quorum_volume=$VOLUME_QUORUM" \
     --extra-vars "wal_volume=$VOLUME_WAL" \
     --extra-vars "generic_unix_url=$GENERIC_UNIX_URL" \
     --extra-vars "@${VARS_FILE}" \

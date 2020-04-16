@@ -21,8 +21,8 @@ class Deployer:
 
         self.parallel_deploy(configurations, common_conf)
 
-        if common_conf.background_topology_file != "none":
-            runner.run_background_load_across_runs(configurations, common_conf)
+        # if common_conf.background_topology_file != "none":
+        #     runner.run_background_load_across_runs(configurations, common_conf)
 
     def get_deploy_status(self):
         return self._deploy_status

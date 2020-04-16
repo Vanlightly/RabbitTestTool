@@ -1,0 +1,50 @@
+{
+    "benchmarks": [
+        { 
+            "topology": "point-to-point/point-to-point-safe.json",
+            "topologyVariables": { 
+                "publisherCount": "4",
+                "queueCount": "4",
+                "consumerCount": "4",
+                "publishRate": 100,
+                "queuePrefix": "qq"
+            }
+        },
+        { 
+            "topology": "point-to-point/point-to-point-safe.json",
+            "topologyVariables": { 
+                "publisherCount": "4",
+                "queueCount": "4",
+                "consumerCount": "4",
+                "publishRate": 80,
+                "queuePrefix": "cmq"
+            }
+        },
+        { 
+            "topology": "point-to-point/point-to-point-safe-two-vhosts.json",
+            "topologyVariables": { 
+                "publisherCount1": "4",
+                "queueCount1": "4",
+                "consumerCount1": "4",
+                "publishRate1": 100,
+                "queuePrefix1": "qq",
+                "publisherCount2": "4",
+                "queueCount2": "4",
+                "consumerCount2": "4",
+                "publishRate2": 80,
+                "queuePrefix2": "cmq"
+            }
+        }
+    ],
+    "commonAttributes": {
+        "topologyVariables": { 
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue-and-mirrored.json",
+        "policyVariables": { 
+            "qqPattern": "^qq.+",
+            "qqMaxInMemoryLength": "10000",
+            "cmqPattern": "^cmq.+"
+        }
+    }
+}

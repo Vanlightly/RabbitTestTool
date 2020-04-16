@@ -9,6 +9,11 @@ class PlaylistEntry:
         self.trigger_type = ""
         self.trigger_at = 0
         self.grace_period_sec = 0
+        self.bg_topology = ""
+        self.bg_policy = ""
+        self.bg_step_seconds = 0
+        self.bg_step_repeat = 0
+        self.bg_delay_seconds = 0
 
     def get_topology_variables(self):
         if len(self.topology_variables) == 0:
