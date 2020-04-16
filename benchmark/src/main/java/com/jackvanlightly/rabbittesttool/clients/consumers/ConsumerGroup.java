@@ -57,7 +57,8 @@ public class ConsumerGroup {
         }
 
         this.consumerCounter = 0;
-        this.executorService = Executors.newFixedThreadPool(maxScale, new NamedThreadFactory(getExecutorId()));
+        //this.executorService = Executors.newFixedThreadPool(maxScale, new NamedThreadFactory(getExecutorId()));
+        this.executorService = Executors.newCachedThreadPool(new NamedThreadFactory(getExecutorId()));
         this.consumers = new ArrayList<>();
     }
 
@@ -142,7 +143,8 @@ public class ConsumerGroup {
                 queueHosts,
                 settings,
                 this.stats,
-                messageModel);
+                messageModel,
+                this.executorService);
 
         this.consumers.add(consumer);
         this.currentQueues.put(queue, this.currentQueues.get(queue) + 1);

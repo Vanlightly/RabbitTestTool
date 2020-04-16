@@ -5,9 +5,10 @@
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
     { "name": "vhostCount", "default": "1" },
-    { "name": "queueCount", "default": "2" },
-    { "name": "publisherCount", "default": "2" },
-    { "name": "consumerCount", "default": "2" },
+    { "name": "queuePrefix", "default": "q1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
     { "name": "deliveryMode", "default": "persistent" },
     { "name": "messageSize", "default": "16" },
     { "name": "publishRate", "default": "0"},
@@ -28,7 +29,7 @@
       "scale": "{{ var.vhostCount }}",
       "queueGroups": [ 
         { 
-          "group": "q1", 
+          "group": "{{ var.queuePrefix }}", 
           "scale": "{{ var.queueCount }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
@@ -44,7 +45,7 @@
             "inFlightLimit": "{{ var.inflightLimit }}"
           },
           "sendToQueueGroup": {
-            "queueGroup": "q1",
+            "queueGroup": "{{ var.queuePrefix }}",
             "mode": "Counterpart"
           },
           "deliveryMode": "{{ var.deliveryMode }}",
@@ -57,7 +58,7 @@
         { 
           "group": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queueGroup": "q1",
+          "queueGroup": "{{ var.queuePrefix }}",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",

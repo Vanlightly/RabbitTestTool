@@ -41,7 +41,7 @@ public class QueueFillAction {
                 connectionSettings,
                 queueHosts,
                 isCancelled);
-        publisher.fill(queueName, config.getMessageSize(), config.getMessageCount());
+        publisher.fill(queueName, config.getMessageSize(), config.getMessageCount(), config.getPublishRate());
     }
 
 //    public void runIndependently() {

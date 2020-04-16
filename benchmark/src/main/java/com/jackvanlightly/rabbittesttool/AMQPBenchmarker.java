@@ -17,6 +17,7 @@ import com.jackvanlightly.rabbittesttool.topology.*;
 import com.jackvanlightly.rabbittesttool.topology.model.StepOverride;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
+import io.micrometer.core.instrument.util.NamedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,7 +157,8 @@ public class AMQPBenchmarker {
                         arguments.getStr("--config-tag", "?"));
             }
             else {
-                benchmarkRegister = new ConsoleRegister(System.out);
+                boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);
+                benchmarkRegister = new ConsoleRegister(System.out, printLiveStats);
             }
 
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
@@ -169,7 +171,7 @@ public class AMQPBenchmarker {
 
             MessageModel messageModel = new MessageModel(true, unavailabilitySeconds, checkOrdering, checkDataLoss, checkDuplicates);
 
-            ExecutorService modelExecutor = Executors.newSingleThreadExecutor();
+            ExecutorService modelExecutor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MessageModel"));
             modelExecutor.execute(() -> messageModel.monitorProperties());
 
             String benchmarkId = performRun(Modes.Model,
@@ -269,7 +271,8 @@ public class AMQPBenchmarker {
                         arguments.getStr("--config-tag"));
             }
             else {
-                benchmarkRegister = new ConsoleRegister(System.out);
+                boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);
+                benchmarkRegister = new ConsoleRegister(System.out, printLiveStats);
             }
 
             performRun(Modes.Benchmark,

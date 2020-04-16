@@ -459,7 +459,8 @@ public class TopologyLoader {
                     case "fill":
                         actionConfig = new QueueFillActionConfig(actionDelay,
                                 getMandatoryIntValue(actionJson, "messageSize"),
-                                getMandatoryIntValue(actionJson, "messageCount"));
+                                getMandatoryIntValue(actionJson, "messageCount"),
+                                getOptionalIntValue(actionJson, "publishRate", 0));
                         break;
                     case "drain":
                         actionConfig = new QueueDrainActionConfig(actionDelay,

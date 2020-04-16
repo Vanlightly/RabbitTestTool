@@ -34,21 +34,23 @@ public class Consumer implements Runnable  {
     private EventingConsumer eventingConsumer;
     private ConsumerStats consumerStats;
     private Broker currentHost;
+    ExecutorService consumerExecutorService;
 
     public Consumer(String consumerId,
                     ConnectionSettings connectionSettings,
                     QueueHosts queueHosts,
                     ConsumerSettings consumerSettings,
                     Stats stats,
-                    MessageModel messageModel) {
+                    MessageModel messageModel,
+                    ExecutorService consumerExecutorService) {
         this.logger = new BenchmarkLogger("CONSUMER");
         this.isCancelled = new AtomicBoolean();
         this.consumerId = consumerId;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
-        this.isCancelled = isCancelled;
         this.stats = stats;
         this.messageModel = messageModel;
+        this.consumerExecutorService = consumerExecutorService;
         this.consumerSettings = consumerSettings;
         this.step = 0;
         //this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
@@ -229,12 +231,8 @@ public class Consumer implements Runnable  {
             factory.setRequestedFrameMax(consumerSettings.getFrameMax());
 
         factory.setRequestedHeartbeat(10);
-        //factory.setSharedExecutor(this.executorService);
-        factory.setThreadFactory(r -> {
-            Thread t = Executors.defaultThreadFactory().newThread(r);
-            t.setDaemon(true);
-            return t;
-        });
+        factory.setSharedExecutor(consumerExecutorService);
+        factory.setThreadFactory(new NamedThreadFactory("ConsumerConnection-" + consumerId));
 
         if(!connectionSettings.isNoTcpDelay())
             factory.setSocketConfigurator(new WithNagleSocketConfigurator());

@@ -22,9 +22,11 @@ public class ConsoleRegister implements BenchmarkRegister {
     private StepStatistics lastStats;
     private Instant started;
     private Instant stopped;
+    private boolean printLiveStats;
 
-    public ConsoleRegister(PrintStream out) {
+    public ConsoleRegister(PrintStream out, boolean printLiveStats) {
         this.out = out;
+        this.printLiveStats = printLiveStats;
     }
 
     @Override
@@ -59,52 +61,53 @@ public class ConsoleRegister implements BenchmarkRegister {
 
     @Override
     public void logLiveStatistics(String benchmarkId, int step, StepStatistics stepStatistics) {
-        this.out.println(MessageFormat.format("Step {0} live statistics:", step));
-        this.out.println(MessageFormat.format("    At seconds: {0,number,#}/{1,number,#}",
-                stepStatistics.getRecordingSeconds(),
-                stepStatistics.getDurationSeconds()));
+        if(printLiveStats) {
+            this.out.println(MessageFormat.format("Step {0} live statistics:", step));
+            this.out.println(MessageFormat.format("    At seconds: {0,number,#}/{1,number,#}",
+                    stepStatistics.getRecordingSeconds(),
+                    stepStatistics.getDurationSeconds()));
 
-        if(lastStats == null) {
-            this.out.println(MessageFormat.format("    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#}",
-                    stepStatistics.getSentCount(),
-                    stepStatistics.getSentBytesCount(),
-                    stepStatistics.getReceivedCount(),
-                    stepStatistics.getReceivedBytesCount()));
+            if (lastStats == null) {
+                this.out.println(MessageFormat.format("    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#}",
+                        stepStatistics.getSentCount(),
+                        stepStatistics.getSentBytesCount(),
+                        stepStatistics.getReceivedCount(),
+                        stepStatistics.getReceivedBytesCount()));
+            } else {
+                this.out.println(MessageFormat.format("    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#}",
+                        stepStatistics.getSentCount() - lastStats.getSentCount(),
+                        stepStatistics.getSentBytesCount() - lastStats.getSentBytesCount(),
+                        stepStatistics.getReceivedCount() - lastStats.getReceivedCount(),
+                        stepStatistics.getReceivedBytesCount() - lastStats.getReceivedBytesCount()));
+            }
+
+            lastStats = stepStatistics;
+
+            StringBuilder latenciesSb = new StringBuilder();
+            StringBuilder confirmLatenciesSb = new StringBuilder();
+            String comma = ", ";
+
+            for (int i = 0; i < stepStatistics.getLatencyPercentiles().length; i++) {
+                if (i == stepStatistics.getLatencyPercentiles().length - 1)
+                    comma = "";
+
+                latenciesSb.append(stepStatistics.getLatencyPercentiles()[i] + "=" + stepStatistics.getLatencies()[i] + comma);
+            }
+
+            for (int i = 0; i < stepStatistics.getLatencyPercentiles().length; i++) {
+                if (i == stepStatistics.getLatencyPercentiles().length - 1)
+                    comma = "";
+
+                confirmLatenciesSb.append(stepStatistics.getLatencyPercentiles()[i] + "=" + stepStatistics.getConfirmLatencies()[i] + comma);
+            }
+
+            this.out.println("    Latencies (since start): " + latenciesSb.toString());
+            if (stepStatistics.getConfirmLatencies()[1] > 0) {
+                this.out.println("    Confirm Latencies (since start): " + confirmLatenciesSb.toString());
+            }
+
+            this.out.println("");
         }
-        else {
-            this.out.println(MessageFormat.format("    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#}",
-                    stepStatistics.getSentCount() - lastStats.getSentCount(),
-                    stepStatistics.getSentBytesCount() - lastStats.getSentBytesCount(),
-                    stepStatistics.getReceivedCount() - lastStats.getReceivedCount(),
-                    stepStatistics.getReceivedBytesCount() - lastStats.getReceivedBytesCount()));
-        }
-
-        lastStats = stepStatistics;
-
-        StringBuilder latenciesSb = new StringBuilder();
-        StringBuilder confirmLatenciesSb = new StringBuilder();
-        String comma = ", ";
-
-        for(int i = 0; i<stepStatistics.getLatencyPercentiles().length; i++) {
-            if(i == stepStatistics.getLatencyPercentiles().length-1)
-                comma = "";
-
-            latenciesSb.append(stepStatistics.getLatencyPercentiles()[i] + "=" + stepStatistics.getLatencies()[i] + comma);
-        }
-
-        for(int i = 0; i<stepStatistics.getLatencyPercentiles().length; i++) {
-            if(i == stepStatistics.getLatencyPercentiles().length-1)
-                comma = "";
-
-            confirmLatenciesSb.append(stepStatistics.getLatencyPercentiles()[i] + "=" + stepStatistics.getConfirmLatencies()[i] + comma);
-        }
-
-        this.out.println("    Latencies (since start): " + latenciesSb.toString());
-        if(stepStatistics.getConfirmLatencies()[1] > 0) {
-            this.out.println("    Confirm Latencies (since start): " + confirmLatenciesSb.toString());
-        }
-
-        this.out.println("");
     }
 
     @Override

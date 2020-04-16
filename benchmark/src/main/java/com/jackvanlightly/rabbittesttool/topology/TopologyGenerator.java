@@ -535,7 +535,8 @@ public class TopologyGenerator {
             String responseMsg = lastResponse != null ? lastResponse.toString() : "";
             throw new TopologyException("Received a non success response code executing PUT " + url
                     + " Code:" + lastResponseCode
-                    + " Response: " + responseMsg);
+                    + " Response: " + responseMsg
+                    + " Body: " + json);
         }
     }
 

@@ -10,6 +10,7 @@ import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import com.jackvanlightly.rabbittesttool.topology.model.actions.ActionListConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.actions.ExecuteMode;
+import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 public class ActionSupervisor {
     BenchmarkLogger logger;
@@ -71,16 +73,24 @@ public class ActionSupervisor {
     }
 
     private void run(List<ActionList> actionLists) {
+        List<ActionList> actionListsToApply = actionLists.stream().filter(x -> x.hasActions()).collect(Collectors.toList());
+        if(actionListsToApply.isEmpty()) {
+            logger.info("No actions to run");
+            return;
+        }
+
         logger.info("Starting action list runners");
-        ExecutorService actionsExecutor = Executors.newFixedThreadPool(actionLists.size());
-        for(ActionList actionList : actionLists) {
-            actionsExecutor.submit(() -> {
-                ActionListRunner runner = new ActionListRunner(queueHosts, topologyGenerator, isCancelled);
-                if(actionList.getConfig().getExecuteMode() == ExecuteMode.Synchronized)
-                    runner.runSynchronized(actionList);
-                else
-                    runner.runIndependently(actionList);
-            });
+        ExecutorService actionsExecutor = Executors.newFixedThreadPool(actionListsToApply.size(), new NamedThreadFactory("Actions"));
+        for(ActionList actionList : actionListsToApply) {
+            if(actionList.hasActions()) {
+                actionsExecutor.submit(() -> {
+                    ActionListRunner runner = new ActionListRunner(queueHosts, topologyGenerator, isCancelled);
+                    if (actionList.getConfig().getExecuteMode() == ExecuteMode.Synchronized)
+                        runner.runSynchronized(actionList);
+                    else
+                        runner.runIndependently(actionList);
+                });
+            }
         }
 
         logger.info("Action list runners started");

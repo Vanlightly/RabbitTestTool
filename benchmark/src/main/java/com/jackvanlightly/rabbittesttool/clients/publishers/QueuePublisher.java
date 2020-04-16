@@ -9,6 +9,7 @@ import com.jackvanlightly.rabbittesttool.topology.model.publishers.DeliveryMode;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.QueueGroupMode;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.SendToMode;
 import com.rabbitmq.client.*;
+import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,6 +29,11 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
     ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms;
     Semaphore inflightSemaphore;
 
+    // for publishing rate
+    private int sentInPeriod;
+    private int limitInPeriod;
+    private int periodNs;
+
     public QueuePublisher(String publisherId,
                           ConnectionSettings connectionSettings,
                           QueueHosts queueHosts,
@@ -39,7 +45,7 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
         this.isCancelled = isCancelled;
     }
 
-    public void fill(String queueName, int messageSize, int messageCount) {
+    public void fill(String queueName, int messageSize, int messageCount, int targetRate) {
         int sentCount = 0;
         messageGenerator = new MessageGenerator();
         messageGenerator.setBaseMessageSize(messageSize);
@@ -58,6 +64,12 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
                 channel.confirmSelect();
                 channel.addConfirmListener(this);
 
+                long periodStartNs = System.nanoTime();
+                boolean rateLimit = targetRate > 0;
+
+                if(rateLimit)
+                    configureRateLimit(targetRate);
+
                 while (!isCancelled.get()) {
                     inflightSemaphore.acquire();
 
@@ -66,6 +78,25 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
 
                     if(sentCount >= messageCount)
                         break;
+
+                    if (rateLimit) {
+                        this.sentInPeriod++;
+                        long now = System.nanoTime();
+                        long elapsedNs = now - periodStartNs;
+
+                        if (this.sentInPeriod >= this.limitInPeriod) {
+                            long waitNs = this.periodNs - elapsedNs;
+                            if (waitNs > 0)
+                                waitFor((int) (waitNs / 999000));
+
+                            // may need to adjust for drift over time
+                            periodStartNs = System.nanoTime();
+                            this.sentInPeriod = 0;
+                        } else if (now - periodStartNs > this.periodNs) {
+                            periodStartNs = now;
+                            this.sentInPeriod = 0;
+                        }
+                    }
                 }
 
                 logger.info("Queue publisher " + publisherId + " stopping");
@@ -89,6 +120,20 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
         }
 
         logger.info("Publisher " + publisherId + " completed initial send");
+    }
+
+    private void configureRateLimit(int targetRate) {
+        int measurementPeriodMs = 1000 / targetRate;
+
+        if (measurementPeriodMs >= 10) {
+            this.limitInPeriod = 1;
+        } else {
+            measurementPeriodMs = 10;
+            int periodsPerSecond = 1000 / measurementPeriodMs;
+            this.limitInPeriod = targetRate / periodsPerSecond;
+        }
+
+        this.periodNs = measurementPeriodMs * 1000000;
     }
 
     private void publish(Channel channel, String queueName) throws IOException {
@@ -127,12 +172,7 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
         factory.setConnectionTimeout(5000);
         factory.setAutomaticRecoveryEnabled(false);
         factory.setRequestedHeartbeat(10);
-        //factory.setSharedExecutor(this.executorService);
-        factory.setThreadFactory(r -> {
-            Thread t = Executors.defaultThreadFactory().newThread(r);
-            t.setDaemon(true);
-            return t;
-        });
+        factory.setThreadFactory(new NamedThreadFactory("QueuePublisherConnection-" + publisherId));
 
         return factory.newConnection();
     }

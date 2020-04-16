@@ -11,6 +11,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -177,7 +178,7 @@ public class Stats {
                 report();
             }
         };
-        reportExecutor = Executors.newSingleThreadScheduledExecutor();
+        reportExecutor = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ReportStats"));
         long delay  = 1000L;
         long period = 1000L;
         reportExecutor.scheduleAtFixedRate(repeatedTask, delay, period, TimeUnit.MILLISECONDS);

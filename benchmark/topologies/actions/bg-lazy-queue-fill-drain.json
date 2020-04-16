@@ -1,24 +1,24 @@
 {
-  "topologyName": "queue_fill_drain",
+  "topologyName": "bg-lazy-queue-fill-drain",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostCount", "default": "1" },
-    { "name": "queueCount", "default": "1" },
-    { "name": "queueMode", "default": "default" },
+    { "name": "vhostCount", "default": "20" },
+    { "name": "queueCount", "default": "2" },
+    { "name": "queueMode", "default": "lazy" },
     { "name": "durationSeconds", "default": "1800" },
-    { "name": "messageSize", "default": "1024"},
-    { "name": "messageCount", "default": "1000000"},
-    { "name": "executeMode", "default": "synchronized"},
-    { "name": "executeDelaySeconds", "default": "0"},
-    { "name": "actionDelaySeconds", "default": "60"},
-    { "name": "fillRate", "default": "0"}
+    { "name": "messageSize", "default": "16"},
+    { "name": "messageCount", "default": "10000"},
+    { "name": "executeMode", "default": "staggered"},
+    { "name": "executeDelaySeconds", "default": "5"},
+    { "name": "actionDelaySeconds", "default": "5"},
+    { "name": "fillRate", "default": "100"}
   ],
   "description": "fill-drain",
   "vhosts": [
     {
-      "name": "benchmark",
+      "name": "background",
       "scale": "{{ var.vhostCount }}",
       "queueGroups": [ 
         { 

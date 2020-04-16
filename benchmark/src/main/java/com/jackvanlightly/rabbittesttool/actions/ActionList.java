@@ -12,6 +12,10 @@ public class ActionList {
         this.actionListConfig = actionListConfig;
     }
 
+    public boolean hasActions() {
+        return getConfig().getExecuteMode() != null;
+    }
+
     public ConnectionSettings getConnectionSettings() {
         return connectionSettings;
     }

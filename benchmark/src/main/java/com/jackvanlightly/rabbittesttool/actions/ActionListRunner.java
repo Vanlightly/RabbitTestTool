@@ -6,6 +6,7 @@ import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyGenerator;
 import com.jackvanlightly.rabbittesttool.topology.model.actions.*;
+import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -76,7 +77,9 @@ public class ActionListRunner {
 
         while(!isCancelled.get()) {
             for (ActionConfig actionConfig : actionList.getConfig().getActions()) {
-                ExecutorService executorService = Executors.newFixedThreadPool(config.getQueueNames().size());
+                ExecutorService executorService = Executors.newFixedThreadPool(
+                        config.getQueueNames().size(),
+                        new NamedThreadFactory("ActionsListRunner"));
                 ActionDelay delay = actionConfig.getActionDelay();
 
                 switch (actionConfig.getActionType()) {
@@ -119,7 +122,9 @@ public class ActionListRunner {
 
     private void runQueueActionsIndependently(ActionList actionList) {
         QueueActionListConfig config = (QueueActionListConfig)actionList.getConfig();
-        ExecutorService executorService = Executors.newFixedThreadPool(config.getQueueNames().size());
+        ExecutorService executorService = Executors.newFixedThreadPool(
+                config.getQueueNames().size(),
+                new NamedThreadFactory("ActionsListRunner"));
 
         for(String queueName : config.getQueueNames()) {
             if(actionList.getConfig().getExecuteMode() == ExecuteMode.IndependentStaggered)

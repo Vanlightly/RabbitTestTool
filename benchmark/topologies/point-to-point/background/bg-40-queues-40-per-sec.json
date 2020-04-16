@@ -1,34 +1,34 @@
 {
-  "topologyName": "PointToPoint",
+  "topologyName": "bg-40-queues-40-per-sec",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostCount", "default": "1" },
-    { "name": "queuePrefix", "default": "q1" },
-    { "name": "queueCount", "default": "1" },
-    { "name": "publisherCount", "default": "1" },
-    { "name": "consumerCount", "default": "1" },
+    { "name": "vhostCount", "default": "20" },
+    { "name": "queueCount", "default": "2" },
+    { "name": "publisherCount", "default": "2" },
+    { "name": "consumerCount", "default": "0" },
     { "name": "deliveryMode", "default": "persistent" },
     { "name": "messageSize", "default": "16" },
-    { "name": "publishRate", "default": "0"},
-    { "name": "useConfirms", "default": "false" },
-    { "name": "inflightLimit", "default": "0" },
-    { "name": "manualAcks", "default": "false" },
-    { "name": "consumerPrefetch", "default": "0" },
-    { "name": "ackInterval", "default": "0" },
+    { "name": "publishRate", "default": "40"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "100" },
     { "name": "processingMs", "default": "0" },
-    { "name": "queueMode", "default": "default" },
-    { "name": "durationSeconds", "default": "120" }
+    { "name": "queueMode", "default": "lazy" },
+    { "name": "durationSeconds", "default": "1800" },
+    { "name": "initialPublish", "default": "0" }
   ],
   "description": "Point to point",
   "vhosts": [
     {
-      "name": "benchmark",
+      "name": "background",
       "scale": "{{ var.vhostCount }}",
       "queueGroups": [ 
         { 
-          "group": "{{ var.queuePrefix }}", 
+          "group": "q1", 
           "scale": "{{ var.queueCount }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
@@ -49,7 +49,8 @@
           },
           "deliveryMode": "{{ var.deliveryMode }}",
           "messageSize": "{{ var.messageSize }}",
-          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
         }
       ],
       "consumerGroups": [ 

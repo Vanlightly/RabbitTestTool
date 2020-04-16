@@ -48,7 +48,8 @@ public class PublisherGroup {
         this.publishers = new ArrayList<>();
 
         this.publisherCounter = 0;
-        this.executorService = Executors.newFixedThreadPool(maxScale, new NamedThreadFactory(getExecutorId()));
+        //this.executorService = Executors.newFixedThreadPool(maxScale, new NamedThreadFactory(getExecutorId()));
+        this.executorService = Executors.newCachedThreadPool(new NamedThreadFactory(getExecutorId()));
         this.publishers = new ArrayList<>();
 
 
@@ -144,7 +145,8 @@ public class PublisherGroup {
                 connectionSettings,
                 queueHosts,
                 settings,
-                currentQueuesInGroup);
+                currentQueuesInGroup,
+                executorService);
 
         this.publishers.add(publisher);
 

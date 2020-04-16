@@ -16,6 +16,7 @@ import com.jackvanlightly.rabbittesttool.topology.model.*;
 import com.jackvanlightly.rabbittesttool.topology.TopologyGenerator;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.PublisherConfig;
+import io.micrometer.core.instrument.util.NamedThreadFactory;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,8 +80,8 @@ public class Orchestrator {
         complete = new AtomicBoolean();
         jumpToCleanup = new AtomicBoolean();
 
-        queueHostsExecutor = Executors.newFixedThreadPool(2);
-        actionSupervisorExecutor = Executors.newSingleThreadExecutor();
+        queueHostsExecutor = Executors.newFixedThreadPool(2, new NamedThreadFactory("QueueHosts"));
+        actionSupervisorExecutor = Executors.newSingleThreadExecutor(new NamedThreadFactory("ActionsSupervisor"));
     }
 
     public boolean runBenchmark(String runId,

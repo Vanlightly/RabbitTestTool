@@ -5,11 +5,16 @@ import java.util.List;
 public class QueueFillActionConfig extends ActionConfig {
     int messageSize;
     int messageCount;
+    int publishRate;
 
-    public QueueFillActionConfig(ActionDelay actionDelay, int messageSize, int messageCount) {
+    public QueueFillActionConfig(ActionDelay actionDelay,
+                                 int messageSize,
+                                 int messageCount,
+                                 int publishRate) {
         super(ActionType.QueueFill, actionDelay);
         this.messageSize = messageSize;
         this.messageCount = messageCount;
+        this.publishRate = publishRate;
     }
 
     public int getMessageSize() {
@@ -18,5 +23,9 @@ public class QueueFillActionConfig extends ActionConfig {
 
     public int getMessageCount() {
         return messageCount;
+    }
+
+    public int getPublishRate() {
+        return publishRate;
     }
 }

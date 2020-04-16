@@ -1,0 +1,139 @@
+{
+  "topologyName": "point-to-point-safe-two-vhosts",
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "vhostCount1", "default": "1" },
+    { "name": "queuePrefix1", "default": "q1" },
+    { "name": "queueCount1", "default": "1" },
+    { "name": "publisherCount1", "default": "1" },
+    { "name": "consumerCount1", "default": "1" },
+    { "name": "deliveryMode1", "default": "persistent" },
+    { "name": "messageSize1", "default": "16" },
+    { "name": "publishRate1", "default": "0"},
+    { "name": "useConfirms1", "default": "true" },
+    { "name": "inflightLimit1", "default": "1000" },
+    { "name": "manualAcks1", "default": "true" },
+    { "name": "consumerPrefetch1", "default": "1000" },
+    { "name": "ackInterval1", "default": "100" },
+    { "name": "processingMs1", "default": "0" },
+    { "name": "queueMode1", "default": "default" },
+    { "name": "initialPublish1", "default": "0" },
+    
+    { "name": "vhostCount2", "default": "1" },
+    { "name": "queuePrefix2", "default": "q2" },
+    { "name": "queueCount2", "default": "1" },
+    { "name": "publisherCount2", "default": "1" },
+    { "name": "consumerCount2", "default": "1" },
+    { "name": "deliveryMode2", "default": "persistent" },
+    { "name": "messageSize2", "default": "16" },
+    { "name": "publishRate2", "default": "0"},
+    { "name": "useConfirms2", "default": "true" },
+    { "name": "inflightLimit2", "default": "1000" },
+    { "name": "manualAcks2", "default": "true" },
+    { "name": "consumerPrefetch2", "default": "1000" },
+    { "name": "ackInterval2", "default": "100" },
+    { "name": "processingMs2", "default": "0" },
+    { "name": "queueMode2", "default": "default" },
+    { "name": "initialPublish2", "default": "0" },
+    { "name": "durationSeconds", "default": "120" }
+  ],
+  "description": "Point to point",
+  "vhosts": [
+    {
+      "name": "q1vhost",
+      "scale": "{{ var.vhostCount1 }}",
+      "queueGroups": [ 
+        { 
+          "group": "{{ var.queuePrefix1 }}", 
+          "scale": "{{ var.queueCount1 }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode1 }}", "type": "string" }
+          ]
+        } 
+      ],
+      "publisherGroups": [
+        {
+          "group": "p1",
+          "scale": "{{ var.publisherCount1 }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms1 }}",
+            "inFlightLimit": "{{ var.inflightLimit1 }}"
+          },
+          "sendToQueueGroup": {
+            "queueGroup": "{{ var.queuePrefix1 }}",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode1 }}",
+          "messageSize": "{{ var.messageSize1 }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate1 }}",
+          "initialPublish": "{{ var.initialPublish1 }}"
+        }
+      ],
+      "consumerGroups": [ 
+        { 
+          "group": "c1", 
+          "scale": "{{ var.consumerCount1 }}", 
+          "queueGroup": "{{ var.queuePrefix1 }}",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks1 }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch1 }}",
+            "ackInterval": "{{ var.ackInterval1 }}"
+          },
+          "processingMs": "{{ var.processingMs1 }}"
+        } 
+      ]
+    },
+    {
+      "name": "q2vhost",
+      "scale": "{{ var.vhostCount2 }}",
+      "queueGroups": [ 
+        { 
+          "group": "{{ var.queuePrefix2 }}", 
+          "scale": "{{ var.queueCount2 }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode2 }}", "type": "string" }
+          ]
+        } 
+      ],
+      "publisherGroups": [
+        {
+          "group": "p2",
+          "scale": "{{ var.publisherCount2 }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms2 }}",
+            "inFlightLimit": "{{ var.inflightLimit2 }}"
+          },
+          "sendToQueueGroup": {
+            "queueGroup": "{{ var.queuePrefix2 }}",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode2 }}",
+          "messageSize": "{{ var.messageSize2 }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate2 }}",
+          "initialPublish": "{{ var.initialPublish2 }}"
+        }
+      ],
+      "consumerGroups": [ 
+        { 
+          "group": "c2", 
+          "scale": "{{ var.consumerCount2 }}", 
+          "queueGroup": "{{ var.queuePrefix2 }}",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks2 }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch2 }}",
+            "ackInterval": "{{ var.ackInterval2 }}"
+          },
+          "processingMs": "{{ var.processingMs2 }}"
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

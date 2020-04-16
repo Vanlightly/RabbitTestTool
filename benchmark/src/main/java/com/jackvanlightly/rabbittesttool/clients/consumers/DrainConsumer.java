@@ -14,6 +14,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -138,11 +139,7 @@ public class DrainConsumer {
         factory.setAutomaticRecoveryEnabled(false);
         factory.setRequestedHeartbeat(10);
         //factory.setSharedExecutor(this.executorService);
-        factory.setThreadFactory(r -> {
-            Thread t = Executors.defaultThreadFactory().newThread(r);
-            t.setDaemon(true);
-            return t;
-        });
+        factory.setThreadFactory(new NamedThreadFactory("DrainConsumerConnection-" + consumerId));
 
         return factory.newConnection();
     }

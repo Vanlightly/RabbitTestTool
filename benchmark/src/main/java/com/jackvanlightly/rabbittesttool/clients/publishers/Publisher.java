@@ -29,7 +29,7 @@ public class Publisher implements Runnable {
     private ConnectionSettings connectionSettings;
     private ConnectionFactory factory;
     private QueueHosts queueHosts;
-    //private ExecutorService executorService;
+    private ExecutorService executorService;
     private PublisherSettings publisherSettings;
     private AtomicBoolean isCancelled;
     private int routingKeyIndex;
@@ -74,7 +74,8 @@ public class Publisher implements Runnable {
                      ConnectionSettings connectionSettings,
                      QueueHosts queueHosts,
                      PublisherSettings publisherSettings,
-                     List<String> queuesInGroup) {
+                     List<String> queuesInGroup,
+                     ExecutorService executorService) {
         this.logger = new BenchmarkLogger("PUBLISHER");
         this.isCancelled = new AtomicBoolean();
         this.publisherId = publisherId;
@@ -83,6 +84,7 @@ public class Publisher implements Runnable {
         this.publisherSettings = publisherSettings;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
+        this.executorService = executorService;
         this.useConfirms = publisherSettings.getPublisherMode().isUseConfirms();
         this.publisherStats = new PublisherStats();
 
@@ -448,12 +450,9 @@ public class Publisher implements Runnable {
             factory.setRequestedFrameMax(publisherSettings.getFrameMax());
 
         factory.setRequestedHeartbeat(10);
+        factory.setSharedExecutor(executorService);
         //factory.setSharedExecutor(this.executorService);
-        factory.setThreadFactory(r -> {
-            Thread t = Executors.defaultThreadFactory().newThread(r);
-            t.setDaemon(true);
-            return t;
-        });
+        factory.setThreadFactory(new NamedThreadFactory("PublisherConnection-" + publisherId));
 
         if(!connectionSettings.isNoTcpDelay())
             factory.setSocketConfigurator(new WithNagleSocketConfigurator());
