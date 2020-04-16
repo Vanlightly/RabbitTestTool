@@ -204,8 +204,12 @@ Arguments that can be applied to all or specific configurations. When running mu
 | --volume1-size | 50 | The size in MB of the volume 1 |
 | --volume2-size | 0 | The size in MB of the volume 2. Zero signifies no volume. |
 | --volume3-size | 0 | The size in MB of the volume 3. Zero signifies no volume. |
+| --volume1-mountpoint | /volume1 | The directory that this volume mounts onto |
+| --volume2-mountpoint | /volume2 | The directory that this volume mounts onto |
+| --volume3-mountpoint | /volume3 | The directory that this volume mounts onto |
 | --data-volume | volume1 | Which volume mnesia and message store data resides on |
 | --logs-volume | volume1 | Which volume logs resides on |
+| --quorum-volume | volume1 | Which volume the quorum queue segment files resides on |
 | --wal-volume | volume1 | Which volume the WAL files resides on |
 | --filesystem | None (mandatory) | xfs or ext4 |
 | --tenancy | None (mandatory) | Default or Dedicated |
@@ -247,7 +251,7 @@ python3.6 run-logged-aws-playlist.py \
 --generic-unix-url https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.0/rabbitmq-server-generic-unix-3.8.0.tar.xz
 ```
 
-Example with a single configuration with three volumes for data, logs and wal:
+Example with a single configuration with three volumes for data, quorum and wal:
 
 ```bash
 python3.6 run-logged-aws-playlist.py \
@@ -269,7 +273,8 @@ python3.6 run-logged-aws-playlist.py \
 --volume2-size 20 \
 --volume3-size 50 \
 --data-volume volume1 \
---logs-volume volume2 \
+--logs-volume volume1 \
+--quorum-volume volume2 \
 --wal-volume volume3 \
 --filesystem xfs \
 --tenancy default \
@@ -344,7 +349,57 @@ python3.6 run-logged-aws-playlist.py \
 --generic-unix-url https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.0/rabbitmq-server-generic-unix-3.8.0.tar.xz \
 ```
 
+Note that background load can now be added from playlist files.
+
 You can take any of the arguments that can be applied to a single configuration and have multiple configurations which share everything but that one argument.
+
+### Playlist Files
+
+A playlist file defines a set of benchmarks, with configuration unique to each benchmark, and configuration shared by all benchmarks in the playlist.
+
+Example of a quorum queue based playlist of 6 benchmarks.
+```json
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "publisherCount": "2", "queueCount": "2", "consumerCount": "2" } },
+        { "topologyVariables": { "publisherCount": "4", "queueCount": "4", "consumerCount": "4" } },
+        { "topologyVariables": { "publisherCount": "6", "queueCount": "6", "consumerCount": "6" } },
+        { "topologyVariables": { "publisherCount": "8", "queueCount": "8", "consumerCount": "8" } },
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "durationSeconds": "300",
+            "messageSize": "1024"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "100000" 
+        }
+    }
+}
+```
+
+Each field can be placed in either the `benchmark` or `commonAttributes` block. If placed in both, the value in `benchmark` block will take precedence.
+
+|Field|Required|Description|
+|---|---|---|
+|topology|Required|The topology file to be run|
+|topologyVariables|Optional|The topology variables to be overidden, with their new values|
+|policy|Optional|The policy file to be included|
+|policyVariables|Optional|The policy variables to be overidden, with their new values|
+|bgTopology|Optional|The background topology to be run|
+|bgPolicy|Optional|The background policy to be run|
+|bgStepSeconds|Optional|The background topology step seconds|
+|bgStepRepeat|Optional|The background topology step repeat, i.e each step in the benchmark will be repeated this number of times|
+|bgDelaySeconds|Optional|A delay is that occurs before running. A positive number causes the background load to start after the main topology load has started. A negative number causes the background load to be started that many seconds before the main topology load is started|
 
 ### Config Files
 
