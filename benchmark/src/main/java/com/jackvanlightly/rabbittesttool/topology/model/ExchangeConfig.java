@@ -15,6 +15,33 @@ public class ExchangeConfig {
         bindings = new ArrayList<>();
     }
 
+    public ExchangeConfig(String name, String vhostName, ExchangeType exchangeType, List<BindingConfig> bindings, boolean isDownstream, ShovelConfig shovelConfig) {
+        this.name = name;
+        this.vhostName = vhostName;
+        this.exchangeType = exchangeType;
+        this.bindings = bindings;
+        this.isDownstream = isDownstream;
+        this.shovelConfig = shovelConfig;
+    }
+
+    public ExchangeConfig clone(int scaleNumber) {
+        List<BindingConfig> newBindings = new ArrayList<>();
+        for(BindingConfig bc : bindings) {
+            newBindings.add(bc.clone(scaleNumber));
+        }
+
+        ShovelConfig sc = null;
+        if(this.shovelConfig != null)
+            sc = this.shovelConfig.clone(scaleNumber);
+
+        return new ExchangeConfig(this.name + VirtualHost.getScaleSuffix(scaleNumber),
+                this.vhostName,
+                this.exchangeType,
+                newBindings,
+                this.isDownstream,
+                sc);
+    }
+
     public String getName() {
         return name;
     }

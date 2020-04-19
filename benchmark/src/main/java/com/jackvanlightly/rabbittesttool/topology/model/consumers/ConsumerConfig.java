@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.topology.model.consumers;
 
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
+import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 
 import java.util.List;
 
@@ -13,6 +14,31 @@ public class ConsumerConfig {
     private int frameMax;
     private int processingMs;
     private boolean isDownstream;
+
+    public ConsumerConfig() {
+    }
+
+    public ConsumerConfig(String group, String vhostName, AckMode ackMode, int scale, String queueGroup, int frameMax, int processingMs, boolean isDownstream) {
+        this.group = group;
+        this.vhostName = vhostName;
+        this.ackMode = ackMode;
+        this.scale = scale;
+        this.queueGroup = queueGroup;
+        this.frameMax = frameMax;
+        this.processingMs = processingMs;
+        this.isDownstream = isDownstream;
+    }
+
+    public ConsumerConfig clone(int scaleNumber) {
+        return new ConsumerConfig(this.group + VirtualHost.getScaleSuffix(scaleNumber),
+            this.vhostName,
+            this.ackMode,
+            this.scale,
+            this.queueGroup + VirtualHost.getScaleSuffix(scaleNumber),
+            this.frameMax,
+            this.processingMs,
+            this.isDownstream);
+    }
 
     public String getVhostName() {
         return vhostName;

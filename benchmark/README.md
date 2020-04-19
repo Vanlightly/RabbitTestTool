@@ -341,7 +341,8 @@ We can specify variables with default values in our topology files. This allows 
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostCount", "default": "1" },
+    { "name": "vhostScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
     { "name": "queueCount", "default": "1" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
@@ -353,7 +354,8 @@ We can specify variables with default values in our topology files. This allows 
   "vhosts": [
     {
       "name": "benchmark",
-      "scale": "{{ var.vhostCount }}",
+      "scale": "{{ var.vhostScale }}",
+      "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
       "queueGroups": [ 
         { "group": "q1", 

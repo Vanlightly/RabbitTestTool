@@ -12,6 +12,18 @@ public class BindingConfig {
         properties = new ArrayList<>();
     }
 
+    public BindingConfig(String from, String bindingKey, List<Property> properties) {
+        this.from = from;
+        this.bindingKey = bindingKey;
+        this.properties = properties;
+    }
+
+    public BindingConfig clone(int scaleNumber) {
+        return new BindingConfig(this.from + VirtualHost.getScaleSuffix(scaleNumber),
+                this.bindingKey,
+                this.properties);
+    }
+
     public String getFrom() {
         return from;
     }

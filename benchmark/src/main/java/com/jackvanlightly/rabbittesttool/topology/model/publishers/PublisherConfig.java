@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.topology.model.publishers;
 
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
+import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,54 @@ public class PublisherConfig {
 
     public PublisherConfig() {
         availableHeaders = new ArrayList<>();
+    }
+
+    public PublisherConfig(String group, PublisherMode publisherMode, String vhostName, boolean isDownstream, int scale, SendToMode sendToMode, SendToExchange sendToExchange, SendToQueueGroup sendToQueueGroup, DeliveryMode deliveryMode, int messageSize, int headersPerMessage, int frameMax, List<MessageHeader> availableHeaders, int publishRatePerSecond, int streams, long messageLimit, long initialPublish) {
+        this.group = group;
+        this.publisherMode = publisherMode;
+        this.vhostName = vhostName;
+        this.isDownstream = isDownstream;
+        this.scale = scale;
+        this.sendToMode = sendToMode;
+        this.sendToExchange = sendToExchange;
+        this.sendToQueueGroup = sendToQueueGroup;
+        this.deliveryMode = deliveryMode;
+        this.messageSize = messageSize;
+        this.headersPerMessage = headersPerMessage;
+        this.frameMax = frameMax;
+        this.availableHeaders = availableHeaders;
+        this.publishRatePerSecond = publishRatePerSecond;
+        this.streams = streams;
+        this.messageLimit = messageLimit;
+        this.initialPublish = initialPublish;
+    }
+
+    public PublisherConfig clone(int scaleNumber) {
+        SendToExchange s2e = null;
+        if(this.sendToExchange != null)
+            s2e = this.sendToExchange.clone(scaleNumber);
+
+        SendToQueueGroup s2q = null;
+        if(this.sendToQueueGroup != null)
+            s2q = this.sendToQueueGroup.clone(scaleNumber);
+
+        return new PublisherConfig(this.group + VirtualHost.getScaleSuffix(scaleNumber),
+            this.publisherMode,
+            this.vhostName,
+            this.isDownstream,
+            this.scale,
+            this.sendToMode,
+            s2e,
+            s2q,
+            this.deliveryMode,
+            this.messageSize,
+            this.headersPerMessage,
+            this.frameMax,
+            this.availableHeaders,
+            this.publishRatePerSecond,
+            this.streams,
+            this.messageLimit,
+            this.initialPublish);
     }
 
     public String getGroup() {

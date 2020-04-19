@@ -1,7 +1,7 @@
 [agent]
   hostname = "{{ hostname }}"
   flush_interval = "15s"
-  interval = "15s"
+  interval = "5s"
 
 
 # Input Plugins
@@ -23,6 +23,7 @@
 [[inputs.rabbitmq]]
   username = "{{ rabbitmq_user.name }}"
   password = "{{ rabbitmq_user.password }}"
+  interval = "15s"
 
 [[inputs.prometheus]]
   ## An array of urls to scrape metrics from.

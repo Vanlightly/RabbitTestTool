@@ -65,7 +65,8 @@ The variables are defined in an array and placed in the topology using the "{{ v
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostCount", "default": "1" },
+    { "name": "vhostScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
     { "name": "queueCount", "default": "1" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
@@ -84,7 +85,8 @@ The variables are defined in an array and placed in the topology using the "{{ v
   "vhosts": [
     {
       "name": "benchmark",
-      "scale": "{{ var.vhostCount }}",
+      "scale": "{{ var.vhostScale }}",
+      "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
       "queueGroups": [ 
         { "group": "q1", 

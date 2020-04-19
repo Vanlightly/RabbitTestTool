@@ -21,6 +21,38 @@ public class QueueConfig {
         bindings = new ArrayList<>();
     }
 
+    public QueueConfig(String group, String vhostName, boolean isDownstream, int scale, List<Property> properties, List<BindingConfig> bindings, ShovelConfig shovelConfig, ActionListConfig actionList) {
+        this.group = group;
+        this.vhostName = vhostName;
+        this.isDownstream = isDownstream;
+        this.scale = scale;
+        this.properties = properties;
+        this.bindings = bindings;
+        this.shovelConfig = shovelConfig;
+        this.actionList = actionList;
+    }
+
+    public QueueConfig clone(int scaleNumber) {
+        List<BindingConfig> newBindings = new ArrayList<>();
+        for(BindingConfig bc : bindings) {
+            newBindings.add(bc.clone(scaleNumber));
+        }
+
+        ShovelConfig sc = null;
+        if(this.shovelConfig != null)
+            sc = this.shovelConfig.clone(scaleNumber);
+
+        return new QueueConfig(
+                this.group + VirtualHost.getScaleSuffix(scaleNumber),
+                this.vhostName,
+                this.isDownstream,
+                this.scale,
+                this.properties,
+                newBindings,
+                sc,
+                this.actionList);
+    }
+
     public String getGroup() {
         return group;
     }

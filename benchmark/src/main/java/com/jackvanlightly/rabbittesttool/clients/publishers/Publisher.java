@@ -570,9 +570,13 @@ public class Publisher implements Runnable {
 
     private String getQueueCounterpart() {
         int pubOrdinal = Integer.valueOf(publisherId.split("_")[2]);
+        int maxQueue = this.queuesInGroup.stream().map(x -> Integer.valueOf(x.split("_")[1])).max(Integer::compareTo).get();
+        int mod_result = pubOrdinal % maxQueue;
+        int queueOrdinal = mod_result == 0 ? maxQueue : mod_result;
+
         for(String queue : this.queuesInGroup) {
             int ordinal = Integer.valueOf(queue.split("_")[1]);
-            if(ordinal == pubOrdinal)
+            if(ordinal == queueOrdinal)
                 return queue;
         }
 

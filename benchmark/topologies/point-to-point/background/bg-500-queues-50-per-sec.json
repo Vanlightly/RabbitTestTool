@@ -4,7 +4,8 @@
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostCount", "default": "50" },
+    { "name": "vhostScale", "default": "50" },
+    { "name": "scaleType", "default": "single-vhost" },
     { "name": "queueCount", "default": "10" },
     { "name": "publisherCount", "default": "10" },
     { "name": "consumerCount", "default": "0" },
@@ -25,7 +26,8 @@
   "vhosts": [
     {
       "name": "background",
-      "scale": "{{ var.vhostCount }}",
+      "scale": "{{ var.vhostScale }}",
+      "scaleType": "{{ var.scaleType }}",
       "queueGroups": [ 
         { 
           "group": "q1", 

@@ -30,7 +30,6 @@ public class AMQPBenchmarker {
     private static final Logger LOGGER = LoggerFactory.getLogger("MAIN");
 
     public static void main(String[] args) {
-
         CmdArguments arguments = new CmdArguments(args);
         if(arguments.hasRequestedHelp()) {
             printHelp(arguments);

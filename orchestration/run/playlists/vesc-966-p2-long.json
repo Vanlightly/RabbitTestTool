@@ -1,0 +1,210 @@
+{
+    "benchmarks": [
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "5", "fanoutPublishRate": "5" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "10", "fanoutPublishRate": "10" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "15", "fanoutPublishRate": "15" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "20", "fanoutPublishRate": "20" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "25", "fanoutPublishRate": "25" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "30", "fanoutPublishRate": "30" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "5", "fanoutPublishRate": "5" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "10", "fanoutPublishRate": "10" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "15", "fanoutPublishRate": "15" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "20", "fanoutPublishRate": "20" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "25", "fanoutPublishRate": "25" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "p2pPublishRate": "30", "fanoutPublishRate": "30" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "5", "fanoutPublishRate": "5" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "10", "fanoutPublishRate": "10" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "15", "fanoutPublishRate": "15" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "20", "fanoutPublishRate": "20" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "25", "fanoutPublishRate": "25" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "30", "fanoutPublishRate": "30" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "5", "fanoutPublishRate": "5" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "10", "fanoutPublishRate": "10" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "15", "fanoutPublishRate": "15" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "20", "fanoutPublishRate": "20" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "25", "fanoutPublishRate": "25" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "false", "p2pPublishRate": "30", "fanoutPublishRate": "30" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "5", "fanoutPublishRate": "5" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "10", "fanoutPublishRate": "10" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "15", "fanoutPublishRate": "15" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "20", "fanoutPublishRate": "20" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "25", "fanoutPublishRate": "25" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "30", "fanoutPublishRate": "30" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "5", "fanoutPublishRate": "5" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "10", "fanoutPublishRate": "10" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "15", "fanoutPublishRate": "15" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "20", "fanoutPublishRate": "20" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "25", "fanoutPublishRate": "25" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "p2pPublishRate": "30", "fanoutPublishRate": "30" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "mixed-workload/point-to-point-fanout-topic-mix.json",
+        "topologyVariables": { 
+            "p2pScale": "1",
+            "p2pPublisherCount": "480", 
+            "p2pQueueCount": "140", 
+            "p2pConsumerCount": "1280",
+            "p2pMessageSize": "12000",
+            
+            "fanoutScale": "10",
+            "fanoutPublisherCount": "12",
+            "fanoutQueueCount": "4",
+            "fanoutConsumerCount": "32",
+            "fanoutMessageSize": "12000",
+
+            "topicScale": "0",
+
+            "inflightLimit": "100", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "100", 
+            "ackInterval": "1",
+            "durationSeconds": "300"
+        }
+    }
+}

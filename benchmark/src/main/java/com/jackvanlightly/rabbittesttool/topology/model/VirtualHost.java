@@ -68,4 +68,8 @@ public class VirtualHost {
     public void setDownstream(boolean downstream) {
         isDownstream = downstream;
     }
+
+    public static String getScaleSuffix(int scaleNumber) {
+        return "-s" + scaleNumber;
+    }
 }

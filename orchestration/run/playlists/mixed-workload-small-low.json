@@ -1,0 +1,44 @@
+{
+    "benchmarks": [
+        { 
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "10000" }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "mixed-workload/point-to-point-fanout-topic-mix.json",
+        "topologyVariables": { 
+            "p2pScale": "1", 
+            "p2pPublisherCount": "10", 
+            "p2pQueueCount": "10", 
+            "p2pConsumerCount": "10",
+            "p2pMessageSize": "1024",
+            "p2pPublishRate": "10",
+            
+            "fanoutScale": "1",
+            "fanoutPublisherCount": "5", 
+            "fanoutQueueCount": "5", 
+            "fanoutConsumerCount": "10",
+            "fanoutMessageSize": "8192",
+            "fanoutPublishRate": "10",
+
+            "topicScale": "1",
+            "topicPublisherCount": "5", 
+            "topicQueueCount": "2", 
+            "topicConsumerCount": "6",
+            "topicMessageSize": "100000",
+            "topicPublishRate": "1",
+
+            "useConfirms": "true",
+            "inflightLimit": "100", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "100", 
+            "ackInterval": "1",
+            "durationSeconds": "300"
+        }
+    }
+}

@@ -1,5 +1,7 @@
 package com.jackvanlightly.rabbittesttool.topology.model.publishers;
 
+import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
+
 public class SendToExchange {
     private String exchange;
     private RoutingKeyMode routingKeyMode;
@@ -9,6 +11,13 @@ public class SendToExchange {
     public SendToExchange(String exchange, RoutingKeyMode routingKeyMode) {
         this.exchange = exchange;
         this.routingKeyMode = routingKeyMode;
+    }
+
+    public SendToExchange clone(int scaleNumber) {
+        SendToExchange s2e = new SendToExchange(this.exchange + VirtualHost.getScaleSuffix(scaleNumber), this.routingKeyMode);
+        s2e.setRoutingKeys(routingKeys);
+        s2e.setRoutingKey(routingKey);
+        return s2e;
     }
 
     public static SendToExchange withNoRoutingKey(String exchange) {

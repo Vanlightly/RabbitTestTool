@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
+import com.jackvanlightly.rabbittesttool.clients.consumers.Consumer;
 import com.jackvanlightly.rabbittesttool.topology.model.actions.*;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.AckMode;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
@@ -14,6 +15,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
@@ -25,6 +28,11 @@ public class TopologyLoader {
             "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize",
             "messageCount", "thresholdSeconds"));
     private Set<String> boolFields = new HashSet<>(Arrays.asList("useConfirms", "manualAcks"));
+    private Pattern variablePattern;
+
+    public TopologyLoader() {
+        variablePattern = Pattern.compile("\\s*(\\{\\{\\s*var.(\\w+)\\s*\\}\\})\\w*");
+    }
 
     public Topology loadTopology(String topologyPath,
                                  String policyPath,
@@ -195,49 +203,122 @@ public class TopologyLoader {
                                                StepOverride stepOverride) {
         List<VirtualHost> virtualHosts = new ArrayList<>();
         int scale = getOptionalIntValue(vhostJson, "scale", 1);
+        ScaleType scaleType = getScaleType(vhostJson);
 
-        for(int i=1; i<=scale; i++) {
-            String vhostName = "";
-            if(scale > 1)
-                vhostName = getMandatoryStrValue(vhostJson, "name") + StringUtils.leftPad(String.valueOf(i), 5, "0");
-            else
-                vhostName = getMandatoryStrValue(vhostJson, "name");
+        if(scaleType == ScaleType.MultipleVhost) {
+            for (int i = 1; i <= scale; i++) {
+                String vhostName = "";
+                if (scale > 1)
+                    vhostName = getMandatoryStrValue(vhostJson, "name") + StringUtils.leftPad(String.valueOf(i), 5, "0");
+                else
+                    vhostName = getMandatoryStrValue(vhostJson, "name");
 
-            if(vhostName.contains("_"))
+                if (vhostName.contains("_"))
+                    throw new TopologyException("Virtual host names cannot contain an underscore");
+
+                boolean isDownstream = getOptionalStrValue(vhostJson, "federation", "upstream")
+                        .toLowerCase().equals("downstream");
+
+                VirtualHost vhost = new VirtualHost();
+                vhost.setName(vhostName);
+                vhost.setDownstream(isDownstream);
+
+                String info = isDownstream ? " on downstream" : "";
+
+                if (vhostJson.has("exchanges"))
+                    vhost.setExchanges(loadExchanges(vhostName, vhostJson.getJSONArray("exchanges"), isDownstream));
+                else
+                    logger.info("No exchanges defined for vhost " + vhostName + info);
+
+                if (vhostJson.has("queueGroups"))
+                    vhost.setQueues(loadQueueGroupConfigs(vhostName, vhostJson.getJSONArray("queueGroups"), isDownstream));
+                else
+                    logger.info("No queue groups defined for vhost " + vhostName + info);
+
+                if (vhostJson.has("publisherGroups"))
+                    vhost.setPublishers(loadPublisherGroupConfigs(vhostName, vhostJson.getJSONArray("publisherGroups"),
+                            vhost.getQueues(),
+                            benchmarkType,
+                            stepOverride,
+                            isDownstream));
+                else
+                    logger.info("No publisher groups defined  for vhost " + vhostName + info);
+
+                if (vhostJson.has("consumerGroups"))
+                    vhost.setConsumers(loadConsumerGroupConfigs(vhostName, vhostJson.getJSONArray("consumerGroups"), vhost.getQueues(), isDownstream));
+                else
+                    logger.info("No consumer groups defined vhost " + vhostName + info);
+
+                virtualHosts.add(vhost);
+            }
+        }
+        else {
+            String vhostName = getMandatoryStrValue(vhostJson, "name");
+            if (vhostName.contains("_"))
                 throw new TopologyException("Virtual host names cannot contain an underscore");
 
             boolean isDownstream = getOptionalStrValue(vhostJson, "federation", "upstream")
                     .toLowerCase().equals("downstream");
 
-            VirtualHost vhost = new VirtualHost();
-            vhost.setName(vhostName);
-            vhost.setDownstream(isDownstream);
-
             String info = isDownstream ? " on downstream" : "";
-
+            List<ExchangeConfig> exchangeConfigs = new ArrayList<>();
             if (vhostJson.has("exchanges"))
-                vhost.setExchanges(loadExchanges(vhostName, vhostJson.getJSONArray("exchanges"), isDownstream));
+                exchangeConfigs = loadExchanges(vhostName, vhostJson.getJSONArray("exchanges"), isDownstream);
             else
-                logger.info("No exchanges defined for vhost " + vhostName + info);
+                logger.info("No exchanges defined  for vhost " + vhostName + info);
 
-            if(vhostJson.has("queueGroups"))
-                vhost.setQueues(loadQueueGroupConfigs(vhostName, vhostJson.getJSONArray("queueGroups"), isDownstream));
+            List<QueueConfig> queueConfigs = new ArrayList<>();
+            if (vhostJson.has("queueGroups"))
+                queueConfigs = loadQueueGroupConfigs(vhostName, vhostJson.getJSONArray("queueGroups"), isDownstream);
             else
                 logger.info("No queue groups defined for vhost " + vhostName + info);
 
+            List<PublisherConfig> publisherConfigs = new ArrayList<>();
             if (vhostJson.has("publisherGroups"))
-                vhost.setPublishers(loadPublisherGroupConfigs(vhostName, vhostJson.getJSONArray("publisherGroups"),
-                        vhost.getQueues(),
+                publisherConfigs = loadPublisherGroupConfigs(vhostName, vhostJson.getJSONArray("publisherGroups"),
+                        queueConfigs,
                         benchmarkType,
                         stepOverride,
-                        isDownstream));
+                        isDownstream);
             else
                 logger.info("No publisher groups defined  for vhost " + vhostName + info);
 
+            List<ConsumerConfig> consumerConfigs = new ArrayList<>();
             if (vhostJson.has("consumerGroups"))
-                vhost.setConsumers(loadConsumerGroupConfigs(vhostName, vhostJson.getJSONArray("consumerGroups"), vhost.getQueues(), isDownstream));
+                consumerConfigs = loadConsumerGroupConfigs(vhostName, vhostJson.getJSONArray("consumerGroups"), queueConfigs, isDownstream);
             else
                 logger.info("No consumer groups defined vhost " + vhostName + info);
+
+            List<PublisherConfig> finalPublisherConfigs = new ArrayList<>();
+            List<ExchangeConfig> finalExchangeConfigs = new ArrayList<>();
+            List<QueueConfig> finalQueueConfigs = new ArrayList<>();
+            List<ConsumerConfig> finalConsumerConfigs = new ArrayList<>();
+
+            for (int scaleNumber = 1; scaleNumber <= scale; scaleNumber++) {
+                for(ExchangeConfig ec : exchangeConfigs) {
+                    finalExchangeConfigs.add(ec.clone(scaleNumber));
+                }
+
+                for(PublisherConfig pc : publisherConfigs) {
+                    finalPublisherConfigs.add(pc.clone(scaleNumber));
+                }
+
+                for(QueueConfig qc : queueConfigs) {
+                    finalQueueConfigs.add(qc.clone(scaleNumber));
+                }
+
+                for(ConsumerConfig cc : consumerConfigs) {
+                    finalConsumerConfigs.add(cc.clone(scaleNumber));
+                }
+            }
+
+            VirtualHost vhost = new VirtualHost();
+            vhost.setName(vhostName);
+            vhost.setDownstream(isDownstream);
+            vhost.setExchanges(finalExchangeConfigs);
+            vhost.setPublishers(finalPublisherConfigs);
+            vhost.setQueues(finalQueueConfigs);
+            vhost.setConsumers(finalConsumerConfigs);
 
             virtualHosts.add(vhost);
         }
@@ -499,6 +580,18 @@ public class TopologyLoader {
         }
 
         return actionDelay;
+    }
+
+    private ScaleType getScaleType(JSONObject configJson) {
+        if(!configJson.has("scaleType"))
+            return ScaleType.MultipleVhost;
+
+        String value = configJson.getString("scaleType").toLowerCase();
+        switch (value) {
+            case "single-vhost": return ScaleType.SingleVhost;
+            case "multiple-vhost": return ScaleType.MultipleVhost;
+            default: throw new TopologyException("Invalid value for 'scaleType' field. Allowed values: single-vhost, multiple-vhost");
+        }
     }
 
     private ActionListExecution getActionListExecuteCount(JSONObject configJson) {
@@ -998,18 +1091,38 @@ public class TopologyLoader {
     }
 
     private String getVariableValue(String value, Map<String, String> variables, Map<String,String> variableDefaults) {
-        if(value.trim().startsWith("{{ var.")) {
-            String name = value.trim().replace("{{ var.", "").replace(" }}", "");
-            if (variables.containsKey(name)) {
-                return variables.get(name);
-            } else if (variableDefaults.containsKey(name)) {
-                return variableDefaults.get(name);
+        Matcher m = variablePattern.matcher(value);
+        if(m.matches()) {
+            String variableText = m.group(1);
+            String variableName = m.group(2);
+            String variableValue = "";
+            if (variables.containsKey(variableName)) {
+                variableValue = variables.get(variableName);
+            } else if (variableDefaults.containsKey(variableName)) {
+                variableValue = variableDefaults.get(variableName);
             } else
-                throw new TopologyException("Variable " + name + " was not supplied and has no default value");
+                throw new TopologyException("Variable " + variableName + " was not supplied and has no default value");
+
+            return value.replace(variableText, variableValue);
         }
         else {
             return value;
         }
+
+//        if(value.trim().contains("{{ var.")) {
+//            //String name = value.trim().replace("{{ var.", "").replace(" }}", "");
+//
+//            String name = "";
+//            if (variables.containsKey(name)) {
+//                return variables.get(name);
+//            } else if (variableDefaults.containsKey(name)) {
+//                return variableDefaults.get(name);
+//            } else
+//                throw new TopologyException("Variable " + name + " was not supplied and has no default value");
+//        }
+//        else {
+//            return value;
+//        }
     }
 
     private int getIntValue(JSONObject json, String jsonPath, Map<String, String> variables, Map<String,String> variableDefaults) {

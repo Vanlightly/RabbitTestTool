@@ -4,7 +4,8 @@
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostCount1", "default": "1" },
+    { "name": "vhostScale1", "default": "1" },
+    { "name": "scaleType1", "default": "single-vhost" },
     { "name": "queuePrefix1", "default": "q1" },
     { "name": "queueCount1", "default": "1" },
     { "name": "publisherCount1", "default": "1" },
@@ -21,7 +22,8 @@
     { "name": "queueMode1", "default": "default" },
     { "name": "initialPublish1", "default": "0" },
     
-    { "name": "vhostCount2", "default": "1" },
+    { "name": "vhostScale2", "default": "1" },
+    { "name": "scaleType2", "default": "single-vhost" },
     { "name": "queuePrefix2", "default": "q2" },
     { "name": "queueCount2", "default": "1" },
     { "name": "publisherCount2", "default": "1" },
@@ -43,7 +45,8 @@
   "vhosts": [
     {
       "name": "q1vhost",
-      "scale": "{{ var.vhostCount1 }}",
+      "scale": "{{ var.vhostScale1 }}",
+      "scaleType": "{{ var.scaleType1 }}",
       "queueGroups": [ 
         { 
           "group": "{{ var.queuePrefix1 }}", 
@@ -87,7 +90,8 @@
     },
     {
       "name": "q2vhost",
-      "scale": "{{ var.vhostCount2 }}",
+      "scale": "{{ var.vhostScale2 }}",
+      "scaleType": "{{ var.scaleType2 }}",
       "queueGroups": [ 
         { 
           "group": "{{ var.queuePrefix2 }}", 

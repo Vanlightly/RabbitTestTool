@@ -9,10 +9,10 @@ import com.jackvanlightly.rabbittesttool.model.ReceivedMessage;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EventingConsumer extends DefaultConsumer {
@@ -26,6 +26,7 @@ public class EventingConsumer extends DefaultConsumer {
     private int ackInterval;
     private long delTagLastAcked;
     private long delTagLastReceived;
+    private Instant lastAckedTime;
     private int prefetch;
     private int processingMs;
     private ConsumerStats consumerStats;
@@ -55,6 +56,7 @@ public class EventingConsumer extends DefaultConsumer {
 
         consumerCancelled = new AtomicBoolean();
         delTagLastAcked = -1;
+        lastAckedTime = Instant.now();
     }
 
     public void setProcessingMs(int processingMs) {
@@ -111,6 +113,14 @@ public class EventingConsumer extends DefaultConsumer {
             if(deliveryTag - delTagLastAcked > ackInterval) {
                 getChannel().basicAck(deliveryTag, true);
                 delTagLastAcked = deliveryTag;
+            }
+            else {
+                Instant now = Instant.now();
+                if(Duration.between(lastAckedTime, now).toMillis() > 1000) {
+                    getChannel().basicAck(deliveryTag, true);
+                    delTagLastAcked = deliveryTag;
+                    lastAckedTime = now;
+                }
             }
         }
 
