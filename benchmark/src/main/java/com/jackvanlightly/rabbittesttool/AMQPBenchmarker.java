@@ -350,10 +350,8 @@ public class AMQPBenchmarker {
                 int sampleIntervalMs = 10000;
 
                 if (publishRealTimeMetrics) {
-                    String instanceTag = instanceConfig.getInstanceType() + "-" + instanceConfig.getVolume() + "-" + instanceConfig.getFileSystem() + "-" + instanceConfig.getTenancy();
                     stats = new Stats(sampleIntervalMs,
                             brokerConfig,
-                            instanceTag,
                             metrics.getRegistry(),
                             "amqp_");
                 } else {

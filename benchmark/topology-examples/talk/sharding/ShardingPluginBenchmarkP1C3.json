@@ -2,7 +2,7 @@
   "topologyName": "FastConsistentHash",
   "topologyType": "fixed",
   "benchmarkType": "throughput",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": 1,
@@ -12,9 +12,9 @@
           "type": "modulushash"
         }
       ],
-      "queueGroups": [
+      "queues": [
         {
-          "group": "sharded",
+          "prefix": "sharded",
           "scale": 1,
           "bindings": [
             {
@@ -23,9 +23,9 @@
           ]
         }
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": 1,
           "sendToExchange": {
             "exchange": "sharded",
@@ -34,11 +34,11 @@
           "deliveryMode": "Persistent"
         }
       ],
-      "consumerGroups": [
+      "consumers": [
         {
-          "group": "c1",
+          "prefix": "c1",
           "scale": 3,
-          "queueGroup": "sharded"
+          "queuePrefix": "sharded"
         }
       ]
     }

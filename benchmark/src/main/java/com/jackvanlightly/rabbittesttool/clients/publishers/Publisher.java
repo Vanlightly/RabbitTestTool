@@ -3,6 +3,7 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
+import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
@@ -10,8 +11,6 @@ import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.*;
 import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -25,7 +24,7 @@ public class Publisher implements Runnable {
 
     private String publisherId;
     private MessageModel messageModel;
-    private Stats stats;
+    private PublisherGroupStats publisherGroupStats;
     private ConnectionSettings connectionSettings;
     private ConnectionFactory factory;
     private QueueHosts queueHosts;
@@ -70,7 +69,7 @@ public class Publisher implements Runnable {
 
     public Publisher(String publisherId,
                      MessageModel messageModel,
-                     Stats stats,
+                     PublisherGroupStats publisherGroupStats,
                      ConnectionSettings connectionSettings,
                      QueueHosts queueHosts,
                      PublisherSettings publisherSettings,
@@ -80,7 +79,7 @@ public class Publisher implements Runnable {
         this.isCancelled = new AtomicBoolean();
         this.publisherId = publisherId;
         this.messageModel = messageModel;
-        this.stats = stats;
+        this.publisherGroupStats = publisherGroupStats;
         this.publisherSettings = publisherSettings;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
@@ -188,7 +187,7 @@ public class Publisher implements Runnable {
                 channel = connection.createChannel();
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
                 Semaphore inflightSemaphore = new Semaphore(1000);
-                PublisherListener listener = new PublisherListener(messageModel, stats, pendingConfirms, inflightSemaphore);
+                PublisherListener listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
 
                 logger.info("Publisher " + publisherId + " opened channel for initial publish");
 
@@ -242,7 +241,7 @@ public class Publisher implements Runnable {
             try {
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
                 Semaphore inflightSemaphore = new Semaphore(publisherSettings.getPublisherMode().getInFlightLimit());
-                PublisherListener listener = new PublisherListener(messageModel, stats, pendingConfirms, inflightSemaphore);
+                PublisherListener listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
 
                 connection = getConnection();
                 channel = connection.createChannel();
@@ -425,7 +424,8 @@ public class Publisher implements Runnable {
 
         int headerCount = messageProperties.getHeaders() != null ? messageProperties.getHeaders().size() : 0;
         int deliveryMode = publisherSettings.getDeliveryMode() == DeliveryMode.Persistent ? 2 : 1;
-        stats.handleSend(body.length,
+
+        publisherGroupStats.handleSend(body.length,
                 headerCount,
                 deliveryMode,
                 routingKey.length());

@@ -3,22 +3,22 @@
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
     "description": "Persistent, 1kb, 1 pub/queue, increasing consumers",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
-                    "sendToQueueGroup": {
-                        "queueGroup": "q1",
+                    "sendToQueuePrefix": {
+                        "queuePrefix": "q1",
                         "mode": "Counterpart"
                     },
                     "deliveryMode": "Persistent",
@@ -26,11 +26,11 @@
                     "msgsPerSecondPerPublisher": 10000
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 100,
-                    "queueGroup": "q1",
+                    "queuePrefix": "q1",
                     "processingMs": 5
                 }
             ]

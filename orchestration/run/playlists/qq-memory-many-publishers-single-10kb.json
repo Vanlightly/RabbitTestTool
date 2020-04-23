@@ -1,0 +1,20 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "1000", "publishRate": "40", "publisherCount": "600", "queueCount": "50", "consumerCount": "600" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "100", 
+            "ackInterval": "1" ,
+            "messageSize": "10000",
+            "durationSeconds": "1800"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

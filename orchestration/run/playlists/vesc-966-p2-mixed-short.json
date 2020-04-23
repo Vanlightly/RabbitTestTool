@@ -1,0 +1,123 @@
+{
+    "benchmarks": [
+        { 
+            "topologyVariables": { "p2pPublishRate": "5", "fanoutPublishRate": "5", "topicPublishRate": "5" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "0" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "10", "fanoutPublishRate": "10", "topicPublishRate": "10" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "0" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "15", "fanoutPublishRate": "15", "topicPublishRate": "15" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "0" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "20", "fanoutPublishRate": "20", "topicPublishRate": "20" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "0" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "25", "fanoutPublishRate": "25", "topicPublishRate": "25" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "0" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "30", "fanoutPublishRate": "30", "topicPublishRate": "30" },
+            "policy": "quorum-queue-mem-limit.json", 
+            "policyVariables": { "maxInMemoryLength": "0" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "5", "fanoutPublishRate": "5", "topicPublishRate": "5" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "10", "fanoutPublishRate": "10", "topicPublishRate": "10" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "15", "fanoutPublishRate": "15", "topicPublishRate": "15" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "20", "fanoutPublishRate": "20", "topicPublishRate": "20" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "25", "fanoutPublishRate": "25", "topicPublishRate": "25" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        },
+        { 
+            "topologyVariables": { "p2pPublishRate": "30", "fanoutPublishRate": "30", "topicPublishRate": "30" },
+            "policy": "mirrored-queue.json", 
+            "policyVariables": { "haMode": "exactly", "haParams": "2" }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "mixed-workload/point-to-point-fanout-topic-mix.json",
+        "topologyVariables": { 
+            "p2pScale": "1",
+            "p2pQueueCount": "150", 
+            "p2pConsumerCount": "1200",
+            "p2pInflightLimit": "100", 
+            "p2pManualAcks": "true", 
+            "p2pConsumerPrefetch": "10", 
+            "p2pAckInterval": "1",
+            "p2pProcessingMs": "10",
+            "p2pQueueMode": "default",
+            "p2pPublishRate": "5",
+            "p2pUseConfirms": "true", 
+                
+            "p2pGroup1PublisherCount": "60", 
+            "p2pGroup1MessageSize": "1000",
+                        
+            "p2pGroup2PublisherCount": "372", 
+            "p2pGroup2MessageSize": "10000",
+            
+            "p2pGroup3PublisherCount": "30", 
+            "p2pGroup3MessageSize": "35000",
+            
+            "p2pGroup4PublisherCount": "6", 
+            "p2pGroup4MessageSize": "200000",
+            
+            
+            "fanoutScale": "4",
+            "fanoutPublisherCount": "18",
+            "fanoutQueueCount": "6",
+            "fanoutConsumerCount": "48",
+            "fanoutMessageSize": "12000",
+            "fanoutInflightLimit": "100", 
+            "fanoutManualAcks": "true", 
+            "fanoutConsumerPrefetch": "10", 
+            "fanoutAckInterval": "1",
+            "fanoutProcessingMs": "10",
+            "fanoutQueueMode": "default",
+            "fanoutUseConfirms": "true", 
+
+            "topicScale": "4",
+            "topicPublisherCount": "15",
+            "topicQueueCount": "5",
+            "topicConsumerCount": "40",
+            "topicFanout": "2",
+            "topicMessageSize": "12000",
+            "topicPublishRate": "5",
+            "topicInflightLimit": "10", 
+            "topicManualAcks": "true", 
+            "topicConsumerPrefetch": "10", 
+            "topicAckInterval": "1",
+            "topicProcessingMs": "10",
+            "topicQueueMode": "default",
+            "topicUseConfirms": "true", 
+            
+            "durationSeconds": "300"
+        }
+    }
+}

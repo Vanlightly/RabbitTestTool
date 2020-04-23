@@ -3,7 +3,7 @@
     "topologyType": "Fixed",
     "benchmarkType": "throughput",
     "description": "One publisher only, 16 byte messages",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
@@ -13,18 +13,18 @@
                     "type": "fanout"
                 }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1,
                     "bindings": [
                         { "from": "ex1" }
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",

@@ -3,33 +3,33 @@
   "topologyType": "fixed",
   "benchmarkType": "throughput",
   "description": "64 Kb persistent messages over 1 hour, 30 pub/queue/con",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": 1,
-      "queueGroups": [
+      "queues": [
         {
-            "group": "q1",
+            "prefix": "q1",
             "scale": 30
         }
       ],
-      "publisherGroups": [
+      "publishers": [
           {
-              "group": "p1",
+              "prefix": "p1",
               "scale": 30,
-              "sendToQueueGroup": {
-                  "queueGroup": "q1",
+              "sendToQueuePrefix": {
+                  "queuePrefix": "q1",
                   "mode": "random"
               },
               "deliveryMode": "Persistent",
               "messageSize": 65536
           }
       ],
-      "consumerGroups": [
+      "consumers": [
           {
-              "group": "c1",
+              "prefix": "c1",
               "scale": 30,
-              "queueGroup": "q1"
+              "queuePrefix": "q1"
           }
       ]
     }

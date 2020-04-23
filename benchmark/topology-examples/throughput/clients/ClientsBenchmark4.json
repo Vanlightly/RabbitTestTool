@@ -3,7 +3,7 @@
     "topologyType": "MultipleDimensions",
     "benchmarkType": "throughput",
     "description": "Increasing publishers and consumers across 10 queues",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
@@ -13,18 +13,18 @@
                     "type": "direct"
                 }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 10,
                     "bindings": [
-                        { "from": "ex1", "bindingKey": "self" }
+                        { "from": "ex1", "bindingKeys": ["self"] }
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -34,11 +34,11 @@
                     "deliveryMode": "Persistent"
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 10,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }

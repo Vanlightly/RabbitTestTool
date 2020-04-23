@@ -2,7 +2,7 @@
     "topologyName": "OverloadBenchmark3",
     "topologyType": "SingleDimension",
     "benchmarkType": "stress",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
@@ -12,18 +12,18 @@
                     "type": "fanout"
                 }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1,
                     "bindings": [
                         { "from": "ex1" }
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 10,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -34,11 +34,11 @@
                     "messageSize": 10240
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }

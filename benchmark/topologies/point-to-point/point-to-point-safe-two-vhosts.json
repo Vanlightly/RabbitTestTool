@@ -42,30 +42,30 @@
     { "name": "durationSeconds", "default": "120" }
   ],
   "description": "Point to point",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "q1vhost",
       "scale": "{{ var.vhostScale1 }}",
       "scaleType": "{{ var.scaleType1 }}",
-      "queueGroups": [ 
+      "queues": [ 
         { 
-          "group": "{{ var.queuePrefix1 }}", 
+          "prefix": "{{ var.queuePrefix1 }}", 
           "scale": "{{ var.queueCount1 }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode1 }}", "type": "string" }
           ]
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount1 }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms1 }}",
             "inFlightLimit": "{{ var.inflightLimit1 }}"
           },
-          "sendToQueueGroup": {
-            "queueGroup": "{{ var.queuePrefix1 }}",
+          "sendToQueuePrefix": {
+            "queuePrefix": "{{ var.queuePrefix1 }}",
             "mode": "Counterpart"
           },
           "deliveryMode": "{{ var.deliveryMode1 }}",
@@ -74,11 +74,11 @@
           "initialPublish": "{{ var.initialPublish1 }}"
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c1", 
+          "prefix": "c1", 
           "scale": "{{ var.consumerCount1 }}", 
-          "queueGroup": "{{ var.queuePrefix1 }}",
+          "queuePrefix": "{{ var.queuePrefix1 }}",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks1 }}",
             "consumerPrefetch": "{{ var.consumerPrefetch1 }}",
@@ -92,25 +92,25 @@
       "name": "q2vhost",
       "scale": "{{ var.vhostScale2 }}",
       "scaleType": "{{ var.scaleType2 }}",
-      "queueGroups": [ 
+      "queues": [ 
         { 
-          "group": "{{ var.queuePrefix2 }}", 
+          "prefix": "{{ var.queuePrefix2 }}", 
           "scale": "{{ var.queueCount2 }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode2 }}", "type": "string" }
           ]
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p2",
+          "prefix": "p2",
           "scale": "{{ var.publisherCount2 }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms2 }}",
             "inFlightLimit": "{{ var.inflightLimit2 }}"
           },
-          "sendToQueueGroup": {
-            "queueGroup": "{{ var.queuePrefix2 }}",
+          "sendToQueuePrefix": {
+            "queuePrefix": "{{ var.queuePrefix2 }}",
             "mode": "Counterpart"
           },
           "deliveryMode": "{{ var.deliveryMode2 }}",
@@ -119,11 +119,11 @@
           "initialPublish": "{{ var.initialPublish2 }}"
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c2", 
+          "prefix": "c2", 
           "scale": "{{ var.consumerCount2 }}", 
-          "queueGroup": "{{ var.queuePrefix2 }}",
+          "queuePrefix": "{{ var.queuePrefix2 }}",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks2 }}",
             "consumerPrefetch": "{{ var.consumerPrefetch2 }}",

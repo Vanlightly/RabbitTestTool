@@ -3,7 +3,7 @@
   "topologyType": "fixed",
   "benchmarkType": "throughput",
   "description": "5 routing keys, five queues",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": 1,
@@ -13,9 +13,9 @@
           "type": "direct"
         }
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": 1,
           "sendToExchange": {
             "exchange": "ex1",

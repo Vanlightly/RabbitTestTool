@@ -3,6 +3,7 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
+import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.PublisherConfig;
@@ -10,8 +11,6 @@ import com.jackvanlightly.rabbittesttool.topology.model.publishers.SendToMode;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class PublisherGroup {
     private BenchmarkLogger logger;
     private List<Publisher> publishers;
+    private PublisherGroupStats publisherGroupStats;
     private List<String> currentQueuesInGroup;
     private ConnectionSettings connectionSettings;
     private PublisherConfig publisherConfig;
@@ -30,19 +30,18 @@ public class PublisherGroup {
     private QueueHosts queueHosts;
     private ExecutorService executorService;
     private int publisherCounter;
-    private Stats stats;
 
     public PublisherGroup(ConnectionSettings connectionSettings,
                           PublisherConfig publisherConfig,
                           VirtualHost vhost,
-                          Stats stats,
+                          Stats globalStats,
                           MessageModel messageModel,
-                          QueueHosts queueHosts,
-                          int maxScale) {
+                          QueueHosts queueHosts) {
         this.logger = new BenchmarkLogger("PUBLISHER_GROUP");
         this.connectionSettings = connectionSettings;
         this.publisherConfig = publisherConfig;
-        this.stats = stats;
+        this.publisherGroupStats = new PublisherGroupStats(globalStats, publisherConfig.getGroupPrefix());
+        globalStats.addGroup(this.publisherGroupStats);
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
         this.publishers = new ArrayList<>();
@@ -141,7 +140,7 @@ public class PublisherGroup {
         Publisher publisher = new Publisher(
                 getPublisherId(publisherCounter),
                 messageModel,
-                stats,
+                publisherGroupStats,
                 connectionSettings,
                 queueHosts,
                 settings,

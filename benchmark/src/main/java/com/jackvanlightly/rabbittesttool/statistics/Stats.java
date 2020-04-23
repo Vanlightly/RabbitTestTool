@@ -26,12 +26,17 @@ import java.util.function.DoubleBinaryOperator;
 public class Stats {
 
     ScheduledExecutorService reportExecutor;
+    BrokerConfiguration brokerConfig;
+    MeterRegistry registry;
+    String metricsPrefix;
+
+    List<GroupsStats> groupStatsList;
 
     public static boolean RecordingActive;
-    protected final long samplingIntervalMs;
-    protected final long startTime;
-    protected Instant recordStart;
-    protected Instant recordStop;
+    public final long samplingIntervalMs;
+    public final long startTime;
+    public Instant recordStart;
+    public Instant recordStop;
 
     private final Consumer<Long> updateLatency;
     private final Consumer<Long> updateConfirmLatency;
@@ -84,19 +89,23 @@ public class Stats {
 
     public Stats(long samplingIntervalMs,
                  BrokerConfiguration brokerConfig) {
-        this(samplingIntervalMs, brokerConfig, "?", new SimpleMeterRegistry(), "_amqp");
+        this(samplingIntervalMs, brokerConfig, new SimpleMeterRegistry(), "_amqp");
     }
 
     public Stats(long samplingIntervalMs,
                  BrokerConfiguration brokerConfig,
-                 String instance,
                  MeterRegistry registry,
                  String metricsPrefix) {
         this.samplingIntervalMs = samplingIntervalMs;
+        this.brokerConfig = brokerConfig;
+        this.registry = registry;
+        this.metricsPrefix = metricsPrefix;
         startTime = System.currentTimeMillis();
 
         metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
-        List<Tag> tags = getTags(brokerConfig, instance);
+        List<Tag> tags = getTags(brokerConfig);
+
+        groupStatsList = new ArrayList<>();
 
         Timer latencyTimer = Timer
                 .builder(metricsPrefix + "latency")
@@ -123,6 +132,7 @@ public class Stats {
                 .register(registry);
 
         DoubleBinaryOperator accumulatorFunction = (x, y) -> y;
+
 
         published = registry.gauge(metricsPrefix + "published", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         returned = registry.gauge(metricsPrefix + "returned", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
@@ -172,6 +182,34 @@ public class Stats {
         startReportTimer();
     }
 
+    public long getSamplingIntervalMs() {
+        return samplingIntervalMs;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public Instant getRecordStart() {
+        return recordStart;
+    }
+
+    public Instant getRecordStop() {
+        return recordStop;
+    }
+
+    public BrokerConfiguration getBrokerConfig() {
+        return brokerConfig;
+    }
+
+    public MeterRegistry getRegistry() {
+        return registry;
+    }
+
+    public String getMetricsPrefix() {
+        return metricsPrefix;
+    }
+
     private void startReportTimer(){
         TimerTask repeatedTask = new TimerTask() {
             public void run() {
@@ -188,11 +226,15 @@ public class Stats {
         reportExecutor.shutdown();
     }
 
+    public synchronized void addGroup(GroupsStats groupsStats) {
+        groupStatsList.add(groupsStats);
+    }
+
     private double rate(long count, long elapsed) {
         return 1000.0 * count / elapsed;
     }
 
-    private void recordStats(long now) {
+    private void recordStats() {
         recordPublisherCount(currentPublisherCount);
         recordConsumerCount(currentConsumerCount);
         recordQueueCount(currentQueueCount);
@@ -292,13 +334,12 @@ public class Stats {
         RecordingActive = false;
     }
 
-    private List<Tag> getTags(BrokerConfiguration brokerConfig, String instance) {
+    private List<Tag> getTags(BrokerConfiguration brokerConfig) {
         String node = brokerConfig.getNodeNames().stream().min(Comparator.comparing(String::valueOf)).get();
         return new ArrayList<>(Arrays.asList(
                 Tag.of("technology", brokerConfig.getTechnology()),
-                Tag.of("version", brokerConfig.getVersion()),
-                Tag.of("instance", instance),
-                Tag.of("node", node)
+                Tag.of("node", node),
+                Tag.of("group", "all")
         ));
     }
 
@@ -335,7 +376,9 @@ public class Stats {
 
         if (elapsedInterval >= samplingIntervalMs) {
             elapsedTotal += elapsedInterval;
-            recordStats(now);
+            recordStats();
+            for(GroupsStats gs : groupStatsList)
+                gs.recordStats();
             reset(now);
         }
     }

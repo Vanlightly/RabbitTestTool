@@ -3,7 +3,7 @@
   "topologyType": "Fixed",
   "benchmarkType": "throughput",
   "description": "5 routing keys, five queues",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": 1,
@@ -13,12 +13,12 @@
           "type": "fanout"
         }
       ],
-      "queueGroups": [
-        { "group": "q1", "scale": 6, "bindings": [ { "from": "ex1" } ]}
+      "queues": [
+        { "prefix": "q1", "scale": 6, "bindings": [ { "from": "ex1" } ]}
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": 1,
           "sendToExchange": {
             "exchange": "ex1",
@@ -28,8 +28,8 @@
           "msgsPerSecondPerPublisher": 1000
         }
       ],
-      "consumerGroups": [
-        { "group": "c1", "scale": 6, "queueGroup": "q1" }
+      "consumers": [
+        { "prefix": "c1", "scale": 6, "queuePrefix": "q1" }
       ]
     }
   ],

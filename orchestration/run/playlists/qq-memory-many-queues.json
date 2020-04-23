@@ -1,0 +1,27 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "inflightLimit": "1000", "publishRate": "600", "publisherCount": "30", "queueCount": "10", "consumerCount": "80" } },
+        { "topologyVariables": { "inflightLimit": "800", "publishRate": "160", "publisherCount": "150", "queueCount": "50", "consumerCount": "400" } },
+        { "topologyVariables": { "inflightLimit": "400", "publishRate": "80", "publisherCount": "300", "queueCount": "100", "consumerCount": "800" } },
+        { "topologyVariables": { "inflightLimit": "200", "publishRate": "40", "publisherCount": "600", "queueCount": "200", "consumerCount": "1600" } },
+        { "topologyVariables": { "inflightLimit": "200", "publishRate": "40", "publisherCount": "600", "queueCount": "10", "consumerCount": "1600" } },
+        { "topologyVariables": { "inflightLimit": "200", "publishRate": "40", "publisherCount": "600", "queueCount": "50", "consumerCount": "1600" } },
+        { "topologyVariables": { "inflightLimit": "200", "publishRate": "40", "publisherCount": "600", "queueCount": "100", "consumerCount": "1600" } },
+        { "topologyVariables": { "inflightLimit": "200", "publishRate": "40", "publisherCount": "600", "queueCount": "200", "consumerCount": "1600" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "messageSize": "10000",
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

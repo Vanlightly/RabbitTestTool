@@ -1,26 +1,32 @@
 package com.jackvanlightly.rabbittesttool.topology.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class BindingConfig {
     private String from;
-    private String bindingKey;
+    private List<String> bindingKeys;
+    private int bindingKeysPerQueue;
     private List<Property> properties;
 
     public BindingConfig() {
         properties = new ArrayList<>();
     }
 
-    public BindingConfig(String from, String bindingKey, List<Property> properties) {
+    public BindingConfig(String from,
+                         List<String> bindingKeys,
+                         int bindingKeysPerQueue,
+                         List<Property> properties) {
         this.from = from;
-        this.bindingKey = bindingKey;
+        this.bindingKeys = bindingKeys;
+        this.bindingKeysPerQueue = bindingKeysPerQueue;
         this.properties = properties;
     }
 
     public BindingConfig clone(int scaleNumber) {
         return new BindingConfig(this.from + VirtualHost.getScaleSuffix(scaleNumber),
-                this.bindingKey,
+                this.bindingKeys,
+                this.bindingKeysPerQueue,
                 this.properties);
     }
 
@@ -40,11 +46,31 @@ public class BindingConfig {
         this.properties = properties;
     }
 
-    public String getBindingKey() {
-        return bindingKey;
+    public List<String> getBindingKeys(int ordinal, int prefixSize, int fanoutDegree) {
+        Set<String> bkList = new HashSet<>();
+        int counter = ordinal-1;
+        while(counter < bindingKeys.size()) {
+            for(int degree=0; degree<fanoutDegree; degree++) {
+                int logicalIndex =  counter+degree;
+                int physicalIndex =  logicalIndex < prefixSize ? logicalIndex : logicalIndex % prefixSize;
+
+                bkList.add(bindingKeys.get(physicalIndex));
+            }
+            counter += prefixSize;
+        }
+
+        return bkList.stream().sorted(String::compareTo).collect(Collectors.toList());
     }
 
-    public void setBindingKey(String bindingKey) {
-        this.bindingKey = bindingKey;
+    public void setBindingKeys(List<String> bindingKeys) {
+        this.bindingKeys = bindingKeys;
+    }
+
+    public int getBindingKeysPerQueue() {
+        return bindingKeysPerQueue;
+    }
+
+    public void setBindingKeysPerQueue(int bindingKeysPerQueue) {
+        this.bindingKeysPerQueue = bindingKeysPerQueue;
     }
 }

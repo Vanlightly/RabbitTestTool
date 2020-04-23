@@ -3,7 +3,7 @@
     "topologyType": "Fixed",
     "benchmarkType": "throughput",
     "description": "1 header in binding, increasing header count",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
@@ -13,9 +13,9 @@
                     "type": "headers"
                 }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1", "scale": 1,
+                    "prefix": "q1", "scale": 1,
                     "bindings": [
                         {
                             "from": "ex1",
@@ -27,7 +27,7 @@
                     ]
                 },
                 {
-                    "group": "q2", "scale": 1,
+                    "prefix": "q2", "scale": 1,
                     "bindings": [
                         {
                             "from": "ex1",
@@ -39,7 +39,7 @@
                     ]
                 },
                 {
-                    "group": "q3", "scale": 1,
+                    "prefix": "q3", "scale": 1,
                     "bindings": [
                         {
                             "from": "ex1",
@@ -51,7 +51,7 @@
                     ]
                 },
                 {
-                    "group": "q4", "scale": 1,
+                    "prefix": "q4", "scale": 1,
                     "bindings": [
                         {
                             "from": "ex1",
@@ -64,7 +64,7 @@
                 }
                 ,
                 {
-                    "group": "q5", "scale": 1,
+                    "prefix": "q5", "scale": 1,
                     "bindings": [
                         {
                             "from": "ex1",
@@ -76,9 +76,9 @@
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -96,12 +96,12 @@
                     "headersPerMessage": 1
                 }
             ],
-            "consumerGroups": [
-                { "group": "c1", "scale": 1, "queueGroup": "q1" },
-                { "group": "c2", "scale": 1, "queueGroup": "q2" },
-                { "group": "c3", "scale": 1, "queueGroup": "q3" },
-                { "group": "c4", "scale": 1, "queueGroup": "q4" },
-                { "group": "c5", "scale": 1, "queueGroup": "q5" }
+            "consumers": [
+                { "prefix": "c1", "scale": 1, "queuePrefix": "q1" },
+                { "prefix": "c2", "scale": 1, "queuePrefix": "q2" },
+                { "prefix": "c3", "scale": 1, "queuePrefix": "q3" },
+                { "prefix": "c4", "scale": 1, "queuePrefix": "q4" },
+                { "prefix": "c5", "scale": 1, "queuePrefix": "q5" }
             ]
         }
     ],

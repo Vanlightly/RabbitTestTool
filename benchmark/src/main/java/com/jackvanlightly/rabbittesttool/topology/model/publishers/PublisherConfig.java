@@ -8,6 +8,7 @@ import java.util.List;
 
 public class PublisherConfig {
 
+    private String groupPrefix;
     private String group;
     private PublisherMode publisherMode;
     private String vhostName;
@@ -33,7 +34,8 @@ public class PublisherConfig {
         availableHeaders = new ArrayList<>();
     }
 
-    public PublisherConfig(String group, PublisherMode publisherMode, String vhostName, boolean isDownstream, int scale, SendToMode sendToMode, SendToExchange sendToExchange, SendToQueueGroup sendToQueueGroup, DeliveryMode deliveryMode, int messageSize, int headersPerMessage, int frameMax, List<MessageHeader> availableHeaders, int publishRatePerSecond, int streams, long messageLimit, long initialPublish) {
+    public PublisherConfig(String groupPrefix, String group, PublisherMode publisherMode, String vhostName, boolean isDownstream, int scale, SendToMode sendToMode, SendToExchange sendToExchange, SendToQueueGroup sendToQueueGroup, DeliveryMode deliveryMode, int messageSize, int headersPerMessage, int frameMax, List<MessageHeader> availableHeaders, int publishRatePerSecond, int streams, long messageLimit, long initialPublish) {
+        this.groupPrefix = groupPrefix;
         this.group = group;
         this.publisherMode = publisherMode;
         this.vhostName = vhostName;
@@ -62,23 +64,32 @@ public class PublisherConfig {
         if(this.sendToQueueGroup != null)
             s2q = this.sendToQueueGroup.clone(scaleNumber);
 
-        return new PublisherConfig(this.group + VirtualHost.getScaleSuffix(scaleNumber),
-            this.publisherMode,
-            this.vhostName,
-            this.isDownstream,
-            this.scale,
-            this.sendToMode,
-            s2e,
-            s2q,
-            this.deliveryMode,
-            this.messageSize,
-            this.headersPerMessage,
-            this.frameMax,
-            this.availableHeaders,
-            this.publishRatePerSecond,
-            this.streams,
-            this.messageLimit,
-            this.initialPublish);
+        return new PublisherConfig(this.groupPrefix,
+                this.group + VirtualHost.getScaleSuffix(scaleNumber),
+                this.publisherMode,
+                this.vhostName,
+                this.isDownstream,
+                this.scale,
+                this.sendToMode,
+                s2e,
+                s2q,
+                this.deliveryMode,
+                this.messageSize,
+                this.headersPerMessage,
+                this.frameMax,
+                this.availableHeaders,
+                this.publishRatePerSecond,
+                this.streams,
+                this.messageLimit,
+                this.initialPublish);
+    }
+
+    public String getGroupPrefix() {
+        return groupPrefix;
+    }
+
+    public void setGroupPrefix(String groupPrefix) {
+        this.groupPrefix = groupPrefix;
     }
 
     public String getGroup() {

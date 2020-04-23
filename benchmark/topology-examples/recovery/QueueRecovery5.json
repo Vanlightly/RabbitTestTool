@@ -3,21 +3,21 @@
     "topologyType": "MultipleDimensions",
     "benchmarkType": "throughput",
     "description": "Prepublish 500000, consume with slow start",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
-            "queueGroups": [{ "group": "q1", "scale": 1 }],
-            "publisherGroups": [
+            "queues": [{ "prefix": "q1", "scale": 1 }],
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "publishMode": {
                         "useConfirms": true,
                         "inFlightLimit": 1000
                     },
-                    "sendToQueueGroup": {
-                        "queueGroup": "q1",
+                    "sendToQueuePrefix": {
+                        "queuePrefix": "q1",
                         "mode": "Counterpart"
                     },
                     "deliveryMode": "Persistent",
@@ -26,11 +26,11 @@
                     "msgsPerSecondPerPublisher": 2
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1",
+                    "queuePrefix": "q1",
                     "ProcessingMs": 1000,
                     "ackMode": {
                         "manualAcks": true,

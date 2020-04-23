@@ -3,7 +3,7 @@
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
     "description": "1MB Frame size, large messages",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
@@ -13,18 +13,18 @@
                     "type": "fanout"
                 }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1,
                     "bindings": [
                         { "from": "ex1" }
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -35,11 +35,11 @@
                     "frameMax": 1048576
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }

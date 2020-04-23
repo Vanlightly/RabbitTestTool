@@ -3,13 +3,13 @@
     "topologyType": "MultipleDimensions",
     "benchmarkType": "throughput",
     "description": "1kb msgs. Confirms (1000) and manual acks (500/1).",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "background",
             "scale": 1,
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 10,
                     "properties": [
                         { "key": "x-queue-type", "value": "quorum", "type": "string" },
@@ -17,16 +17,16 @@
                       ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 10,
                     "publishMode": {
                         "useConfirms": true,
                         "inFlightLimit": 1000
                     },
-                    "sendToQueueGroup": {
-                        "queueGroup": "q1",
+                    "sendToQueuePrefix": {
+                        "queuePrefix": "q1",
                         "mode": "random"
                     },
                     "deliveryMode": "Persistent",
@@ -34,11 +34,11 @@
                     "msgsPerSecondPerPublisher": 1
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 10,
-                    "queueGroup": "q1",
+                    "queuePrefix": "q1",
                     "ackMode": {
                         "manualAcks": true,
                         "consumerPrefetch": 500,

@@ -10,9 +10,24 @@
       { "name": "p2pQueuePrefix", "default": "p2p" },
       { "name": "p2pQueueCount", "default": "1" },
       { "name": "p2pConsumerCount", "default": "1" },
-      { "name": "p2pMessageSize", "default": "16" },
       { "name": "p2pPublishRate", "default": "0"},
-      { "name": "p2ppublisherCount", "default": "1" },
+      { "name": "p2pDeliveryMode", "default": "persistent" },
+      { "name": "p2pUseConfirms", "default": "true" },
+      { "name": "p2pInflightLimit", "default": "1000" },
+      { "name": "p2pManualAcks", "default": "true" },
+      { "name": "p2pConsumerPrefetch", "default": "1000" },
+      { "name": "p2pAckInterval", "default": "1" },
+      { "name": "p2pProcessingMs", "default": "0" },
+      { "name": "p2pQueueMode", "default": "default" },
+
+      { "name": "p2pGroup1PublisherCount", "default": "1" },
+      { "name": "p2pGroup1MessageSize", "default": "16" },
+      { "name": "p2pGroup2PublisherCount", "default": "1" },
+      { "name": "p2pGroup2MessageSize", "default": "16" },
+      { "name": "p2pGroup3PublisherCount", "default": "1" },
+      { "name": "p2pGroup3MessageSize", "default": "16" },
+      { "name": "p2pGroup4PublisherCount", "default": "1" },
+      { "name": "p2pGroup4MessageSize", "default": "16" },
 
       { "name": "fanoutScale", "default": "1" },
       { "name": "fanoutScaleType", "default": "single-vhost" },
@@ -22,72 +37,123 @@
       { "name": "fanoutMessageSize", "default": "16" },
       { "name": "fanoutPublishRate", "default": "0"},
       { "name": "fanoutPublisherCount", "default": "1" },
+      { "name": "fanoutDeliveryMode", "default": "persistent" },
+      { "name": "fanoutUseConfirms", "default": "true" },
+      { "name": "fanoutInflightLimit", "default": "1000" },
+      { "name": "fanoutManualAcks", "default": "true" },
+      { "name": "fanoutConsumerPrefetch", "default": "1000" },
+      { "name": "fanoutAckInterval", "default": "1" },
+      { "name": "fanoutProcessingMs", "default": "0" },
+      { "name": "fanoutQueueMode", "default": "default" },
 
       { "name": "topicScale", "default": "1" },
       { "name": "topicScaleType", "default": "single-vhost" },
       { "name": "topicQueuePrefix", "default": "topic" },
       { "name": "topicQueueCount", "default": "1" },
+      { "name": "topicFanout", "default": "1"},
       { "name": "topicConsumerCount", "default": "1" },
       { "name": "topicMessageSize", "default": "16" },
       { "name": "topicPublishRate", "default": "0"},
       { "name": "topicPublisherCount", "default": "1" },
-
+      { "name": "topicDeliveryMode", "default": "persistent" },
+      { "name": "topicUseConfirms", "default": "true" },
+      { "name": "topicInflightLimit", "default": "1000" },
+      { "name": "topicManualAcks", "default": "true" },
+      { "name": "topicConsumerPrefetch", "default": "1000" },
+      { "name": "topicAckInterval", "default": "1" },
+      { "name": "topicProcessingMs", "default": "0" },
+      { "name": "topicQueueMode", "default": "default" },
       
-      { "name": "deliveryMode", "default": "persistent" },
-      { "name": "useConfirms", "default": "true" },
-      { "name": "inflightLimit", "default": "1000" },
-      { "name": "manualAcks", "default": "true" },
-      { "name": "consumerPrefetch", "default": "1000" },
-      { "name": "ackInterval", "default": "1" },
-      { "name": "processingMs", "default": "0" },
-      { "name": "queueMode", "default": "default" },
-      { "name": "durationSeconds", "default": "120" },
-      { "name": "initialPublish", "default": "0" }
+      { "name": "durationSeconds", "default": "120" }
     ],
     "description": "Point to point",
-    "vhosts": [
+    "topologyGroups": [
       {
         "name": "p2p",
         "scale": "{{ var.p2pScale }}",
         "scaleType": "{{ var.p2pScaleType }}",
-        "queueGroups": [ 
+        "queues": [ 
           { 
-            "group": "{{ var.p2pQueuePrefix }}", 
+            "prefix": "{{ var.p2pQueuePrefix }}", 
             "scale": "{{ var.p2pQueueCount }}",
             "properties": [
-              { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+              { "key": "x-queue-mode", "value": "{{ var.p2pQueueMode }}", "type": "string" }
             ]
           } 
         ],
-        "publisherGroups": [
+        "publishers": [
           {
-            "group": "p1",
-            "scale": "{{ var.p2pPublisherCount }}",
+            "prefix": "p2p-pub-group1",
+            "scale": "{{ var.p2pGroup1PublisherCount }}",
             "publishMode": {
-              "useConfirms": "{{ var.useConfirms }}",
-              "inFlightLimit": "{{ var.inflightLimit }}"
+              "useConfirms": "{{ var.p2pUseConfirms }}",
+              "inFlightLimit": "{{ var.p2pInflightLimit }}"
             },
-            "sendToQueueGroup": {
-              "queueGroup": "{{ var.p2pQueuePrefix }}",
+            "sendToQueuePrefix": {
+              "queuePrefix": "{{ var.p2pQueuePrefix }}",
               "mode": "Counterpart"
             },
-            "deliveryMode": "{{ var.deliveryMode }}",
-            "messageSize": "{{ var.p2pMessageSize }}",
-            "msgsPerSecondPerPublisher": "{{ var.p2pPublishRate }}",
-            "initialPublish": "{{ var.initialPublish }}"
+            "deliveryMode": "{{ var.p2pDeliveryMode }}",
+            "messageSize": "{{ var.p2pGroup1MessageSize }}",
+            "msgsPerSecondPerPublisher": "{{ var.p2pPublishRate }}"
+          },
+          {
+            "prefix": "p2p-pub-group2",
+            "scale": "{{ var.p2pGroup2PublisherCount }}",
+            "publishMode": {
+              "useConfirms": "{{ var.p2pUseConfirms }}",
+              "inFlightLimit": "{{ var.p2pInflightLimit }}"
+            },
+            "sendToQueuePrefix": {
+              "queuePrefix": "{{ var.p2pQueuePrefix }}",
+              "mode": "Counterpart"
+            },
+            "deliveryMode": "{{ var.p2pDeliveryMode }}",
+            "messageSize": "{{ var.p2pGroup2MessageSize }}",
+            "msgsPerSecondPerPublisher": "{{ var.p2pPublishRate }}"
+          },
+          {
+            "prefix": "p2p-pub-group3",
+            "scale": "{{ var.p2pGroup3PublisherCount }}",
+            "publishMode": {
+              "useConfirms": "{{ var.p2pUseConfirms }}",
+              "inFlightLimit": "{{ var.p2pInflightLimit }}"
+            },
+            "sendToQueuePrefix": {
+              "queuePrefix": "{{ var.p2pQueuePrefix }}",
+              "mode": "Counterpart"
+            },
+            "deliveryMode": "{{ var.p2pDeliveryMode }}",
+            "messageSize": "{{ var.p2pGroup3MessageSize }}",
+            "msgsPerSecondPerPublisher": "{{ var.p2pPublishRate }}"
+          },
+          {
+            "prefix": "p2p-pub-group4",
+            "scale": "{{ var.p2pGroup4PublisherCount }}",
+            "publishMode": {
+              "useConfirms": "{{ var.p2pUseConfirms }}",
+              "inFlightLimit": "{{ var.p2pInflightLimit }}"
+            },
+            "sendToQueuePrefix": {
+              "queuePrefix": "{{ var.p2pQueuePrefix }}",
+              "mode": "Counterpart"
+            },
+            "deliveryMode": "{{ var.p2pDeliveryMode }}",
+            "messageSize": "{{ var.p2pGroup4MessageSize }}",
+            "msgsPerSecondPerPublisher": "{{ var.p2pPublishRate }}"
           }
         ],
-        "consumerGroups": [ 
+        "consumers": [ 
           { 
-            "group": "c1", 
+            "prefix": "p2p-con", 
             "scale": "{{ var.p2pConsumerCount }}", 
-            "queueGroup": "{{ var.p2pQueuePrefix }}",
+            "queuePrefix": "{{ var.p2pQueuePrefix }}",
             "ackMode": {
-              "manualAcks": "{{ var.manualAcks }}",
-              "consumerPrefetch": "{{ var.consumerPrefetch }}",
-              "ackInterval": "{{ var.ackInterval }}"
+              "manualAcks": "{{ var.p2pManualAcks }}",
+              "consumerPrefetch": "{{ var.p2pConsumerPrefetch }}",
+              "ackInterval": "{{ var.p2pAckInterval }}"
             },
-            "processingMs": "{{ var.processingMs }}"
+            "processingMs": "{{ var.p2pProcessingMs }}"
           } 
         ]
       },
@@ -98,45 +164,44 @@
         "exchanges": [ 
           { "name": "fanout1", "type": "fanout" }
         ],
-        "queueGroups": [ 
+        "queues": [ 
           { 
-            "group": "{{ var.fanoutQueuePrefix }}", 
+            "prefix": "{{ var.fanoutQueuePrefix }}", 
             "scale": "{{ var.fanoutQueueCount }}",
             "bindings": [{ "from": "fanout1" }],
             "properties": [
-              { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+              { "key": "x-queue-mode", "value": "{{ var.fanoutQueueMode }}", "type": "string" }
             ]
           }
         ],
-        "publisherGroups": [
+        "publishers": [
           {
-            "group": "p2",
+            "prefix": "fanout-pub",
             "scale": "{{ var.fanoutPublisherCount }}",
             "publishMode": {
-              "useConfirms": "{{ var.useConfirms }}",
-              "inFlightLimit": "{{ var.inflightLimit }}"
+              "useConfirms": "{{ var.fanoutUseConfirms }}",
+              "inFlightLimit": "{{ var.fanoutInflightLimit }}"
             },
             "sendToExchange": {
               "exchange": "fanout1",
               "routingKeyMode": "none"
             },
-            "deliveryMode": "{{ var.deliveryMode }}",
+            "deliveryMode": "{{ var.fanoutDeliveryMode }}",
             "messageSize": "{{ var.fanoutMessageSize }}",
-            "msgsPerSecondPerPublisher": "{{ var.fanoutPublishRate }}",
-            "initialPublish": "{{ var.initialPublish }}"
+            "msgsPerSecondPerPublisher": "{{ var.fanoutPublishRate }}"
           }
         ],
-        "consumerGroups": [ 
+        "consumers": [ 
           { 
-            "group": "c2", 
+            "prefix": "fanout-con", 
             "scale": "{{ var.fanoutConsumerCount }}", 
-            "queueGroup": "{{ var.fanoutQueuePrefix }}",
+            "queuePrefix": "{{ var.fanoutQueuePrefix }}",
             "ackMode": {
-              "manualAcks": "{{ var.manualAcks }}",
-              "consumerPrefetch": "{{ var.consumerPrefetch }}",
-              "ackInterval": "{{ var.ackInterval }}"
+              "manualAcks": "{{ var.fanoutManualAcks }}",
+              "consumerPrefetch": "{{ var.fanoutConsumerPrefetch }}",
+              "ackInterval": "{{ var.fanoutAckInterval }}"
             },
-            "processingMs": "{{ var.processingMs }}"
+            "processingMs": "{{ var.fanoutProcessingMs }}"
           } 
         ]
       },
@@ -145,46 +210,51 @@
         "scale": "{{ var.topicScale }}",
         "scaleType": "{{ var.topicScaleType }}",
         "exchanges": [ { "name": "topic1", "type": "topic" }],
-        "queueGroups": [ 
+        "queues": [ 
           { 
-            "group": "{{ var.topicQueuePrefix }}", 
+            "prefix": "{{ var.topicQueuePrefix }}", 
             "scale": "{{ var.topicQueueCount }}",
-            "bindings": [{ "from": "topic1", "bindingKey": "#.rk1" }],
+            "bindings": [
+                { 
+                  "from": "topic1", 
+                  "bindingKeys": ["#.rk1", "#.rk2", "#.rk3", "#.rk4", "#.rk5","#.rk6", "#.rk7", "#.rk8", "#.rk9", "#.rk10"],
+                  "bindingKeysPerQueue": "{{ var.topicFanout }}"
+                }
+              ],
             "properties": [
-              { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+              { "key": "x-queue-mode", "value": "{{ var.topicQueueMode }}", "type": "string" }
             ]
           } 
         ],
-        "publisherGroups": [
+        "publishers": [
           {
-            "group": "p3",
+            "prefix": "topic-pub",
             "scale": "{{ var.topicPublisherCount }}",
             "publishMode": {
-              "useConfirms": "{{ var.useConfirms }}",
-              "inFlightLimit": "{{ var.inflightLimit }}"
+              "useConfirms": "{{ var.topicUseConfirms }}",
+              "inFlightLimit": "{{ var.topicInflightLimit }}"
             },
             "sendToExchange": {
               "exchange": "topic1",
-              "routingKeyMode": "FixedValue",
-              "routingKey": "blah.rk1"
+              "routingKeyMode": "MultiValue",
+              "routingKeys": ["blah.rk1", "blah.rk3", "blah.rk3", "blah.rk4", "blah.rk5", "blah.rk6", "blah.rk7", "blah.rk8", "blah.rk9", "blah.rk10"]
             },
-            "deliveryMode": "{{ var.deliveryMode }}",
+            "deliveryMode": "{{ var.topicDeliveryMode }}",
             "messageSize": "{{ var.topicMessageSize }}",
-            "msgsPerSecondPerPublisher": "{{ var.topicPublishRate }}",
-            "initialPublish": "{{ var.initialPublish }}"
+            "msgsPerSecondPerPublisher": "{{ var.topicPublishRate }}"
           }
         ],
-        "consumerGroups": [ 
+        "consumers": [ 
           { 
-            "group": "c3", 
+            "prefix": "topic-con", 
             "scale": "{{ var.topicConsumerCount }}", 
-            "queueGroup": "{{ var.topicQueuePrefix }}",
+            "queuePrefix": "{{ var.topicQueuePrefix }}",
             "ackMode": {
-              "manualAcks": "{{ var.manualAcks }}",
-              "consumerPrefetch": "{{ var.consumerPrefetch }}",
-              "ackInterval": "{{ var.ackInterval }}"
+              "manualAcks": "{{ var.topicManualAcks }}",
+              "consumerPrefetch": "{{ var.topicConsumerPrefetch }}",
+              "ackInterval": "{{ var.topicAckInterval }}"
             },
-            "processingMs": "{{ var.processingMs }}"
+            "processingMs": "{{ var.topicProcessingMs }}"
           }
         ]
       }

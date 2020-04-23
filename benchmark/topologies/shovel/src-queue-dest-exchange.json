@@ -23,22 +23,22 @@
     { "name": "shovelPrefetch", "default": "1000" },
     { "name": "shovelReconnectSec", "default": "5" }
   ],
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "federation": "upstream",
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms }}",
             "inFlightLimit": "{{ var.inflightLimit }}"
           },
-          "sendToQueueGroup": {
-            "queueGroup": "q1",
+          "sendToQueuePrefix": {
+            "queuePrefix": "q1",
             "mode": "Counterpart"
           },
           "deliveryMode": "{{ var.deliveryMode }}",
@@ -46,8 +46,8 @@
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
         }
       ],
-      "queueGroups": [
-        { "group": "q1",
+      "queues": [
+        { "prefix": "q1",
           "scale": "{{ var.queueCount }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
@@ -72,8 +72,8 @@
             "srcName": "q1_00001"
           } 
         }],
-      "queueGroups": [
-        { "group": "q1",
+      "queues": [
+        { "prefix": "q1",
           "scale": "{{ var.queueCount }}",
           "bindings": [{ "from": "ex1" }],
           "properties": [
@@ -81,11 +81,11 @@
           ]
         }
       ],
-      "consumerGroups": [
+      "consumers": [
         {
-          "group": "c1",
+          "prefix": "c1",
           "scale": "{{ var.consumerCount }}",
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",

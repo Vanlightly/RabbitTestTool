@@ -22,16 +22,16 @@
     { "name": "shovelPrefetch", "default": "1000" },
     { "name": "shovelReconnectSec", "default": "5" }
   ],
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "federation": "upstream",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "1",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms }}",
@@ -52,8 +52,8 @@
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "federation": "downstream",
-      "queueGroups": [
-        { "group": "q1",
+      "queues": [
+        { "prefix": "q1",
           "scale": "{{ var.queueCount }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
@@ -68,11 +68,11 @@
           }
         }
       ],
-      "consumerGroups": [
+      "consumers": [
         {
-          "group": "c1",
+          "prefix": "c1",
           "scale": "{{ var.consumerCount }}",
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",

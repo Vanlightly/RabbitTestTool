@@ -61,7 +61,7 @@ A topology file does not specify urls, users etc, just the exchanges, queues, pu
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
     "description": "Slowly increasing message size",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "exchanges": [
@@ -70,18 +70,18 @@ A topology file does not specify urls, users etc, just the exchanges, queues, pu
                     "type": "fanout"
                 }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1,
                     "bindings": [
                         { "from": "ex1" }
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -91,11 +91,11 @@ A topology file does not specify urls, users etc, just the exchanges, queues, pu
                     "messageSize": 16
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }
@@ -173,16 +173,16 @@ Queues are named **group_ordinal**, for example:
 - q1_00005
 
 ```json
-"queueGroups": [
+"queues": [
     {
-        "group": "q1",
+        "prefix": "q1",
         "scale": 1,
         "bindings": [
-            { "from": "ex1", "bindingKey": "my.*.key" }
+            { "from": "ex1", "bindingKeys": ["my.*.key"] }
         ]
     },
     {
-        "group": "q2",
+        "prefix": "q2",
         "scale": 10,
         "bindings": [
             { "from": "ex2" }
@@ -196,9 +196,9 @@ Queues are named **group_ordinal**, for example:
 A publisher group is a group of publishers that share the same configuration and can be scaled out. For example, the publisher group below publishes to the ex1 exchange with each message having a randomly selected routing key from the 5 keys defined.
 
 ```json
-"publisherGroups": [
+"publishers": [
       {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 5,
         "sendToExchange": {
           "exchange": "ex1",
@@ -217,14 +217,14 @@ A consumer group is a group of consumers that share the same configuration and c
 ```json
 "consumers": [
         {
-            "group": "c1",
+            "prefix": "c1",
             "ackMode": {
                 "manualAcks": true,
                 "consumerPrefetch": 1000,
                 "ackInterval": 100
             },
             "scale": 2,
-            "queueGroup": "q1"
+            "queuePrefix": "q1"
         }
     ]
 ```
@@ -351,21 +351,21 @@ We can specify variables with default values in our topology files. This allows 
     { "name": "durationSeconds", "default": "120" }
   ],
   "description": "Fanout",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
-      "queueGroups": [ 
-        { "group": "q1", 
+      "queues": [ 
+        { "prefix": "q1", 
           "scale": "{{ var.queueCount }}", 
           "bindings": [{ "from": "ex1" }],
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "sendToExchange": {
             "exchange": "ex1",
@@ -376,11 +376,11 @@ We can specify variables with default values in our topology files. This allows 
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c1", 
+          "prefix": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
         } 
       ]
     }

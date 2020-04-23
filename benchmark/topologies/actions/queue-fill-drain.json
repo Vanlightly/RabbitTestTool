@@ -17,14 +17,14 @@
     { "name": "fillRate", "default": "0"}
   ],
   "description": "fill-drain",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
-      "queueGroups": [ 
+      "queues": [ 
         { 
-          "group": "q1", 
+          "prefix": "q1", 
           "scale": "{{ var.queueCount }}", 
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }

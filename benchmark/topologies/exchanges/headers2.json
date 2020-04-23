@@ -21,15 +21,15 @@
     { "name": "durationSeconds", "default": "120" },
     { "name": "match", "default": "any" }
   ],
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "headers" }],
-      "queueGroups": [ 
+      "queues": [ 
         { 
-          "group": "q1", 
+          "prefix": "q1", 
           "scale": "{{ var.queueCount }}", 
           "bindings": [
             { "from": "ex1",
@@ -47,9 +47,9 @@
           ]
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms }}",
@@ -71,11 +71,11 @@
           "headersPerMessage": 4
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c1", 
+          "prefix": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",

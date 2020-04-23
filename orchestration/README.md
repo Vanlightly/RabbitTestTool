@@ -425,6 +425,12 @@ Up to 3 EBS volumes can be provisioned. The data, logs and wal files can be conf
 
 When using c5d and z1d class instances, things work differently. An extra EBS volume is not created and mounted. Instead the NVMe local storage volume is used. The volume-size argument is used to identify the volume to be mounted, for c5d.large, the volume size is 46.6. If you set it to 50, as described in AS docs, it will fail to mount (a better way is needed of identifying the volume to mount). Data, logs and wal are all on this single NVMe volume.
 
+Volumes sizes:
+- c5d.large 46.6G
+- c5d.2xlarge 186.3G
+- c5d.4xlarge 372.5G
+- c5d.9xlarge 838.2G
+
 
 ### Notes on AWS CLI and Ansible
 

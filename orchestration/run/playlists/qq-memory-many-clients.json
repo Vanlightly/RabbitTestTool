@@ -1,0 +1,31 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "inflightLimit": "1000", "publishRate": "600", "publisherCount": "30", "queueCount": "10", "consumerCount": "80" } },
+        { "topologyVariables": { "inflightLimit": "800", "publishRate": "160", "publisherCount": "150", "queueCount": "10", "consumerCount": "400" } },
+        { "topologyVariables": { "inflightLimit": "400", "publishRate": "80", "publisherCount": "300", "queueCount": "10", "consumerCount": "800" } },
+        { "topologyVariables": { "inflightLimit": "200", "publishRate": "40", "publisherCount": "600", "queueCount": "10", "consumerCount": "1600" } },
+        { "topologyVariables": { "inflightLimit": "100", "publishRate": "20", "publisherCount": "1200", "queueCount": "10", "consumerCount": "1600" } },
+        { "topologyVariables": { "inflightLimit": "1000", "publishRate": "2400", "publisherCount": "10", "queueCount": "10", "consumerCount": "30" } },
+        { "topologyVariables": { "inflightLimit": "1000", "publishRate": "240", "publisherCount": "100", "queueCount": "10", "consumerCount": "30" } },
+        { "topologyVariables": { "inflightLimit": "250", "publishRate": "48", "publisherCount": "500", "queueCount": "10", "consumerCount": "30" } },
+        { "topologyVariables": { "inflightLimit": "125", "publishRate": "24", "publisherCount": "1000", "queueCount": "10", "consumerCount": "30" } },
+        { "topologyVariables": { "inflightLimit": "75", "publishRate": "16", "publisherCount": "1500", "queueCount": "10", "consumerCount": "30" } },
+        { "topologyVariables": { "inflightLimit": "60", "publishRate": "12", "publisherCount": "2000", "queueCount": "10", "consumerCount": "30" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "messageSize": "10000",
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

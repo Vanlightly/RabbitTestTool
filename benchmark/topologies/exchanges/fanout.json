@@ -21,14 +21,14 @@
     { "name": "durationSeconds", "default": "120" }
   ],
   "description": "Fanout",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
-      "queueGroups": [ 
-        { "group": "q1", 
+      "queues": [ 
+        { "prefix": "q1", 
           "scale": "{{ var.queueCount }}", 
           "bindings": [{ "from": "ex1" }],
           "properties": [
@@ -36,9 +36,9 @@
           ]
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms }}",
@@ -53,11 +53,11 @@
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c1", 
+          "prefix": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",

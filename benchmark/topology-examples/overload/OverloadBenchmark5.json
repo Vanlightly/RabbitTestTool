@@ -2,22 +2,22 @@
     "topologyName": "OverloadBenchmark5",
     "topologyType": "MultipleDimensions",
     "benchmarkType": "stress",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 10
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 10,
-                    "sendToQueueGroup": {
-                        "queueGroup": "q1",
+                    "sendToQueuePrefix": {
+                        "queuePrefix": "q1",
                         "mode": "Counterpart"
                     },
                     "deliveryMode": "Persistent",
@@ -25,11 +25,11 @@
                     "messageSize": 1024
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 10,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }

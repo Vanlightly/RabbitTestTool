@@ -3,25 +3,25 @@
     "topologyType": "Fixed",
     "benchmarkType": "throughput",
     "description": "ex->queue",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
             "exchanges": [
                 { "name": "ex1","type": "fanout" }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1,
                     "bindings": [
                         { "from": "ex1" }
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -30,11 +30,11 @@
                     "deliveryMode": "Persistent"
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }

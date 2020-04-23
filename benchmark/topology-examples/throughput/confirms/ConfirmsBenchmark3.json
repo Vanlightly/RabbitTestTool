@@ -3,7 +3,7 @@
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
     "description": "Increasing in-flight-limit, 1 pub, direct, round-robin to 10 queues",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
@@ -13,21 +13,21 @@
                     "type": "direct"
                 }
             ],
-            "queueGroups": [
-                { "group": "q1", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q1" } ] },
-                { "group": "q2", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q2" } ] },
-                { "group": "q3", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q3" } ] },
-                { "group": "q4", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q4" } ] },
-                { "group": "q5", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q5" } ] },
-                { "group": "q6", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q6" } ] },
-                { "group": "q7", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q7" } ] },
-                { "group": "q8", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q8" } ] },
-                { "group": "q9", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q9" } ] },
-                { "group": "q10", "scale": 1, "bindings": [ { "from": "ex1", "bindingKey": "q10" } } ] }
+            "queues": [
+                { "prefix": "q1", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q1"] } ] },
+                { "prefix": "q2", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q2"] } ] },
+                { "prefix": "q3", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q3"] } ] },
+                { "prefix": "q4", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q4"] } ] },
+                { "prefix": "q5", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q5"] } ] },
+                { "prefix": "q6", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q6"] } ] },
+                { "prefix": "q7", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q7"] } ] },
+                { "prefix": "q8", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q8"] } ] },
+                { "prefix": "q9", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q9"] } ] },
+                { "prefix": "q10", "scale": 1, "bindings": [ { "from": "ex1", "bindingKeys": ["q10"] } ] }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "publishMode": {
                         "useConfirms": true,
@@ -41,17 +41,17 @@
                     "deliveryMode": "Persistent"
                 }
             ],
-            "consumerGroups": [ 
-                { "group": "c1", "scale": 1, "queueGroup": "q1" },
-                { "group": "c2", "scale": 1, "queueGroup": "q2" },
-                { "group": "c3", "scale": 1, "queueGroup": "q3" },
-                { "group": "c4", "scale": 1, "queueGroup": "q4" },
-                { "group": "c5", "scale": 1, "queueGroup": "q5" },
-                { "group": "c6", "scale": 1, "queueGroup": "q6" },
-                { "group": "c7", "scale": 1, "queueGroup": "q7" },
-                { "group": "c8", "scale": 1, "queueGroup": "q8" },
-                { "group": "c9", "scale": 1, "queueGroup": "q9" },
-                { "group": "c10", "scale": 1, "queueGroup": "q10" }
+            "consumers": [ 
+                { "prefix": "c1", "scale": 1, "queuePrefix": "q1" },
+                { "prefix": "c2", "scale": 1, "queuePrefix": "q2" },
+                { "prefix": "c3", "scale": 1, "queuePrefix": "q3" },
+                { "prefix": "c4", "scale": 1, "queuePrefix": "q4" },
+                { "prefix": "c5", "scale": 1, "queuePrefix": "q5" },
+                { "prefix": "c6", "scale": 1, "queuePrefix": "q6" },
+                { "prefix": "c7", "scale": 1, "queuePrefix": "q7" },
+                { "prefix": "c8", "scale": 1, "queuePrefix": "q8" },
+                { "prefix": "c9", "scale": 1, "queuePrefix": "q9" },
+                { "prefix": "c10", "scale": 1, "queuePrefix": "q10" }
             ]
         }
     ],

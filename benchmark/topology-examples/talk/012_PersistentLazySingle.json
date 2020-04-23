@@ -3,35 +3,35 @@
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
     "description": "Persistent, lazy, 1 kb, 1 pub/queue/consumer, increasing publisher rate",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1,
                     "properties": [
                         { "key": "x-queue-mode", "value": "lazy", "type": "string" }
                       ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
-                    "sendToQueueGroup": {
-                        "queueGroup": "q1",
+                    "sendToQueuePrefix": {
+                        "queuePrefix": "q1",
                         "mode": "Counterpart"
                     },
                     "deliveryMode": "Persistent"
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }

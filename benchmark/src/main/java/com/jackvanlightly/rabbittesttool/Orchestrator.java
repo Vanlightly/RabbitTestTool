@@ -202,28 +202,6 @@ public class Orchestrator {
 
     private void addPublisherGroups(VirtualHost vhost, Topology topology) {
         for(PublisherConfig publisherConfig : vhost.getPublishers()) {
-
-            double publisherMaxScale = publisherConfig.getScale();
-            switch(topology.getTopologyType()) {
-                case SingleVariable:
-                    if (topology.getVariableConfig().getDimension() == VariableDimension.Publishers) {
-                        if (topology.getVariableConfig().getGroup() == null
-                                || topology.getVariableConfig().getGroup().equals(publisherConfig.getGroup())) {
-                            publisherMaxScale = topology.getVariableConfig().getMaxScale();
-                        }
-                    }
-                    break;
-                case MultiVariable:
-                    Map<VariableDimension,Double> maxScales = topology.getVariableConfig().getMaxScales();
-                    if(maxScales.containsKey(VariableDimension.Publishers)) {
-                        if (topology.getVariableConfig().getGroup() == null
-                                || topology.getVariableConfig().getGroup().equals(publisherConfig.getGroup())) {
-                            publisherMaxScale = maxScales.get(VariableDimension.Publishers);
-                        }
-                    }
-                    break;
-            }
-
             ConnectionSettings connSettings = publisherConfig.isDownstream()
                     ? downstreamConnectionSettingsBase.getClone(vhost.getName())
                     : connectionSettingsBase.getClone(vhost.getName());
@@ -236,8 +214,7 @@ public class Orchestrator {
                     vhost,
                     stats,
                     messageModel,
-                    publisherQueueHosts,
-                    (int)publisherMaxScale);
+                    publisherQueueHosts);
             publisherGroup.createInitialPublishers();
             publisherGroups.add(publisherGroup);
         }

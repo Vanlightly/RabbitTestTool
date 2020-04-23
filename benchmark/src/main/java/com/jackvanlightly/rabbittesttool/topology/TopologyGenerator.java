@@ -108,23 +108,29 @@ public class TopologyGenerator {
         for (BindingConfig bindingConfig : exchangeConfig.getBindings()) {
             JSONObject binding = new JSONObject();
 
-            if (bindingConfig.getBindingKey() != null || StringUtils.isEmpty(bindingConfig.getBindingKey()))
-                binding.put("routing_key", bindingConfig.getBindingKey());
+            List<String> bindingKeys = bindingConfig.getBindingKeys(1, 1, 1);
+            if(bindingKeys.isEmpty())
+                bindingKeys.add("");
 
-            if(!bindingConfig.getProperties().isEmpty()) {
-                JSONObject properties = new JSONObject();
-                for (Property p : bindingConfig.getProperties()) {
-                    properties.put(p.getKey(), p.getValue());
+            for(String bindingKey : bindingKeys) {
+                if (bindingKey != null && !StringUtils.isEmpty(bindingKey))
+                    binding.put("routing_key", bindingKey);
+
+                if (!bindingConfig.getProperties().isEmpty()) {
+                    JSONObject properties = new JSONObject();
+                    for (Property p : bindingConfig.getProperties()) {
+                        properties.put(p.getKey(), p.getValue());
+                    }
+                    binding.put("arguments", properties);
                 }
-                binding.put("arguments", properties);
+
+                String bindingJson = binding.toString();
+
+                post(getExchangeToExchangeBindingUrl(exchangeConfig.getVhostName(),
+                        bindingConfig.getFrom(),
+                        exchangeConfig.getName(),
+                        exchangeConfig.isDownstream()), bindingJson);
             }
-
-            String bindingJson = binding.toString();
-
-            post(getExchangeToExchangeBindingUrl(exchangeConfig.getVhostName(),
-                    bindingConfig.getFrom(),
-                    exchangeConfig.getName(),
-                    exchangeConfig.isDownstream()), bindingJson);
         }
     }
 
@@ -234,25 +240,31 @@ public class TopologyGenerator {
         for (BindingConfig bindingConfig : queueConfig.getBindings()) {
             JSONObject binding = new JSONObject();
 
-            if (bindingConfig.getBindingKey() != null && !StringUtils.isEmpty(bindingConfig.getBindingKey()))
-                binding.put("routing_key", bindingConfig.getBindingKey());
-            else
-                binding.put("routing_key", "");
+            List<String> bindingKeys = bindingConfig.getBindingKeys(ordinal, queueConfig.getScale(), bindingConfig.getBindingKeysPerQueue());
+            if(bindingKeys.isEmpty())
+                bindingKeys.add("");
 
-            if(!bindingConfig.getProperties().isEmpty()) {
-                JSONObject properties = new JSONObject();
-                for (Property p : bindingConfig.getProperties()) {
-                    properties.put(p.getKey(), p.getValue());
+            for(String bindingKey : bindingKeys) {
+                if (bindingKey != null && !StringUtils.isEmpty(bindingKey))
+                    binding.put("routing_key", bindingKey);
+                else
+                    binding.put("routing_key", "");
+
+                if (!bindingConfig.getProperties().isEmpty()) {
+                    JSONObject properties = new JSONObject();
+                    for (Property p : bindingConfig.getProperties()) {
+                        properties.put(p.getKey(), p.getValue());
+                    }
+                    binding.put("arguments", properties);
                 }
-                binding.put("arguments", properties);
+
+                String bindingJson = binding.toString();
+
+                post(getExchangeToQueueBindingUrl(queueConfig.getVhostName(),
+                        bindingConfig.getFrom(),
+                        queueConfig.getQueueName(ordinal),
+                        queueConfig.isDownstream()), bindingJson);
             }
-
-            String bindingJson = binding.toString();
-
-            post(getExchangeToQueueBindingUrl(queueConfig.getVhostName(),
-                    bindingConfig.getFrom(),
-                    queueConfig.getQueueName(ordinal),
-                    queueConfig.isDownstream()), bindingJson);
         }
     }
 
@@ -329,8 +341,8 @@ public class TopologyGenerator {
                 return new JSONArray(json);
             }
             catch(JSONException je) {
-                System.out.println(json);
                 if(je.getMessage().startsWith("Duplicate key")) {
+                    System.out.println("Duplicate key bug!");
                     String pattern = "\\\"(.+)\\\"";
                     Pattern r = Pattern.compile(pattern);
                     Matcher m = r.matcher(je.getMessage());

@@ -14,18 +14,18 @@ An example topology file with one publisher, one exchange, one queue and one con
     "topologyType": "fixed",
     "benchmarkType": "throughput",
     "description": "One pub/queue/con, 16 byte msg",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "exchanges": [
                 { "name": "ex1", "type": "fanout" }
             ],
-            "queueGroups": [
-                { "group": "q1", "scale": 1, "bindings": [{ "from": "ex1"}] }
+            "queues": [
+                { "prefix": "q1", "scale": 1, "bindings": [{ "from": "ex1"}] }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -34,11 +34,11 @@ An example topology file with one publisher, one exchange, one queue and one con
                     "deliveryMode": "Persistent"
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }
@@ -82,14 +82,14 @@ The variables are defined in an array and placed in the topology using the "{{ v
     { "name": "durationSeconds", "default": "120" }
   ],
   "description": "Fanout",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
-      "queueGroups": [ 
-        { "group": "q1", 
+      "queues": [ 
+        { "prefix": "q1", 
           "scale": "{{ var.queueCount }}", 
           "bindings": [{ "from": "ex1" }],
           "properties": [
@@ -97,9 +97,9 @@ The variables are defined in an array and placed in the topology using the "{{ v
           ]
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms }}",
@@ -114,11 +114,11 @@ The variables are defined in an array and placed in the topology using the "{{ v
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c1", 
+          "prefix": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",
@@ -157,15 +157,15 @@ Underscores ARE NOT supported in virtual host names.
 Virtual hosts can optionally be marked as either `upstream` (the default) or `downstream` via the **federation** field. This is required when benchmarking either federated exchanges, federated queue or shovels.
 
 ```json
-"vhosts": [
+"topologyGroups": [
     {
         "name": "test",
         "scale": 1,
         "federation": "downstream",
         "exchanges": [],
-        "queueGroups": [],
-        "publisherGroups": [],
-        "consumerGroups": []
+        "queues": [],
+        "publishers": [],
+        "consumers": []
     }
 ]
 ```
@@ -206,7 +206,7 @@ Example of two exchanges, with an exchange to exchange binding.
 ```json
 "exchanges": [
     { "name": "ex1", "type": "topic" },
-    { "name": "ex2", "type": "fanout", "bindings": [ { "from": "ex1", "bindingKey": "error.#" }] }
+    { "name": "ex2", "type": "fanout", "bindings": [ { "from": "ex1", "bindingKeys": ["error.#"] }] }
 ]
 ```
 
@@ -247,18 +247,18 @@ The queueGroups field is a JSON array of queueGroup objects.
 An example of two queue groups.
 
 ```json
-"queueGroups": [
-    {"group": "q1", "scale": 1, "bindings": [ { "from": "ex1" } ]},
-    {"group": "q2", "scale": 10, "bindings": [ { "from": "ex2" } ]}
+"queues": [
+    {"prefix": "q1", "scale": 1, "bindings": [ { "from": "ex1" } ]},
+    {"prefix": "q2", "scale": 10, "bindings": [ { "from": "ex2" } ]}
 ]
 ```
 
 Example of 10 lazy queues bound to a single exchange.
 
 ```json
-"queueGroups": [
+"queues": [
     {
-        "group": "q1", 
+        "prefix": "q1", 
         "scale": 10, 
         "bindings": [ { "from": "ex1" } ],
         "properties": [
@@ -287,9 +287,9 @@ Example of 10 lazy queues bound to a single exchange.
 An example of a single publisher group with the default message size, no publishing rate limit and no publisher confirms.
 
 ```json
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 1,
         "sendToExchange": {
             "exchange": "ex1",
@@ -303,9 +303,9 @@ An example of a single publisher group with the default message size, no publish
 An example of a single publisher group with the a message size, publishing rate limit and publisher confirms.
 
 ```json
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 1,
         "publishMode": {
             "useConfirms": true,
@@ -336,15 +336,15 @@ When using Counterpart mode, a publisher group of 3 that sends to a queue group 
 An example of a publisher group that sends messages directly to queues of queue group q1 (via default exchange), with each message going to a randomly chosen queue of that group each time.
 
 ```json
-"queueGroups": [
-    {|"group": "q1", "scale": 5, "bindings": [ { "from": "ex1" } ]}
+"queues": [
+    {|"prefix": "q1", "scale": 5, "bindings": [ { "from": "ex1" } ]}
 ],
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 10,
-        "sendToQueueGroup": {
-            "queueGroup": "q1",
+        "sendToQueuePrefix": {
+            "queuePrefix": "q1",
             "mode": "Random"
         },
         "deliveryMode": "Persistent"
@@ -355,15 +355,15 @@ An example of a publisher group that sends messages directly to queues of queue 
 An example of a publisher group and queue group of the same scale where each publisher sends messages to the queue with the same number suffix as itself of queue group q1 (via default exchange).
 
 ```json
-"queueGroups": [
-    {|"group": "q1", "scale": 10, "bindings": [ { "from": "ex1" } ]}
+"queues": [
+    {|"prefix": "q1", "scale": 10, "bindings": [ { "from": "ex1" } ]}
 ],
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 10,
-        "sendToQueueGroup": {
-            "queueGroup": "q1",
+        "sendToQueuePrefix": {
+            "queuePrefix": "q1",
             "mode": "Counterpart"
         },
         "deliveryMode": "Persistent"
@@ -394,9 +394,9 @@ The routing key modes available are:
 An example where a publisher group sends messages to exchange ex1 without a routing key.
 
 ```json
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 1,
         "sendToExchange": {
             "exchange": "ex1",
@@ -410,9 +410,9 @@ An example where a publisher group sends messages to exchange ex1 without a rout
 An example where a publisher group sends all messages to exchange ex1 with the same routing key value of rk1.
 
 ```json
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 1,
         "sendToExchange": {
             "exchange": "ex1",
@@ -427,9 +427,9 @@ An example where a publisher group sends all messages to exchange ex1 with the s
 An example where a publisher group sends messages to exchange ex1 choosing a random routing from the routingKeys array for each message.
 
 ```json
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 1,
         "sendToExchange": {
             "exchange": "ex1",
@@ -444,9 +444,9 @@ An example where a publisher group sends messages to exchange ex1 choosing a ran
 An example of using Index routing key mode. In each step of a SingleDimension topology, a different routing key is sent. 
 
 ```json
-"publisherGroups": [
+"publishers": [
     {
-        "group": "p1",
+        "prefix": "p1",
         "scale": 1,
         "sendToExchange": {
             "exchange": "ex1",
@@ -491,11 +491,11 @@ When using confirms.
 An example of a consumer group of 5 consumers, consuming from queue group q1. Using NoAck mode and no prefetch.
 
 ```json
-"consumerGroups": [
+"consumers": [
     {
-        "group": "c1",
+        "prefix": "c1",
         "scale": 5,
-        "queueGroup": "q1"
+        "queuePrefix": "q1"
     }
 ]
 ```
@@ -503,11 +503,11 @@ An example of a consumer group of 5 consumers, consuming from queue group q1. Us
 An example of a consumer group with one consumer that uses manual acks with a prefetch, acks with multiple flag every 5th message and takes 10ms to process each message.
 
 ```json
-"consumerGroups": [
+"consumers": [
     {
-        "group": "c1",
+        "prefix": "c1",
         "scale": 1,
-        "queueGroup": "q1",
+        "queuePrefix": "q1",
         "ackMode": {
             "manualAcks": true,
             "consumerPrefetch": 10,
@@ -565,8 +565,8 @@ Example of an exchange destination and source shovel:
 Example of an queue destination and source shovel, where the group is scaled out to 10 queues, creating 10 shovels. Each shovel has a queue with the same name as its source.
 
 ```json
-"queueGroups": [
-    { "group": "q1",
+"queues": [
+    { "prefix": "q1",
         "scale": "3",
         "shovel": {
             "ackMode": "on-confirm",

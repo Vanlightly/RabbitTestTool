@@ -3,7 +3,7 @@
     "topologyType": "SingleDimension",
     "benchmarkType": "latency",
     "description": "Single, short, fixed routing key",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "benchmark",
             "scale": 1,
@@ -13,21 +13,21 @@
                     "type": "direct"
                 }
             ],
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 1,
                     "bindings": [
                         {
                             "from": "ex1",
-                            "bindingKey": "rk1"
+                            "bindingKeys": ["rk1"]
                         }
                     ]
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 1,
                     "sendToExchange": {
                         "exchange": "ex1",
@@ -38,11 +38,11 @@
                     "msgsPerSecondPerPublisher": 1
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 1,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }

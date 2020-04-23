@@ -20,15 +20,15 @@
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" }
   ],
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "benchmark",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "sharded", "type": "modulushash" }],
-      "queueGroups": [ 
+      "queues": [ 
         { 
-          "group": "sharded", 
+          "prefix": "sharded", 
           "scale": "{{ var.queueCount }}", 
           "bindings": [{ "from": "sharded" }],
           "properties": [
@@ -36,9 +36,9 @@
           ]
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms }}",
@@ -53,11 +53,11 @@
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c1", 
+          "prefix": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",

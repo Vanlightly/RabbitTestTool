@@ -23,30 +23,30 @@
     { "name": "initialPublish", "default": "0" }
   ],
   "description": "Point to point",
-  "vhosts": [
+  "topologyGroups": [
     {
       "name": "background",
       "scale": "{{ var.vhostScale }}",
       "scaleType": "{{ var.scaleType }}",
-      "queueGroups": [ 
+      "queues": [ 
         { 
-          "group": "q1", 
+          "prefix": "q1", 
           "scale": "{{ var.queueCount }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
           ]
         } 
       ],
-      "publisherGroups": [
+      "publishers": [
         {
-          "group": "p1",
+          "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "publishMode": {
             "useConfirms": "{{ var.useConfirms }}",
             "inFlightLimit": "{{ var.inflightLimit }}"
           },
-          "sendToQueueGroup": {
-            "queueGroup": "q1",
+          "sendToQueuePrefix": {
+            "queuePrefix": "q1",
             "mode": "Counterpart"
           },
           "deliveryMode": "{{ var.deliveryMode }}",
@@ -55,11 +55,11 @@
           "initialPublish": "{{ var.initialPublish }}"
         }
       ],
-      "consumerGroups": [ 
+      "consumers": [ 
         { 
-          "group": "c1", 
+          "prefix": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queueGroup": "q1",
+          "queuePrefix": "q1",
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",

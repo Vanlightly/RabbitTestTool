@@ -3,15 +3,13 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
-import com.jackvanlightly.rabbittesttool.clients.consumers.Consumer;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
+import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BlockedListener;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -21,15 +19,18 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
 
     private BenchmarkLogger logger;
     private MessageModel messageModel;
-    private Stats stats;
+    private PublisherGroupStats publisherGroupStats;
     private ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
     private Semaphore inflightSemaphore;
     private Set<MessagePayload> undeliverable;
 
-    public PublisherListener(MessageModel messageModel, Stats stats, ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms, Semaphore inflightSemaphore) {
+    public PublisherListener(MessageModel messageModel,
+                             PublisherGroupStats publisherGroupStats,
+                             ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms,
+                             Semaphore inflightSemaphore) {
         this.logger = new BenchmarkLogger("PUBLISHER");
         this.messageModel = messageModel;
-        this.stats = stats;
+        this.publisherGroupStats = publisherGroupStats;
         this.pendingConfirms = pendingConfirms;
         this.inflightSemaphore = inflightSemaphore;
         this.undeliverable = new HashSet<>();
@@ -79,7 +80,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
 
         if(numConfirms > 0) {
             inflightSemaphore.release(numConfirms);
-            stats.handleConfirm(numConfirms, latencies);
+            publisherGroupStats.handleConfirm(numConfirms, latencies);
         }
     }
 
@@ -95,7 +96,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
             numConfirms = 1;
         }
         inflightSemaphore.release(numConfirms);
-        stats.handleNack(numConfirms);
+        publisherGroupStats.handleNack(numConfirms);
     }
 
     @Override
@@ -112,16 +113,16 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
         catch(Exception e) {
             logger.error("Failed registering basic return", e);
         }
-        stats.handleReturn();
+        publisherGroupStats.handleReturn();
     }
 
     @Override
     public void handleBlocked(String reason) {
-        stats.handleBlockedConnection();
+        publisherGroupStats.handleBlockedConnection();
     }
 
     @Override
     public void handleUnblocked() {
-        stats.handleUnblockedConnection();
+        publisherGroupStats.handleUnblockedConnection();
     }
 }

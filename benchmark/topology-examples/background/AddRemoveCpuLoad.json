@@ -3,22 +3,22 @@
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
     "description": "1kb msgs. Confirms (1000) and manual acks (500/1).",
-    "vhosts": [
+    "topologyGroups": [
         {
             "name": "background",
             "scale": 1,
-            "queueGroups": [
+            "queues": [
                 {
-                    "group": "q1",
+                    "prefix": "q1",
                     "scale": 30
                 }
             ],
-            "publisherGroups": [
+            "publishers": [
                 {
-                    "group": "p1",
+                    "prefix": "p1",
                     "scale": 30,
-                    "sendToQueueGroup": {
-                        "queueGroup": "q1",
+                    "sendToQueuePrefix": {
+                        "queuePrefix": "q1",
                         "mode": "random"
                     },
                     "deliveryMode": "Persistent",
@@ -26,11 +26,11 @@
                     "msgsPerSecondPerPublisher": 500
                 }
             ],
-            "consumerGroups": [
+            "consumers": [
                 {
-                    "group": "c1",
+                    "prefix": "c1",
                     "scale": 30,
-                    "queueGroup": "q1"
+                    "queuePrefix": "q1"
                 }
             ]
         }
