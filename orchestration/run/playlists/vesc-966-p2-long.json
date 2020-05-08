@@ -237,7 +237,7 @@
             "p2pScale": "1",
             "p2pQueueCount": "150", 
             "p2pConsumerCount": "1200",
-            "p2pInflightLimit": "100", 
+            "p2pInflightLimit": "5", 
             "p2pManualAcks": "true", 
             "p2pConsumerPrefetch": "10", 
             "p2pAckInterval": "1",
@@ -264,7 +264,7 @@
             "fanoutQueueCount": "6",
             "fanoutConsumerCount": "48",
             "fanoutMessageSize": "12000",
-            "fanoutInflightLimit": "100", 
+            "fanoutInflightLimit": "5", 
             "fanoutManualAcks": "true", 
             "fanoutConsumerPrefetch": "10", 
             "fanoutAckInterval": "1",
@@ -279,7 +279,7 @@
             "topicFanout": "2",
             "topicMessageSize": "12000",
             "topicPublishRate": "5",
-            "topicInflightLimit": "10", 
+            "topicInflightLimit": "5", 
             "topicManualAcks": "true", 
             "topicConsumerPrefetch": "10", 
             "topicAckInterval": "1",
@@ -288,6 +288,10 @@
             "topicUseConfirms": "true", 
             
             "durationSeconds": "300"
+        },
+        "brokerConfiguration": { 
+            "quorum_commands_soft_limit": "32",
+            "wal_max_batch_size": "2048"
         }
     }
 }

@@ -1,0 +1,51 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "useConfirms": "false", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "10", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "100", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "10000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        
+        { "topologyVariables": { "useConfirms": "false", "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "10", "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "50", "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "100", "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "200", "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "1000", "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+
+        { "topologyVariables": { "useConfirms": "false", "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "20", "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "100", "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "200", "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "400", "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "2000", "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+
+        { "topologyVariables": { "useConfirms": "false", "publishRate": "30", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "3", "publishRate": "30", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "6", "publishRate": "30", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "30", "publishRate": "30", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "60", "publishRate": "30", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+
+        { "topologyVariables": { "useConfirms": "false", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "2", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "3", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "6", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "12", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "60", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "useConfirms": "true", "inflightLimit": "120", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "messageSize": "1000",
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

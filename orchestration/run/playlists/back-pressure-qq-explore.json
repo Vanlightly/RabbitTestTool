@@ -1,0 +1,102 @@
+{
+    "benchmarks": [
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "2", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "4096", "quorum_commands_soft_limit": "32" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "2", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "2048", "quorum_commands_soft_limit": "16" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "2", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "1024", "quorum_commands_soft_limit": "8" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "2", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "512", "quorum_commands_soft_limit": "4" }
+        },
+
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "3", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "4096", "quorum_commands_soft_limit": "32" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "3", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "2048", "quorum_commands_soft_limit": "16" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "3", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "1024", "quorum_commands_soft_limit": "8" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "3", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "512", "quorum_commands_soft_limit": "4" }
+        },
+
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "6", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "4096", "quorum_commands_soft_limit": "32" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "6", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "2048", "quorum_commands_soft_limit": "16" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "6", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "1024", "quorum_commands_soft_limit": "8" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "6", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "512", "quorum_commands_soft_limit": "4" }
+        },
+
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "12", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "4096", "quorum_commands_soft_limit": "32" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "12", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "2048", "quorum_commands_soft_limit": "16" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "12", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "1024", "quorum_commands_soft_limit": "8" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "12", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "512", "quorum_commands_soft_limit": "4" }
+        },
+
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "60", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "4096", "quorum_commands_soft_limit": "32" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "60", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "2048", "quorum_commands_soft_limit": "16" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "60", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "1024", "quorum_commands_soft_limit": "8" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflightLimit": "60", "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" },
+            "brokerConfiguration": { "wal_max_batch_size": "512", "quorum_commands_soft_limit": "4" }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "messageSize": "1000",
+            "durationSeconds": "900"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

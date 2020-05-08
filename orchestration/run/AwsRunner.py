@@ -67,6 +67,8 @@ class AwsRunner(Runner):
                                 unique_conf.con_connect_to_node,
                                 common_conf.mode,
                                 str(playlist_entry.grace_period_sec),
+                                common_conf.warmUpSeconds,
+                                common_conf.checks,
                                 str(run_ordinal),
                                 common_conf.tags,
                                 common_conf.attempts,

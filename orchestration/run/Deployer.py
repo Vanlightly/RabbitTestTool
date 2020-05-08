@@ -43,18 +43,12 @@ class Deployer:
         pass
 
     def teardown_all(self, configurations, common_conf, no_destroy):
-        try:
-            console_out(self.actor, f"Getting logs")
-            start_node, end_node = self.get_start_end_nodes(configurations)
-            self.get_logs(common_conf, start_node, end_node)
-            console_out(self.actor, f"Logs retrieved")
-        except Exception as e:
-            console_out_exception(self.actor, "Failed retrieving logs", e)
-
         if no_destroy:
             console_out(self.actor, "No teardown as --no-destroy set to true")
+            self.get_logs_of_all_configs(common_conf, configurations)
         else:
             console_out(self.actor, "Terminating all servers")
+            self.get_logs_of_all_configs(common_conf, configurations)
 
             for config_tag in configurations:
                 console_out(self.actor, f"TEARDOWN FOR configuration {config_tag}")
@@ -93,6 +87,12 @@ class Deployer:
 
         return start_node, last_node
 
+    def get_start_end_nodes_of_config(self, unique_conf):
+        start_node = unique_conf.node_number
+        last_node = int(unique_conf.node_number) + int(unique_conf.cluster_size) - 1
+        
+        return start_node, last_node
+
 
     def parallel_deploy(self, configurations, common_conf):
         d_threads = list()
@@ -129,5 +129,26 @@ class Deployer:
                     if not common_conf.no_deploy:
                         self.teardown_all(configurations, common_conf, False)
 
-    def get_logs(self, common_conf, start_node, end_node):
+    def get_logs_of_all_configs(self, common_conf, configurations):
+        for config_tag in configurations:
+            unique_conf_list = configurations[config_tag]
+            for p in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[p]
+
+                try:
+                    start_node, end_node = self.get_start_end_nodes_of_config(unique_conf)
+                    self.get_logs(common_conf, unique_conf.logs_volume, start_node, end_node)
+                except Exception as e:
+                    console_out_exception(self.actor, "Failed retrieving logs", e)
+    
+    def get_logs(self, common_conf, logs_volume, start_node, end_node):
         raise NotImplementedError
+
+    def update_broker_config_on_all(self, configurations, common_conf, broker_config):
+        for config_tag in configurations:
+            unique_conf_list = configurations[config_tag]
+            for p in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[p]
+
+                start_node, end_node = self.get_start_end_nodes_of_config(unique_conf)
+                self.update_broker_config(common_conf, start_node, end_node, broker_config)

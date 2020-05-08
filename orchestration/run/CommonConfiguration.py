@@ -28,6 +28,11 @@ class CommonConfiguration:
         self.override_broker_hosts = get_optional_arg(args, "--override-broker-hosts", "", "")
         self.federation_enabled = is_true(get_optional_arg(args, "--federation-enabled", "", "false"))
         self.attempts = get_optional_arg(args, "--attempts", "", "1")
+        self.warmUpSeconds = get_optional_arg(args, "--warm-up-seconds", "", "1")
+        
+
+        # model mode only. Value: dataloss,duplicates,ordering. Don't use ordering unless one consumer per queue.
+        self.checks = get_optional_arg(args, "--checks", "", "dataloss,duplicates") 
         
         self.username = "benchmark"
         self.password = get_mandatory_arg(args, "--password", "")

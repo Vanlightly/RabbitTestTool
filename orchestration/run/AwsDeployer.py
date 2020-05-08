@@ -285,12 +285,30 @@ class AwsDeployer(Deployer):
                     console_out(self.actor, "teardown failed, will retry in 1 minute")
                     time.sleep(60)
 
-    def get_logs(self, common_conf, start_node, end_node):
+    def get_logs(self, common_conf, logs_volume, start_node, end_node):
         target_dir = "logs/" + datetime.now().strftime("%Y%m%d%H%M")
         subprocess.call(["bash", "get-logs.sh",
                         common_conf.key_pair,
+                        logs_volume,
                         str(start_node),
                         str(end_node),
                         str(common_conf.run_tag),
                         "rabbitmq",
-                        target_dir ])
+                        target_dir])
+
+    def update_broker_config(self, common_conf, start_node, end_node, broker_config):
+        quorum_commands_soft_limit = "0"
+        if "quorum_commands_soft_limit" in broker_config:
+            quorum_commands_soft_limit = broker_config["quorum_commands_soft_limit"]
+        
+        wal_max_batch_size = "0"
+        if "wal_max_batch_size" in broker_config:
+            wal_max_batch_size = broker_config["wal_max_batch_size"]
+
+        subprocess.call(["bash", "update-rabbitmq-config.sh",
+                        common_conf.key_pair,
+                        str(start_node),
+                        str(end_node),
+                        str(common_conf.run_tag),
+                        quorum_commands_soft_limit,
+                        wal_max_batch_size], cwd="../deploy/aws")

@@ -1,4 +1,7 @@
 [
+    {rabbit, [
+        {quorum_commands_soft_limit, {{ quorum_commands_soft_limit }} }
+    ]},
     {ra, [
         {wal_data_dir, '/{{ wal_volume }}/wal'},
         {segment_max_entries, {{ raft_segment_max_entries }}}

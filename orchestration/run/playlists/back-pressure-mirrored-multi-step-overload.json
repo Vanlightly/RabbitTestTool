@@ -1,0 +1,26 @@
+{
+    "benchmarks": [
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflight1": "2", "inflight2": "5", "inflight3": "10", "inflight4": "20", "inflight5": "100",
+                "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "messageSize": "1000" }
+        },
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflight1": "2", "inflight2": "5", "inflight3": "10", "inflight4": "20", "inflight5": "100",
+                "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "messageSize": "10000" }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe-growing-inflight.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "consumerPrefetch": "10", 
+            "ackInterval": "1" ,
+            "durationSeconds": "900"
+        },
+        "policy": "mirrored-queue.json",
+        "policyVariables": { 
+            "haMode": "exactly",
+            "haParams": "2"
+        }
+    }
+}

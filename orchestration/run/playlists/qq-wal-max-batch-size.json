@@ -1,0 +1,40 @@
+{
+    "benchmarks": [
+        { "brokerConfiguration": { "wal_max_batch_size": "16" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "32" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "64" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "128" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "256" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "512" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "1024" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "2048" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "4096" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "8192" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "16384" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "32768" } },
+        { "brokerConfiguration": { "wal_max_batch_size": "65536" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "durationSeconds": "300",
+            "messageSize": "1000",
+            "inflightLimit": "100", 
+            "publishRate": "5000", 
+            "publisherCount": "10", 
+            "queueCount": "10", 
+            "consumerCount": "10"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        },
+        "brokerConfiguration": { 
+            "quorum_commands_soft_limit": "32" 
+        }
+    }
+}

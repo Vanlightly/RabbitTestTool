@@ -290,3 +290,6 @@ class GcpDeployer(Deployer):
             subprocess.call(proxy_args)
             if exit_code != 0:
                 raise Exception(f"cloud_sql_proxy on {node_name} failed with exit code {exit_code}")
+
+    def update_broker_config(self, common_conf, start_node, end_node, broker_config):
+        raise NotImplementedError

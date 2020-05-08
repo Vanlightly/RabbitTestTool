@@ -1,0 +1,93 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "100", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "40000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "50", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "100", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "500", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "1000", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "50", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "100", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "500", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "messageSize": "1000", "inflightLimit": "1000", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "5", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "10", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "50", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "100", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "1000", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "5", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "10", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "50", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "100", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "1000", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "2", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "10", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "20", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "1000", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "2", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "10", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "20", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } },
+        { "topologyVariables": { "messageSize": "1000","inflightLimit": "1000", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } },
+
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "100", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "40000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "50", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "100", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "500", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "1000", "publishRate": "5000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "50", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "100", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "500", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        { "topologyVariables": { "messageSize": "10000", "inflightLimit": "1000", "publishRate": "5000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "5", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "10", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "50", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "100", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "1000", "publishRate": "500", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" } },
+
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "5", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "10", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "50", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "100", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "1000", "publishRate": "500", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" } },
+
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "2", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "10", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "20", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "1000", "publishRate": "100", "publisherCount": "500", "queueCount": "100", "consumerCount": "500" } },
+
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "2", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "10", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "20", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } },
+        { "topologyVariables": { "messageSize": "10000","inflightLimit": "1000", "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        },
+        "brokerConfiguration": { 
+            "quorum_commands_soft_limit": "32",
+            "wal_max_batch_size": "2048"
+        }
+    }
+}

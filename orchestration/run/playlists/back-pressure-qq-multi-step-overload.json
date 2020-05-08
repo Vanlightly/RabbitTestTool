@@ -1,0 +1,34 @@
+{
+    "benchmarks": [
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflight1": "2", "inflight2": "5", "inflight3": "10", "inflight4": "20", "inflight5": "100",
+                "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "messageSize": "1000" },
+            "brokerConfiguration": { 
+                "wal_max_batch_size": "4096", 
+                "quorum_commands_soft_limit": "32" 
+            }
+        },
+
+        { 
+            "topologyVariables": { "useConfirms": "true", "inflight1": "2", "inflight2": "5", "inflight3": "10", "inflight4": "20", "inflight5": "100",
+                "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "messageSize": "10000" },
+            "brokerConfiguration": { 
+                "wal_max_batch_size": "4096", 
+                "quorum_commands_soft_limit": "32" 
+            }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe-growing-inflight.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "consumerPrefetch": "10", 
+            "ackInterval": "1" ,
+            "durationSeconds": "900"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

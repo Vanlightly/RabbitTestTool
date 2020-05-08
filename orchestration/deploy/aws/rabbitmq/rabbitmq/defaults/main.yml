@@ -12,3 +12,5 @@ data_volume: volume1
 logs_volume: volume1
 wal_volume: volume1
 quorum_volume: volume1
+quorum_commands_soft_limit: 256
+wal_max_batch_size: 32768

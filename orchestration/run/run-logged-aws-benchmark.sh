@@ -64,6 +64,9 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --pub-connect-to-node "${30}" \
 --con-connect-to-node "${31}" \
 --grace-period-sec "${33}" \
---run-ordinal "${34}" \
---benchmark-tags "${35}" \
---benchmark-attempts "${36}" "${37}" "${38}" "${39}"
+--warm-up-seconds "${34}" \
+--checks "${35}" \
+--zero-exit-code true \
+--run-ordinal "${36}" \
+--benchmark-tags "${37}" \
+--benchmark-attempts "${38}" "${39}" "${40}" "${41}"

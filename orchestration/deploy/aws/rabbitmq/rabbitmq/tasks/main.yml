@@ -6,33 +6,44 @@
       {{ item.ip }} {{ item.host }}
     marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.host }}"
   with_items: "{{ rabbitmq_hosts }}"
+  tags: [installation]
   when: rabbitmq_hosts is defined
-
+  
 - name: Install RabbitMQ public key
   apt_key:
     url: https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc
     state: present
+  tags: [installation]
 
 - name: Install Erlang Solutions public key
   apt_key:
     url: https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
     state: present
+  tags: [installation]
 
 - name: copy Erlang DEB file to /tmp
   copy: 
     src: "{{ local_deb_file_dir }}/{{ erlang_deb_file }}"
     dest: /tmp
+  tags: [installation]
 
 - name: Install Erlang from DEB file
   apt:
     deb: "/tmp/{{ erlang_deb_file }}"
+  tags: [installation]
 
 - include_tasks: install_from_generic.yml
+  tags: [installation]
   when: install_from == 'generic'
+
+- include_tasks: configuration.yml
+  tags: [configuration]
   
 - include_tasks: join_cluster_generic.yml
+  tags: [installation]
   when: node_role == "joinee" and install_from == 'generic'
 
 # hack because when quorum dir is set, feature flags don't turn on
 - include_tasks: feature_flags.yml
+  tags: [installation]
   when: quorum_volume != data_volume

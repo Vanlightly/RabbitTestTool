@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "------------------------------"
-echo "Deploying Loal storage backed instance with args:"
+echo "Deploying Local storage backed instance with args:"
 AMI="$1"
 echo "AMI=$AMI"
 CORE_COUNT="$2"

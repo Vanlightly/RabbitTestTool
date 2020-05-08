@@ -75,11 +75,13 @@ RUNNING="$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=
 if [ -z $RUNNING ]; then
     echo "Node $NODE_NUMBER: Creating $TECHNOLOGY server $NODE_NUMBER with version $BROKER_VERSION"
 
+    LG_INCLUDED="true"
+    
     # if its a local storage instance then do not add extra ebs volume
     if [[ $INSTANCE == c5d* ]] || [[ $INSTANCE == i3* ]]; then
-        bash deploy-local-storage-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INSTANCE $LG_SG $NODE_NUMBER $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC
+        bash deploy-local-storage-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INCLUDED $LG_INSTANCE $LG_SG $NODE_NUMBER $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC
     else
-        bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR "true" $LG_INSTANCE $LG_SG $NODE_NUMBER $RUN_TAG $SG $SN $TECHNOLOGY $TENANCY $TPC $VOL1_SIZE $VOL2_SIZE $VOL3_SIZE $VOL_TYPE
+        bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR "true" $LG_INCLUDED $LG_INSTANCE $LG_SG $NODE_NUMBER $RUN_TAG $SG $SN $TECHNOLOGY $TENANCY $TPC $VOL1_SIZE $VOL2_SIZE $VOL3_SIZE $VOL_TYPE
     fi
 else
     echo "Node $NODE_NUMBER: Instance already exists, skipping EC2 instance creation"

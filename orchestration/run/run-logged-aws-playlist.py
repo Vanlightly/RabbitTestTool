@@ -17,7 +17,7 @@ from printer import console_out
 
 def get_variables(entry_json, common_attr_json, vars_field):
     variables = dict()
-
+    
     # add any variables from common attributes first (least precedence)
     if vars_field in common_attr_json:
         vars_json = common_attr_json[vars_field]
@@ -67,6 +67,7 @@ def get_playlist_entries(playlist_file):
         entry.topology_variables = get_variables(playlist_entry, common_attr, "topologyVariables")
         entry.policy = get_entry_optional_field(playlist_entry, common_attr, "policy", "")
         entry.policy_variables = get_variables(playlist_entry, common_attr, "policyVariables")
+        entry.broker_configuration = get_variables(playlist_entry, common_attr, "brokerConfiguration")
         
         entry.has_broker_actions = get_entry_optional_field(playlist_entry, common_attr, "hasBrokerActions", False)
         if entry.has_broker_actions:
@@ -75,6 +76,7 @@ def get_playlist_entries(playlist_file):
             entry.trigger_at = get_entry_mandatory_field(playlist_entry, common_attr, "triggerAt")
 
         entry.grace_period_sec = get_entry_optional_field(playlist_entry, common_attr, "gracePeriodSec", 0)
+        
 
         entry.bg_topology = get_entry_optional_field(playlist_entry, common_attr, "bgTopology", "")
         entry.bg_policy = get_entry_optional_field(playlist_entry, common_attr, "bgPolicy", "")
@@ -162,6 +164,16 @@ for i in range(common_conf.repeat_count):
     for top_counter in range(0, len(playlist_entries)):
         entry = playlist_entries[top_counter]
         console_out("RUNNER", f"Started {entry.topology}")
+
+        apply_config = len(entry.broker_configuration) > 0
+        if apply_config:
+            console_out("RUNNER", "Applying broker configuration...")
+            deployer.update_broker_config_on_all(configurations, common_conf, entry.broker_configuration)
+            
+        if apply_config or run_ordinal > 1:
+            console_out("RUNNER", "Restarting all clusters before next topology...")
+            broker_actions.restart_all_brokers(configurations, common_conf)
+            time.sleep(60)
 
         # run all instances of the topology benchmark
         b_threads = list()
@@ -253,9 +265,6 @@ for i in range(common_conf.repeat_count):
         # wait for configuration gap seconds
         console_out("RUNNER", f"Finished {entry.topology}")
         time.sleep(common_conf.gap_seconds)
-        console_out("RUNNER", "Restarting all clusters before next topology...")
-        broker_actions.restart_all_brokers(configurations, common_conf)
-        time.sleep(60)
         run_ordinal += 1
         
 
