@@ -25,7 +25,7 @@ public class TopologyLoader {
     private BenchmarkLogger logger;
     private Set<String> intFields = new HashSet<>(Arrays.asList("scale", "inFlightLimit", "consumerPrefetch", "ackInterval",
             "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize",
-            "messageCount", "thresholdSeconds"));
+            "messageCount", "thresholdSeconds", "initialPublish"));
     private Set<String> boolFields = new HashSet<>(Arrays.asList("useConfirms", "manualAcks"));
     private Pattern variablePattern;
 
@@ -1088,13 +1088,38 @@ public class TopologyLoader {
     }
 
     public void handleJSONArray(JSONArray jsonArray, Map<String, String> variables, Map<String,String> variableDefaults) {
-        Iterator<Object> jsonArrayIterator = jsonArray.iterator();
-        jsonArrayIterator.forEachRemaining(element -> {
+        for(int i=0; i<jsonArray.length(); i++) {
+            Object element = jsonArray.get(i);
+
             if(element instanceof JSONObject)
                 handleJSONObject((JSONObject) element, variables, variableDefaults);
             else if(element instanceof JSONArray)
                 handleJSONArray((JSONArray) element, variables, variableDefaults);
-        });
+            else {
+                String fieldValue = (String)element;
+                String variableValue = getVariableValue(fieldValue, variables, variableDefaults);
+                if(StringUtils.isNumeric(variableValue)) {
+                    int value = Integer.valueOf(variableValue);
+                    jsonArray.put(i, value);
+                }
+                else {
+                    jsonArray.put(i, variableValue);
+                }
+            }
+        }
+
+//        Iterator<Object> jsonArrayIterator = jsonArray.iterator();
+//        jsonArrayIterator.forEachRemaining(element -> {
+//            if(element instanceof JSONObject)
+//                handleJSONObject((JSONObject) element, variables, variableDefaults);
+//            else if(element instanceof JSONArray)
+//                handleJSONArray((JSONArray) element, variables, variableDefaults);
+//            else {
+//                String fieldValue = (String)element;
+//                String value = getVariableValue(fieldValue, variables, variableDefaults);
+//                replaceValue(element, element, variables, variableDefaults);
+//            }
+//        });
     }
 
     public void replaceValue(JSONObject json, String key, Map<String, String> variables, Map<String,String> variableDefaults) {

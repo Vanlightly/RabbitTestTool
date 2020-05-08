@@ -2,13 +2,14 @@ package com.jackvanlightly.rabbittesttool.register;
 
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
+import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
 import com.jackvanlightly.rabbittesttool.model.Violation;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 
 import java.util.List;
 
 public interface BenchmarkRegister {
-    void logBenchmarkStart(String runId,
+    void logBenchmarkStart(String benchmarkId,
                            int runOrdinal,
                            String technology,
                            String version,
@@ -37,6 +38,11 @@ public interface BenchmarkRegister {
     void logViolations(String benchmarkId, List<Violation> violations);
     void logConsumeIntervals(String benchmarkId,
                              List<ConsumeInterval> consumeIntervals,
+                             int unavailabilityThresholdSeconds,
+                             double availability);
+
+    void logDisconnectedIntervals(String benchmarkId,
+                             List<DisconnectedInterval> disconnectedIntervals,
                              int unavailabilityThresholdSeconds,
                              double availability);
 }

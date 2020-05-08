@@ -140,7 +140,7 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
         long seqNo = channel.getNextPublishSeqNo();
         long timestamp = MessageUtils.getTimestamp();
 
-        MessagePayload mp = new MessagePayload(1, 1, timestamp);
+        MessagePayload mp = new MessagePayload(1, 1L, timestamp);
         AMQP.BasicProperties messageProperties = getProperties();
 
         pendingConfirms.put(seqNo, mp);

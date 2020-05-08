@@ -18,11 +18,10 @@ import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.PublisherConfig;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 import org.apache.commons.lang3.time.StopWatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -87,19 +86,20 @@ public class Orchestrator {
     public boolean runBenchmark(String runId,
                                 Topology topology,
                                 BrokerConfiguration brokerConfiguration,
-                                Duration gracePeriod) {
+                                Duration gracePeriod,
+                                Duration warmUp) {
         try {
             initialSetup(topology, brokerConfiguration);
             startActionSupervisor(topology);
             switch(topology.getTopologyType()) {
                 case Fixed:
-                    performFixedBenchmark(runId, topology, gracePeriod);
+                    performFixedBenchmark(runId, topology, gracePeriod, warmUp);
                     break;
                 case SingleVariable:
-                    performSingleVariableBenchmark(runId, topology, gracePeriod);
+                    performSingleVariableBenchmark(runId, topology, gracePeriod, warmUp);
                     break;
                 case MultiVariable:
-                    performMultiVariableBenchmark(runId, topology, gracePeriod);
+                    performMultiVariableBenchmark(runId, topology, gracePeriod, warmUp);
                     break;
                 default:
                     throw new RuntimeException("Non-supported topology type");
@@ -323,10 +323,11 @@ public class Orchestrator {
 
     private void performFixedBenchmark(String runId,
                                        Topology topology,
-                                       Duration gracePeriod) {
+                                       Duration gracePeriod,
+                                       Duration warmUp) {
         FixedConfig fixedConfig = topology.getFixedConfig();
         setCountStats();
-        startAllClients();
+        startAllClients(warmUp);
         executeFixedStep(runId, fixedConfig, topology);
         initiateCleanStop(gracePeriod);
     }
@@ -370,7 +371,8 @@ public class Orchestrator {
 
     private void performSingleVariableBenchmark(String runId,
                                                 Topology topology,
-                                                Duration gracePeriod) throws IOException {
+                                                Duration gracePeriod,
+                                                Duration warmUp) throws IOException {
         VariableConfig variableConfig = topology.getVariableConfig();
 
         // initialize dimenion values as step 1 values. Acts as an extra ramp up.
@@ -379,7 +381,7 @@ public class Orchestrator {
 
         resetMessageSentCounts();
         setCountStats();
-        startAllClients();
+        startAllClients(warmUp);
         executeSingleVariableSteps(runId, variableConfig, topology);
         initiateCleanStop(gracePeriod);
     }
@@ -432,7 +434,8 @@ public class Orchestrator {
 
     private void performMultiVariableBenchmark(String runId,
                                                Topology topology,
-                                               Duration gracePeriod) throws IOException {
+                                               Duration gracePeriod,
+                                               Duration warmUp) throws IOException {
         List<String> dimStr = Arrays.stream(topology.getVariableConfig().getMultiDimensions()).map(x -> String.valueOf(x)).collect(Collectors.toList());
         logger.info("Multi-variable with dimensions: " + String.join(" ", dimStr));
 
@@ -446,7 +449,7 @@ public class Orchestrator {
 
         resetMessageSentCounts();
         setCountStats();
-        startAllClients();
+        startAllClients(warmUp);
         executeMultiVariableSteps(runId, variableConfig, topology);
         initiateCleanStop(gracePeriod);
     }
@@ -503,19 +506,46 @@ public class Orchestrator {
         }
     }
 
-    private void startAllClients() {
+    private void startAllClients(Duration warmUp) {
         for(PublisherGroup publisherGroup : publisherGroups)
             publisherGroup.performInitialPublish();
 
         for(ConsumerGroup consumerGroup : consumerGroups)
             consumerGroup.startInitialConsumers();
 
+        // need to set the warm up rate before starting publishers in case they are not rated limited
+        // this will avoid a short spike before warm up commences
+        if(warmUp.toMillis() > 0) {
+            for(PublisherGroup publisherGroup : publisherGroups)
+                publisherGroup.setWarmUpModifier(0.1);
+        }
+
         for(PublisherGroup publisherGroup : publisherGroups)
             publisherGroup.startInitialPublishers();
+
+        if(warmUp.toMillis() > 0) {
+            int rampPeriod = (int)(warmUp.toMillis() / 10);
+            double modifier = 0.1;
+            for (int i = 1; i <= 10; i++) {
+                logger.info("Warm up step " + i + " at " + (modifier * i * 100) + "% of target rate");
+                for(PublisherGroup publisherGroup : publisherGroups) {
+                    publisherGroup.setWarmUpModifier(modifier * i);
+                }
+
+                ClientUtils.waitFor(rampPeriod);
+            }
+
+            // removes the warm up rate modifier and if is a non-rate limited publisher, turns off rate limiting
+            for(PublisherGroup publisherGroup : publisherGroups) {
+                publisherGroup.endWarmUp();
+            }
+        }
     }
 
     private void initiateCleanStop(Duration rollingGracePeriod) {
         logger.info("Signalling publishers to stop");
+
+        // tell the publishers to stop publishing and stop
         for(PublisherGroup publisherGroup : publisherGroups)
             publisherGroup.stopAllPublishers();
 
@@ -523,31 +553,29 @@ public class Orchestrator {
         for(ConsumerGroup consumerGroup : consumerGroups)
             consumerGroup.setProcessingMs(0);
 
+        // print out info on pending confirms
+        int pending = publisherGroups.stream().map(x -> x.getPendingConfirmCount()).reduce(Integer::sum).get();
+        logger.info("Abandoned " + pending + " publisher confirms in-flight");
+
+        // tell the model to not expect further publishes
         messageModel.sendComplete();
 
+        // start the grace period to allow consumers to catch up
         if(!rollingGracePeriod.equals(Duration.ZERO)) {
-            logger.info("Started grace period of " + rollingGracePeriod.getSeconds() + " seconds for consumers to catch up");
+            logger.info("Started rolling grace period of " + rollingGracePeriod.getSeconds() + " seconds for consumers to catch up");
 
-            int waitCounter = 0;
+            int waitCounter = 1;
             while(messageModel.durationSinceLastReceipt().getSeconds() < rollingGracePeriod.getSeconds()) {
                 waitFor(5000);
-                Set<MessagePayload> missing = messageModel.getReceivedMissing();
-                if(missing.isEmpty()) {
+                long missingCount = messageModel.missingMessageCount();
+                if(missingCount == 0) {
                     logger.info("All messages received");
                     break;
                 }
                 else {
-                    logger.info("Waiting for " + missing.size() + " messages to be received");
-                    if(waitCounter % 12 == 0) {
-                        logger.info("First (up to) 10 missing:");
-                        List<String> sample = missing.stream()
-                                .sorted((mp, t1) -> mp.getSequenceNumber())
-                                .map(x -> x.toString())
-                                .limit(10)
-                                .collect(Collectors.toList());
-                        for (String missingSample : sample)
-                            logger.info(missingSample);
-                    }
+                    long periodSince = messageModel.durationSinceLastReceipt().getSeconds();
+                    logger.info(waitCounter + ") Waiting for " + missingCount + " messages to be received. Last received a message "
+                            + periodSince + " seconds ago");
                 }
                 waitCounter++;
             }

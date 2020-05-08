@@ -34,7 +34,24 @@ public class PublisherConfig {
         availableHeaders = new ArrayList<>();
     }
 
-    public PublisherConfig(String groupPrefix, String group, PublisherMode publisherMode, String vhostName, boolean isDownstream, int scale, SendToMode sendToMode, SendToExchange sendToExchange, SendToQueueGroup sendToQueueGroup, DeliveryMode deliveryMode, int messageSize, int headersPerMessage, int frameMax, List<MessageHeader> availableHeaders, int publishRatePerSecond, int streams, long messageLimit, long initialPublish) {
+    public PublisherConfig(String groupPrefix,
+                           String group,
+                           PublisherMode publisherMode,
+                           String vhostName,
+                           boolean isDownstream,
+                           int scale,
+                           SendToMode sendToMode,
+                           SendToExchange sendToExchange,
+                           SendToQueueGroup sendToQueueGroup,
+                           DeliveryMode deliveryMode,
+                           int messageSize,
+                           int headersPerMessage,
+                           int frameMax,
+                           List<MessageHeader> availableHeaders,
+                           int publishRatePerSecond,
+                           int streams,
+                           long messageLimit,
+                           long initialPublish) {
         this.groupPrefix = groupPrefix;
         this.group = group;
         this.publisherMode = publisherMode;

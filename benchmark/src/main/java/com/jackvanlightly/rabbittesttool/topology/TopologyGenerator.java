@@ -342,7 +342,7 @@ public class TopologyGenerator {
             }
             catch(JSONException je) {
                 if(je.getMessage().startsWith("Duplicate key")) {
-                    System.out.println("Duplicate key bug!");
+                    //System.out.println("Duplicate key bug!");
                     String pattern = "\\\"(.+)\\\"";
                     Pattern r = Pattern.compile(pattern);
                     Matcher m = r.matcher(je.getMessage());

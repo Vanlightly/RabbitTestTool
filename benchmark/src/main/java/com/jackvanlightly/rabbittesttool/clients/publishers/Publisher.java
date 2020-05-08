@@ -4,7 +4,6 @@ import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
@@ -13,6 +12,8 @@ import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class Publisher implements Runnable {
 
     private BenchmarkLogger logger;
+    private long confirmTimeoutThresholdNs;
 
     private String publisherId;
     private MessageModel messageModel;
@@ -33,12 +35,13 @@ public class Publisher implements Runnable {
     private AtomicBoolean isCancelled;
     private int routingKeyIndex;
     private PublisherStats publisherStats;
+    private PublisherListener listener;
     private Broker currentHost;
     private int checkHostInterval = 100000;
 
     // for stream round robin
     private int maxStream;
-    private Map<Integer, Integer> streamCounter;
+    private Map<Integer, Long> streamCounter;
 
     // for send to queue round robin
     private List<String> queuesInGroup;
@@ -61,6 +64,8 @@ public class Publisher implements Runnable {
     private Random rand = new Random();
 
     // for publishing rate
+    private boolean rateLimit;
+    private double warmUpModifier;
     private int sentInPeriod;
     private int limitInPeriod;
     private int periodNs;
@@ -106,12 +111,24 @@ public class Publisher implements Runnable {
         this.availableHeaderCount = this.availableMessageHeaderCombinations.size();
         this.inFlightLimit = this.publisherSettings.getPublisherMode().getInFlightLimit();
         this.sendLimit = this.publisherSettings.getMessageLimit();
+        this.warmUpModifier = 1.0;
+        this.rateLimit = this.publisherSettings.getPublishRatePerSecond() > 0;
         initializeStreamCounter();
         initializeRouting();
+
+        confirmTimeoutThresholdNs = 1000000000L*300L; // 5 minutes. TODO add as an arg
     }
 
     public void signalStop() {
         this.isCancelled.set(true);
+    }
+
+    public int getPendingConfirmCount() {
+        if(useConfirms) {
+            return listener.getPendingConfirmCount();
+        }
+        else
+            return 0;
     }
 
     public void addQueue(String queue) {
@@ -137,13 +154,29 @@ public class Publisher implements Runnable {
 
     public void setPublishRatePerSecond(int msgsPerSecond) {
         this.publisherSettings.setPublishRatePerSecond(msgsPerSecond);
-        configureRateLimit();
+        configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
     }
 
     public void modifyPublishRatePerSecond(double percentModification) {
         int newPublishRate = (int)(percentModification * this.publisherSettings.getPublishRatePerSecond());
         this.publisherSettings.setPublishRatePerSecond(newPublishRate);
-        configureRateLimit();
+        configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
+    }
+
+    public void setWarmUpModifier(double warmUpModifier) {
+        this.rateLimit = true;
+        this.warmUpModifier = warmUpModifier;
+        int rate = this.publisherSettings.getPublishRatePerSecond() > 0
+                ? this.publisherSettings.getPublishRatePerSecond()
+                : 10000;
+        configureRateLimit(rate);
+    }
+
+    public void endWarmUp() {
+        warmUpModifier = 1.0;
+        rateLimit = publisherSettings.getPublishRatePerSecond() > 0;
+        if(rateLimit)
+            configureRateLimit(publisherSettings.getPublishRatePerSecond());
     }
 
     public int getInFlightLimit() {
@@ -187,13 +220,13 @@ public class Publisher implements Runnable {
                 channel = connection.createChannel();
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
                 Semaphore inflightSemaphore = new Semaphore(1000);
-                PublisherListener listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
+                PublisherListener initSendListener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
 
                 logger.info("Publisher " + publisherId + " opened channel for initial publish");
 
                 channel.confirmSelect();
-                channel.addConfirmListener(listener);
-                channel.addReturnListener(listener);
+                channel.addConfirmListener(initSendListener);
+                channel.addReturnListener(initSendListener);
 
                 int currentStream = 0;
                 while (!isCancelled.get()) {
@@ -240,11 +273,13 @@ public class Publisher implements Runnable {
             Channel channel = null;
             try {
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
+
                 Semaphore inflightSemaphore = new Semaphore(publisherSettings.getPublisherMode().getInFlightLimit());
-                PublisherListener listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
+                listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
 
                 connection = getConnection();
                 channel = connection.createChannel();
+                messageModel.clientConnected(publisherId);
                 logger.info("Publisher " + publisherId + " opened channel to " + currentHost.getNodeName() + ". Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
 
                 if (this.useConfirms) {
@@ -260,10 +295,9 @@ public class Publisher implements Runnable {
 
                 // period and limit for rate limiting
                 long periodStartNs = System.nanoTime();
-                boolean rateLimit = publisherSettings.getPublishRatePerSecond() > 0;
 
                 if (rateLimit)
-                    configureRateLimit();
+                    configureRateLimit(publisherSettings.getPublishRatePerSecond());
 
                 // examples:
                 //nextPublishRatePerSecondStep
@@ -292,6 +326,8 @@ public class Publisher implements Runnable {
                                 reconnect = true;
                                 break;
                             }
+
+                            listener.checkForTimeouts(confirmTimeoutThresholdNs);
                         }
                     }
 
@@ -313,7 +349,7 @@ public class Publisher implements Runnable {
                             if (this.sentInPeriod >= this.limitInPeriod) {
                                 long waitNs = this.periodNs - elapsedNs;
                                 if (waitNs > 0)
-                                    waitFor((int) (waitNs / 999000));
+                                    waitFor((int) (waitNs / 990000));
 
                                 // may need to adjust for drift over time
                                 periodStartNs = System.nanoTime();
@@ -339,8 +375,11 @@ public class Publisher implements Runnable {
 
                 tryClose(channel);
                 tryClose(connection);
+            } catch (TimeoutException | IOException e) {
+                logger.error("Publisher" + publisherId + " connection failed");
+                waitFor(5000);
             } catch (Exception e) {
-                logger.error("Publisher" + publisherId + " failed", e);
+                logger.error("Publisher" + publisherId + " failed unexpectedly", e);
                 tryClose(channel);
                 tryClose(connection);
                 waitFor(5000);
@@ -365,25 +404,34 @@ public class Publisher implements Runnable {
 
     private void tryClose(Connection connection) {
         try {
-            if (connection.isOpen())
+            if (connection.isOpen()) {
                 connection.close();
+            }
+
+            messageModel.clientDisconnected(publisherId);
         }
         catch(Exception e){}
     }
 
-    private void configureRateLimit() {
-        int measurementPeriodMs = 1000 / publisherSettings.getPublishRatePerSecond();
+    private void configureRateLimit(int publishRate) {
+        // if a non rate limited publisher has a warm up, then for the warm up
+        // we set the top rate to be 10000
+        if(publishRate == 0)
+            publishRate = 10000;
+
+        int rate = Math.max(1, (int)(publishRate * this.warmUpModifier));
+        int measurementPeriodMs = 1000 / rate;
 
         if (measurementPeriodMs >= 10) {
             this.limitInPeriod = 1;
         } else {
             measurementPeriodMs = 10;
             int periodsPerSecond = 1000 / measurementPeriodMs;
-            this.limitInPeriod = publisherSettings.getPublishRatePerSecond() / periodsPerSecond;
+            this.limitInPeriod = rate / periodsPerSecond;
         }
 
         this.periodNs = measurementPeriodMs * 1000000;
-        this.checkHostInterval = publisherSettings.getPublishRatePerSecond()*30;
+        this.checkHostInterval = rate*30;
     }
 
     private void waitFor(int milliseconds) {
@@ -402,7 +450,7 @@ public class Publisher implements Runnable {
         long timestamp = MessageUtils.getTimestamp();
 
         int stream = publisherSettings.getStreams().get(currentStream);
-        Integer streamSeqNo = getAndIncrementStreamCounter(stream);
+        Long streamSeqNo = getAndIncrementStreamCounter(stream);
         MessagePayload mp = new MessagePayload(stream, streamSeqNo, timestamp);
         AMQP.BasicProperties messageProperties = getProperties();
 
@@ -658,11 +706,11 @@ public class Publisher implements Runnable {
         streamCounter = new HashMap<>();
 
         for(Integer stream : publisherSettings.getStreams())
-            streamCounter.put(stream, 0);
+            streamCounter.put(stream, 0L);
     }
 
-    private Integer getAndIncrementStreamCounter(Integer stream) {
-        Integer current = streamCounter.get(stream);
+    private Long getAndIncrementStreamCounter(Integer stream) {
+        Long current = streamCounter.get(stream);
         streamCounter.put(stream, current +  1);
         return current;
     }

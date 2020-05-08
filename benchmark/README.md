@@ -757,8 +757,11 @@ java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
 --run-id2 6d89c595-ad63-4f5b-8466-fd1f922a5baa \
 --technology2 rabbitmq \
 --version2 3.8.1 \
---config-tag2 c2
+--config-tag2 c2 \
+--desc-vars publisherCount,publishRate,queueCount,consumerCount
 ```
+
+    Note that the `--desc-vars` argument exists to select which variables to add to the description column of the generated csv. 
 
 The above omitted the PostgreSQL connection details by specifying a config file.
 

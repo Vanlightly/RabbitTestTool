@@ -10,8 +10,6 @@ import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;

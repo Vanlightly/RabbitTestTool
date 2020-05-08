@@ -5,10 +5,7 @@ import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.comparer.StatisticsComparer;
 import com.jackvanlightly.rabbittesttool.metrics.InfluxMetrics;
-import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
-import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.model.Violation;
-import com.jackvanlightly.rabbittesttool.model.ViolationType;
+import com.jackvanlightly.rabbittesttool.model.*;
 import com.jackvanlightly.rabbittesttool.register.BenchmarkRegister;
 import com.jackvanlightly.rabbittesttool.register.ConsoleRegister;
 import com.jackvanlightly.rabbittesttool.register.PostgresRegister;
@@ -21,10 +18,12 @@ import io.micrometer.core.instrument.util.NamedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class AMQPBenchmarker {
     private static final Logger LOGGER = LoggerFactory.getLogger("MAIN");
@@ -102,11 +101,11 @@ public class AMQPBenchmarker {
             if(arguments.hasKey("--run-id2")) {
                 comparer.generateReport(arguments.getStr("--report-dir"),
                         arguments.getStr("--run-id1"),
-                        arguments.getStr("--technology1"),
+                        arguments.getStr("--technology1", "rabbitmq"),
                         arguments.getStr("--version1"),
                         arguments.getStr("--config-tag1"),
                         arguments.getStr("--run-id2"),
-                        arguments.getStr("--technology2"),
+                        arguments.getStr("--technology2", "rabbitmq"),
                         arguments.getStr("--version2"),
                         arguments.getStr("--config-tag2"),
                         arguments.getStr("--desc-vars"));
@@ -114,7 +113,7 @@ public class AMQPBenchmarker {
             else {
                 comparer.generateReport(arguments.getStr("--report-dir"),
                         arguments.getStr("--run-id1"),
-                        arguments.getStr("--technology1"),
+                        arguments.getStr("--technology1", "rabbitmq"),
                         arguments.getStr("--version1"),
                         arguments.getStr("--config-tag1"),
                         arguments.getStr("--desc-vars"));
@@ -161,17 +160,33 @@ public class AMQPBenchmarker {
             }
 
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
-            int unavailabilitySeconds = arguments.getInt("--unavailability-sec");
+            int unavailabilitySeconds = arguments.getInt("--unavailability-sec", 30);
 
-            String checkArgs = arguments.getStr("--checks", "all").toLowerCase();
+            String checkArgs = arguments.getStr("--checks", "dataloss,duplicates,connectivity").toLowerCase();
             boolean checkOrdering = checkArgs.contains("ordering") || checkArgs.contains("all");
             boolean checkDataLoss = checkArgs.contains("dataloss") || checkArgs.contains("all");
             boolean checkDuplicates = checkArgs.contains("duplicates") || checkArgs.contains("all");
+            boolean checkConnectivity = checkArgs.contains("connectivity") || checkArgs.contains("all");
+            boolean checkConsumeGaps = checkArgs.contains("consumption") || checkArgs.contains("all");
 
-            MessageModel messageModel = new MessageModel(true, unavailabilitySeconds, checkOrdering, checkDataLoss, checkDuplicates);
+            Duration houseKeepingInterval = Duration.ofSeconds(arguments.getInt("--house-keeping-sec", 30));
+            Duration messageLossThresholdDuration = Duration.ofSeconds(arguments.getInt("--message-loss-threshold-sec", 900));
+            int messageLossThresholdMsgs = arguments.getInt("--message-loss-threshold-msgs", 10000);
+            boolean zeroExitCode = arguments.getBoolean("--zero-exit-code", false);
 
-            ExecutorService modelExecutor = Executors.newSingleThreadExecutor(new NamedThreadFactory("MessageModel"));
-            modelExecutor.execute(() -> messageModel.monitorProperties());
+            MessageModel messageModel = new PartitionedModel(benchmarkRegister,
+                    unavailabilitySeconds,
+                    messageLossThresholdDuration,
+                    messageLossThresholdMsgs,
+                    houseKeepingInterval,
+                    checkOrdering,
+                    checkDataLoss,
+                    checkDuplicates,
+                    checkConnectivity,
+                    checkConsumeGaps);
+
+            ExecutorService modelExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("MessageModel"));
+            messageModel.monitorProperties(modelExecutor);
 
             String benchmarkId = performRun(Modes.Model,
                     arguments,
@@ -187,41 +202,118 @@ public class AMQPBenchmarker {
             modelExecutor.shutdown();
 
             List<Violation> violations = messageModel.getViolations();
-            long orderingViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.Ordering).count();
-            long dataLossViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.Missing).count();
-            long duplicationViolations = violations.stream().filter(x -> x.getViolationType() == ViolationType.NonRedeliveredDuplicate).count();
+            long orderingViolations = violations.stream()
+                    .filter(x -> x.getViolationType() == ViolationType.Ordering)
+                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                    .reduce(0L, Long::sum);
+            long dataLossViolations = violations.stream()
+                    .filter(x -> x.getViolationType() == ViolationType.Missing)
+                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                    .reduce(0L, Long::sum);
+            long duplicationViolations = violations.stream()
+                    .filter(x -> x.getViolationType() == ViolationType.NonRedeliveredDuplicate)
+                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                    .reduce(0L, Long::sum);
+
             List<ConsumeInterval> consumeIntervals = messageModel.getConsumeIntervals();
+            List<DisconnectedInterval> disconnectedIntervals = messageModel.getDisconnectedIntervals();
 
             mainLogger.info("-------------------------------------------------------");
             mainLogger.info("---------- SUMMARY ------------------------------------");
             mainLogger.info("Run ID: " + runId + ", BenchmarkId: " + benchmarkId);
-            mainLogger.info("Published Count: " + messageModel.getPublishedCount());
-            mainLogger.info("Consumed Count: " + messageModel.getConsumedCount());
-            mainLogger.info("Ordering Property Violations: " + orderingViolations);
-            mainLogger.info("Data Loss Property Violations: " + dataLossViolations);
-            mainLogger.info("Non-Redelivered Duplicate Property Violations: " + duplicationViolations);
-            mainLogger.info("Unavailability Periods: " + consumeIntervals.size());
+            mainLogger.info("Published Count: " + messageModel.getFinalPublishedCount());
+            mainLogger.info("Consumed Count: " + messageModel.getFinalConsumedCount());
+            mainLogger.info("Unconsumed Remainder Count: " + messageModel.getUnconsumedRemainderCount());
+            mainLogger.info("Redelivered Message Count: " + messageModel.getFinalRedeliveredCount());
+
+            if(checkOrdering)
+                mainLogger.info("Ordering Property Violations: " + orderingViolations);
+            else
+                mainLogger.info("No Ordering Property Violation Checks");
+
+            if(checkDataLoss)
+                mainLogger.info("Data Loss Property Violations: " + dataLossViolations);
+            else
+                mainLogger.info("No Data Loss Property Checks");
+
+            if(checkDuplicates)
+                mainLogger.info("Non-Redelivered Duplicate Property Violations: " + duplicationViolations);
+            else
+                mainLogger.info("No Duplicate Property Checks");
+
+            if(checkConnectivity) {
+                mainLogger.info("Connection availability: " + messageModel.getConnectionAvailability());
+                mainLogger.info("Disconnection periods: " + disconnectedIntervals.size());
+
+                if(!consumeIntervals.isEmpty()) {
+                    mainLogger.info("Max disconnection ms: " + disconnectedIntervals.stream()
+                            .map(x -> x.getDuration().toMillis())
+                            .max(Long::compareTo)
+                            .get());
+                }
+            }
+            else
+                mainLogger.info("Connectivity not measured");
+
+            if(checkConsumeGaps) {
+                mainLogger.info("Consume availability: " + messageModel.getConsumeAvailability());
+                mainLogger.info("No consume periods: " + consumeIntervals.size());
+
+                if(!consumeIntervals.isEmpty()) {
+                    mainLogger.info("Max consume gap ms: " + consumeIntervals.stream()
+                            .map(x -> x.getEndMessage().getReceiveTimestamp() - x.getStartMessage().getReceiveTimestamp())
+                            .max(Long::compareTo)
+                            .get());
+                }
+            }
+            else
+                mainLogger.info("Consumption gaps not measured");
+
+
+
+            if(benchmarkRegister.getClass().equals(ConsoleRegister.class)) {
+                mainLogger.info("Violations recorded to: " + ((ConsoleRegister) benchmarkRegister).getViolationsFile());
+                mainLogger.info("No consume periods recorded to: " + ((ConsoleRegister) benchmarkRegister).getConsumeIntervalsFile());
+                mainLogger.info("Disconnection periods recorded to: " + ((ConsoleRegister) benchmarkRegister).getDisconnectedIntervalsFile());
+            }
+
+
+            if(dataLossViolations > 0 && messageModel.getUnconsumedRemainderCount() > 0) {
+                mainLogger.info("!!!!!!!!!");
+                mainLogger.info("WARNING: Leaving unconsumed messages can cause false positive data loss violations." + System.lineSeparator()
+                        + " False positives can occur when all the following conditions are met:" + System.lineSeparator()
+                        + " 1. Brokers became unavailable and never returned to availability." + System.lineSeparator()
+                        + " 2. Multiple consumers per queue cause imperfect message ordering." + System.lineSeparator()
+                        + "There can be gaps in the sequence at this unavailability cut off point that will be interpretted as message loss.");
+                mainLogger.info("!!!!!!!!!");
+            }
+
+            mainLogger.info("-------------------------------------------------------");
+            mainLogger.info("---------- STREAM SUMMARY -----------------------------");
+            Map<Integer, FinalSeqNos> finalSeqNos = messageModel.getFinalSeqNos();
+            for(Integer stream : finalSeqNos.keySet().stream().sorted().collect(Collectors.toList())) {
+                FinalSeqNos seqNos = finalSeqNos.get(stream);
+                mainLogger.info(MessageFormat.format("Stream: {0,number,#}"
+                                + ", First Published: {1,number,#}, First Consumed: {2,number,#}, First Lost: {3,number,#}"
+                                + ", Last Published: {4,number,#}, Last Consumed: {5,number,#}, Last Lost: {6,number,#}",
+                        stream, seqNos.getFirstPublished(), seqNos.getFirstConsumed(), seqNos.getFirstLost(),
+                        seqNos.getLastPublished(), seqNos.getLastConsumed(), seqNos.getLastLost()));
+            }
+
             mainLogger.info("-------------------------------------------------------");
 
-            if(!consumeIntervals.isEmpty()) {
-                mainLogger.info("Max Unavailability ms: " + consumeIntervals.stream()
-                        .map(x -> x.getEndMessage().getReceiveTimestamp() - x.getStartMessage().getReceiveTimestamp())
-                        .max(Long::compareTo)
-                        .get());
+            if(!zeroExitCode) {
+                if (messageModel.getFinalPublishedCount() == 0 || messageModel.getFinalConsumedCount() == 0)
+                    System.exit(3);
+                else if (dataLossViolations == 0 && consumeIntervals.isEmpty())
+                    System.exit(0);
+                else if (dataLossViolations > 0)
+                    System.exit(4);
+                else if (consumeIntervals.isEmpty())
+                    System.exit(5);
+                else
+                    System.exit(6);
             }
-            benchmarkRegister.logViolations(benchmarkId, violations);
-            benchmarkRegister.logConsumeIntervals(benchmarkId, consumeIntervals, unavailabilitySeconds, messageModel.getAvailability());
-
-            if(messageModel.getPublishedCount() == 0 || messageModel.getConsumedCount() == 0)
-                System.exit(3);
-            else if(dataLossViolations == 0 && consumeIntervals.isEmpty())
-                System.exit(0);
-            else if(dataLossViolations > 0)
-                System.exit(4);
-            else if(consumeIntervals.isEmpty())
-                System.exit(5);
-            else
-                System.exit(6);
         }
         catch(CmdArgumentException e) {
             LOGGER.error(principleBroker + " : " + e.getMessage());
@@ -280,7 +372,7 @@ public class AMQPBenchmarker {
                     metrics,
                     brokerConfig,
                     arguments.hasMetrics(),
-                    new MessageModel(false),
+                    new SimpleMessageModel(false),
                     Duration.ZERO,
                     mainLogger);
         }
@@ -304,6 +396,7 @@ public class AMQPBenchmarker {
                                        Duration gracePeriod,
                                        BenchmarkLogger logger) {
 
+        Duration warmUp = Duration.ofSeconds(arguments.getInt("--warm-up-seconds", 0));
         int attemptLimit = arguments.getInt("--attempts", 1);
         String benchmarkTags = arguments.getStr("--benchmark-tags","");
         String topologyPath = arguments.getStr("--topology");
@@ -330,6 +423,7 @@ public class AMQPBenchmarker {
                 waitFor(10000);
 
             benchmarkId = UUID.randomUUID().toString();
+            messageModel.setBenchmarkId(benchmarkId);
 
             Stats stats = null;
             boolean loggedStart = false;
@@ -393,7 +487,7 @@ public class AMQPBenchmarker {
 //                }
 //            });
 
-                success = orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod);
+                success = orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod, warmUp);
                 if(!success) {
                     if (attempts < attemptLimit)
                         logger.info("Benchmark failed, will retry. On node " + String.join(",", brokerConfig.getNodeNames()));
@@ -474,7 +568,7 @@ public class AMQPBenchmarker {
     }
 
     private static BrokerConfiguration getBrokerConfig(CmdArguments arguments) {
-        return new BrokerConfiguration(arguments.getStr("--technology"),
+        return new BrokerConfiguration(arguments.getStr("--technology", "rabbitmq"),
                 arguments.getStr("--version"),
                 getBrokers(arguments),
                 getDownstreamBrokers(arguments));

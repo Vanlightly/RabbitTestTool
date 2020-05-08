@@ -2,6 +2,7 @@ package com.jackvanlightly.rabbittesttool.register;
 
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
+import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
 import com.jackvanlightly.rabbittesttool.model.Violation;
 import com.jackvanlightly.rabbittesttool.model.ViolationType;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
@@ -585,72 +586,127 @@ public class PostgresRegister implements BenchmarkRegister {
     @Override
     public void logViolations(String benchmarkId, List<Violation> violations) {
         if(!violations.isEmpty()) {
-            for (Violation violation : violations) {
-                if(violation.getViolationType() == ViolationType.Ordering) {
-                    String query = "INSERT INTO VIOLATIONS(BENCHMARK_ID, VIOLATION_TYPE, STREAM, SEQ_NO, TS, PRIOR_STREAM, PRIOR_SEQ_NO, PRIOR_TS)\n" +
-                            "VALUES(?,?,?,?,?,?,?,?)";
-                    try (Connection con = tryGetConnection();
-                         PreparedStatement pst = con.prepareStatement(query)) {
+            try (Connection con = tryGetConnection();) {
+                for (Violation violation : violations) {
+                    if (violation.getViolationType() == ViolationType.Ordering) {
+                        String query = "INSERT INTO VIOLATIONS(BENCHMARK_ID, VIOLATION_TYPE, STREAM, SEQ_NO, TS, PRIOR_STREAM, PRIOR_SEQ_NO, PRIOR_TS, VIOLATION_TIME)\n" +
+                                "VALUES(?,?,?,?,?,?,?,?,?)";
+                        try (PreparedStatement pst = con.prepareStatement(query)) {
 
-                        pst.setObject(1, UUID.fromString(benchmarkId));
-                        pst.setString(2, violation.getViolationType().toString());
-                        pst.setInt(3, violation.getMessagePayload().getStream());
-                        pst.setInt(4, violation.getMessagePayload().getSequenceNumber());
-                        pst.setLong(5, violation.getMessagePayload().getTimestamp());
-                        pst.setInt(6, violation.getPriorMessagePayload().getStream());
-                        pst.setInt(7, violation.getPriorMessagePayload().getSequenceNumber());
-                        pst.setLong(8, violation.getPriorMessagePayload().getTimestamp());
+                            pst.setObject(1, UUID.fromString(benchmarkId));
+                            pst.setString(2, violation.getViolationType().toString());
+                            pst.setInt(3, violation.getMessagePayload().getStream());
+                            pst.setLong(4, violation.getMessagePayload().getSequenceNumber());
+                            pst.setLong(5, violation.getMessagePayload().getTimestamp());
+                            pst.setInt(6, violation.getPriorMessagePayload().getStream());
+                            pst.setLong(7, violation.getPriorMessagePayload().getSequenceNumber());
+                            pst.setLong(8, violation.getPriorMessagePayload().getTimestamp());
+                            pst.setTimestamp(9, toTimestamp(Instant.now()));
 
-                        pst.executeUpdate();
+                            pst.executeUpdate();
 
-                    } catch (SQLException e) {
-                        throw new RuntimeException("Failed logging benchmark start", e);
+                        } catch (SQLException e) {
+                            throw new RuntimeException("Failed writing invariant violations", e);
+                        }
+                    } else if (violation.getMessagePayload() != null) {
+                        String query = "INSERT INTO VIOLATIONS(BENCHMARK_ID, VIOLATION_TYPE, STREAM, SEQ_NO, SEQ_NO_HIGH, TS, VIOLATION_TIME)\n" +
+                                "VALUES(?,?,?,?,?,?,?)";
+                        try (PreparedStatement pst = con.prepareStatement(query)) {
+
+                            pst.setObject(1, UUID.fromString(benchmarkId));
+                            pst.setString(2, violation.getViolationType().toString());
+                            pst.setInt(3, violation.getMessagePayload().getStream());
+                            pst.setLong(4, violation.getMessagePayload().getSequenceNumber());
+                            pst.setLong(5, violation.getMessagePayload().getSequenceNumber());
+                            pst.setLong(6, violation.getMessagePayload().getTimestamp());
+                            pst.setTimestamp(7, toTimestamp(Instant.now()));
+
+                            pst.executeUpdate();
+
+                        } catch (SQLException e) {
+                            throw new RuntimeException("Failed writing invariant violations", e);
+                        }
+                    } else {
+                        String query = "INSERT INTO VIOLATIONS(BENCHMARK_ID, VIOLATION_TYPE, STREAM, SEQ_NO, SEQ_NO_HIGH, TS, VIOLATION_TIME)\n" +
+                                "VALUES(?,?,?,?,?,?,?)";
+                        try (PreparedStatement pst = con.prepareStatement(query)) {
+
+                            pst.setObject(1, UUID.fromString(benchmarkId));
+                            pst.setString(2, violation.getViolationType().toString());
+                            pst.setInt(3, violation.getSpan().getStream());
+                            pst.setLong(4, violation.getSpan().getLow());
+                            pst.setLong(5, violation.getSpan().getHigh());
+                            pst.setLong(6, violation.getSpan().getCreated().toEpochMilli());
+                            pst.setTimestamp(7, toTimestamp(violation.getSpan().getCreated()));
+
+
+                            pst.executeUpdate();
+
+                        } catch (SQLException e) {
+                            throw new RuntimeException("Failed writing invariant violations", e);
+                        }
                     }
                 }
-                else {
-                    String query = "INSERT INTO VIOLATIONS(BENCHMARK_ID, VIOLATION_TYPE, STREAM, SEQ_NO, TS)\n" +
-                            "VALUES(?,?,?,?,?)";
-                    try (Connection con = tryGetConnection();
-                         PreparedStatement pst = con.prepareStatement(query)) {
-
-                        pst.setObject(1, UUID.fromString(benchmarkId));
-                        pst.setString(2, violation.getViolationType().toString());
-                        pst.setInt(3, violation.getMessagePayload().getStream());
-                        pst.setInt(4, violation.getMessagePayload().getSequenceNumber());
-                        pst.setLong(5, violation.getMessagePayload().getTimestamp());
-
-                        pst.executeUpdate();
-
-                    } catch (SQLException e) {
-                        throw new RuntimeException("Failed writing invariant violations", e);
-                    }
-                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed writing invariant violations", e);
             }
         }
     }
 
     @Override
     public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds, double availability) {
-        for(ConsumeInterval interval : consumeIntervals) {
-            String query = "INSERT INTO CONSUME_INTERVALS(BENCHMARK_ID, CONSUMER_ID, VHOST, QUEUE, START_TIME, START_MS, END_TIME, END_MS)\n" +
-                    "VALUES(?,?,?,?,?,?,?,?)";
-            try (Connection con = tryGetConnection();
-                 PreparedStatement pst = con.prepareStatement(query)) {
+        try (Connection con = tryGetConnection();) {
+            for(ConsumeInterval interval : consumeIntervals) {
+                String query = "INSERT INTO CONSUME_INTERVALS(BENCHMARK_ID, CONSUMER_ID, VHOST, QUEUE, START_TIME, START_MS, END_TIME, END_MS)\n" +
+                        "VALUES(?,?,?,?,?,?,?,?)";
 
-                pst.setObject(1, UUID.fromString(benchmarkId));
-                pst.setString(2, interval.getStartMessage().getConsumerId());
-                pst.setString(3, interval.getStartMessage().getVhost());
-                pst.setString(4, interval.getStartMessage().getQueue());
-                pst.setTimestamp(5, toTimestamp(Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp())));
-                pst.setLong(6, interval.getStartMessage().getReceiveTimestamp());
-                pst.setTimestamp(7, toTimestamp(Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp())));
-                pst.setLong(8, interval.getEndMessage().getReceiveTimestamp());
+                try (PreparedStatement pst = con.prepareStatement(query)) {
 
-                pst.executeUpdate();
+                    pst.setObject(1, UUID.fromString(benchmarkId));
+                    pst.setString(2, interval.getStartMessage().getConsumerId());
+                    pst.setString(3, interval.getStartMessage().getVhost());
+                    pst.setString(4, interval.getStartMessage().getQueue());
+                    pst.setTimestamp(5, toTimestamp(Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp())));
+                    pst.setLong(6, interval.getStartMessage().getReceiveTimestamp());
+                    pst.setTimestamp(7, toTimestamp(Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp())));
+                    pst.setLong(8, interval.getEndMessage().getReceiveTimestamp());
 
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed writing consume intervals", e);
+                    pst.executeUpdate();
+
+                } catch (SQLException e) {
+                    throw new RuntimeException("Failed writing consume intervals", e);
+                }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed writing consume intervals", e);
+        }
+    }
+
+    @Override
+    public void logDisconnectedIntervals(String benchmarkId, List<DisconnectedInterval> disconnectedIntervals, int unavailabilityThresholdSeconds, double availability) {
+        try (Connection con = tryGetConnection();) {
+            for(DisconnectedInterval interval : disconnectedIntervals) {
+                String query = "INSERT INTO DISCONNECTED_INTERVALS(BENCHMARK_ID, CLIENT_ID, DURATION_SECONDS, START_TIME, START_MS, END_TIME, END_MS)\n" +
+                        "VALUES(?,?,?,?,?,?,?)";
+
+                try (PreparedStatement pst = con.prepareStatement(query)) {
+
+                    pst.setObject(1, UUID.fromString(benchmarkId));
+                    pst.setString(2, interval.getClientId());
+                    pst.setInt(3, (int)interval.getDuration().getSeconds());
+                    pst.setTimestamp(4, toTimestamp(interval.getFrom()));
+                    pst.setLong(5, interval.getFrom().toEpochMilli());
+                    pst.setTimestamp(6, toTimestamp(interval.getTo()));
+                    pst.setLong(7, interval.getTo().toEpochMilli());
+
+                    pst.executeUpdate();
+
+                } catch (SQLException e) {
+                    throw new RuntimeException("Failed writing disconnected intervals", e);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed writing disconnected intervals", e);
         }
     }
 

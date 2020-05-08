@@ -4,17 +4,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
-public class MessagePayload {
-    public static final int MinimumMessageSize = 16;
+public class MessagePayload implements Comparable<MessagePayload> {
+    public static final int MinimumMessageSize = 20;
 
     private Integer stream;
-    private Integer sequenceNumber;
+    private Long sequenceNumber;
     private long timestamp;
 
     public MessagePayload() {
     }
 
-    public MessagePayload(Integer stream, Integer sequenceNumber, long timestamp) {
+    public MessagePayload(Integer stream, Long sequenceNumber, long timestamp) {
         this.stream = stream;
         this.sequenceNumber = sequenceNumber;
         this.timestamp = timestamp;
@@ -28,11 +28,11 @@ public class MessagePayload {
         this.stream = stream;
     }
 
-    public Integer getSequenceNumber() {
+    public Long getSequenceNumber() {
         return sequenceNumber;
     }
 
-    public void setSequenceNumber(Integer sequenceNumber) {
+    public void setSequenceNumber(Long sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
     }
 
@@ -44,12 +44,8 @@ public class MessagePayload {
         this.timestamp = timestamp;
     }
 
-    public byte[] toByteArray() throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos.write(stream);
-        baos.write(sequenceNumber);
-        baos.write(ByteUtils.longToBytes(timestamp));
-        return baos.toByteArray();
+    public MessagePayload getClone() {
+        return new MessagePayload(stream, sequenceNumber, timestamp);
     }
 
     @Override
@@ -74,5 +70,15 @@ public class MessagePayload {
                 ", sequenceNumber=" + sequenceNumber +
                 ", timestamp=" + timestamp +
                 '}';
+    }
+
+    @Override
+    public int compareTo(MessagePayload o) {
+        if(sequenceNumber < o.getSequenceNumber())
+            return -1;
+        else if(sequenceNumber.equals(o.getSequenceNumber()))
+            return 0;
+        else
+            return 1;
     }
 }

@@ -151,4 +151,5 @@ public class PublisherSettings {
     public void setInitialPublish(long initialPublish) {
         this.initialPublish = initialPublish;
     }
+
 }

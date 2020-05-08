@@ -1,8 +1,8 @@
 package com.jackvanlightly.rabbittesttool.register;
 
-import com.jackvanlightly.rabbittesttool.CmdArguments;
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
+import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
 import com.jackvanlightly.rabbittesttool.model.Violation;
 import com.jackvanlightly.rabbittesttool.model.ViolationType;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
@@ -11,10 +11,9 @@ import java.io.*;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ConsoleRegister implements BenchmarkRegister {
 
@@ -23,10 +22,29 @@ public class ConsoleRegister implements BenchmarkRegister {
     private Instant started;
     private Instant stopped;
     private boolean printLiveStats;
+    private String violationsFile;
+    private String consumeIntervalsFile;
+    private String disconnectedIntervalsFile;
 
     public ConsoleRegister(PrintStream out, boolean printLiveStats) {
         this.out = out;
         this.printLiveStats = printLiveStats;
+        long ts = System.currentTimeMillis();
+        violationsFile = "/tmp/model-results-violations-" + ts + ".txt";
+        consumeIntervalsFile = "/tmp/model-results-no-consume-periods-" + ts + ".txt";
+        disconnectedIntervalsFile = "/tmp/model-results-no-connection-periods-" + ts + ".txt";
+    }
+
+    public String getViolationsFile() {
+        return violationsFile;
+    }
+
+    public String getConsumeIntervalsFile() {
+        return consumeIntervalsFile;
+    }
+
+    public String getDisconnectedIntervalsFile() {
+        return disconnectedIntervalsFile;
     }
 
     @Override
@@ -176,26 +194,19 @@ public class ConsoleRegister implements BenchmarkRegister {
     @Override
     public void logViolations(String benchmarkId, List<Violation> violations) {
         this.out.println("");
-        this.out.println("----------------------------------------------------");
-        this.out.println("----------- PROPERTY VIOLATIONS --------------------");
         if(violations.isEmpty()) {
             this.out.println("No property violations detected");
         }
         else {
             this.out.println("Property violations detected!");
-            List<Violation> sortedViolations = violations.stream()
-                    .sorted(Comparator.comparing(Violation::getViolationType)
-                            .thenComparing(Violation::getTimestamp))
-                    .collect(Collectors.toList());
-            writeToFile(sortedViolations);
+            writeViolationsToFile(violations);
         }
     }
 
-    private void writeToFile(List<Violation> violations) {
+    private void writeViolationsToFile(List<Violation> violations) {
         try {
-            String filename = "/tmp/prop-violations-" + Instant.now().getEpochSecond() + ".txt";
-            File fout = new File(filename);
-            FileOutputStream fos = new FileOutputStream(fout);
+            File fout = new File(violationsFile);
+            FileOutputStream fos = new FileOutputStream(fout, true);
 
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 
@@ -210,19 +221,29 @@ public class ConsoleRegister implements BenchmarkRegister {
                             violation.getPriorMessagePayload().getTimestamp()
                     ));
                 }
-                else {
+                else if(violation.getMessagePayload() != null) {
                     bw.write(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}",
                             violation.getViolationType(),
                             violation.getMessagePayload().getStream(),
                             violation.getMessagePayload().getSequenceNumber(),
                             violation.getMessagePayload().getTimestamp()));
                 }
+                else {
+                    bw.write(MessageFormat.format("Type: {0}, Stream: {1,number,#}, Size: {2,number,#}, Low SeqNo: {3,number,#}, High SeqNo: {4,number,#}, Span ts {5}",
+                            violation.getViolationType(),
+                            violation.getSpan().getStream(),
+                            violation.getSpan().size(),
+                            violation.getSpan().getLow(),
+                            violation.getSpan().getHigh(),
+                            violation.getSpan().getCreated()));
+                }
                 bw.newLine();
             }
 
+            bw.flush();
             bw.close();
 
-            this.out.println("Saved violations to file " + filename);
+            this.out.println("Saved violations to file " + violationsFile);
         }
         catch(Exception e) {
             this.out.println("Failed to write violations to file.");
@@ -233,29 +254,83 @@ public class ConsoleRegister implements BenchmarkRegister {
     @Override
     public void logConsumeIntervals(String benchmarkId, List<ConsumeInterval> consumeIntervals, int unavailabilityThresholdSeconds, double availability) {
         this.out.println("");
-        this.out.println("----------------------------------------------------");
-        this.out.println("----------- UNAVAILABILITY PERIODS -----------------");
         if(consumeIntervals.isEmpty()) {
             this.out.println("No unavailability periods over " + unavailabilityThresholdSeconds + " seconds detected");
         }
         else {
             this.out.println("Unavailability periods over " + unavailabilityThresholdSeconds + " seconds minute detected!");
 
+            List<String> lines = new ArrayList<>();
             for (ConsumeInterval interval : consumeIntervals) {
+
                 Instant start = Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp());
                 Instant end = Instant.ofEpochMilli(interval.getEndMessage().getReceiveTimestamp());
                 long seconds = Duration.between(start, end).getSeconds();
-                this.out.println(MessageFormat.format("ConsumerId: {0}, Seconds: {1,number,#}, Start Time: {2}, Start Seq No: {3,number,#}, End Time {4}, End Seq No {5,number,#}",
+                lines.add(MessageFormat.format("ConsumerId: {0}, Seconds: {1,number,#}, Period: {2} to {3}, Before: {4,number,#}/{5,number,#}, After: {6,number,#}/{7,number,#}",
                         interval.getStartMessage().getConsumerId(),
                         seconds,
                         start,
-                        interval.getStartMessage().getMessagePayload().getSequenceNumber(),
                         end,
+                        interval.getStartMessage().getMessagePayload().getStream(),
+                        interval.getStartMessage().getMessagePayload().getSequenceNumber(),
+                        interval.getEndMessage().getMessagePayload().getStream(),
                         interval.getEndMessage().getMessagePayload().getSequenceNumber()));
             }
 
-            this.out.println(MessageFormat.format("Availability: {0,number,#.##}%", availability));
+            lines.add("");
+            lines.add(MessageFormat.format("Availability: {0,number,#.##}%", availability));
+
+            writeToFile(lines, consumeIntervalsFile);
         }
         this.out.println("----------------------------------------------------");
+    }
+
+    @Override
+    public void logDisconnectedIntervals(String benchmarkId, List<DisconnectedInterval> disconnectedIntervals, int unavailabilityThresholdSeconds, double availability) {
+        this.out.println("");
+        if(disconnectedIntervals.isEmpty()) {
+            this.out.println("No connection unavailability periods over " + unavailabilityThresholdSeconds + " seconds detected");
+        }
+        else {
+            this.out.println("Connection unavailability periods over " + unavailabilityThresholdSeconds + " seconds detected!");
+
+            List<String> lines = new ArrayList<>();
+            for (DisconnectedInterval interval : disconnectedIntervals) {
+
+                lines.add(MessageFormat.format("ClientId: {0}, Seconds: {1,number,#}, Period: {2} to {3}",
+                        interval.getClientId(),
+                        interval.getDuration().getSeconds(),
+                        interval.getFrom(),
+                        interval.getTo()));
+            }
+
+            lines.add("");
+            lines.add(MessageFormat.format("Connection availability: {0,number,#.##}%", availability));
+
+            writeToFile(lines, disconnectedIntervalsFile);
+        }
+    }
+
+    private void writeToFile(List<String> lines, String file) {
+        try {
+            File fout = new File(file);
+            FileOutputStream fos = new FileOutputStream(fout, true);
+
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+
+            for (String line : lines) {
+                bw.write(line);
+                bw.newLine();
+            }
+
+            bw.flush();
+            bw.close();
+
+            this.out.println("Saved consume intervals to file " + consumeIntervalsFile);
+        }
+        catch(Exception e) {
+            this.out.println("Failed to write consume intervals to file.");
+            e.printStackTrace(this.out);
+        }
     }
 }

@@ -2,11 +2,7 @@ package com.jackvanlightly.rabbittesttool.clients.consumers;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
-import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
-import com.jackvanlightly.rabbittesttool.clients.WithNagleSocketConfigurator;
-import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
@@ -17,7 +13,6 @@ import com.rabbitmq.client.ConnectionFactory;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 

@@ -99,6 +99,18 @@ public class PublisherGroup {
         }
     }
 
+    public void setWarmUpModifier(double modifier) {
+        for(Publisher publisher : this.publishers) {
+            publisher.setWarmUpModifier(modifier);
+        }
+    }
+
+    public void endWarmUp() {
+        for(Publisher publisher : this.publishers) {
+            publisher.endWarmUp();
+        }
+    }
+
     public int getPublisherCount() {
         return this.publishers.size();
     }
@@ -224,6 +236,15 @@ public class PublisherGroup {
     public void stopAllPublishers() {
         for(Publisher publisher : this.publishers)
             publisher.signalStop();
+    }
+
+    public int getPendingConfirmCount() {
+        int total = 0;
+        for(Publisher publisher : this.publishers) {
+            total += publisher.getPendingConfirmCount();
+        }
+
+        return total;
     }
 
     public void shutdown() {

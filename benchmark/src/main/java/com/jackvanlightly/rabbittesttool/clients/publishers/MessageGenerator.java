@@ -20,7 +20,7 @@ public class MessageGenerator {
     public synchronized byte[] getMessageBytes(MessagePayload mp) throws IOException {
         messageBuf.position(0);
         messageBuf.putInt(mp.getStream());
-        messageBuf.putInt(mp.getSequenceNumber());
+        messageBuf.putLong(mp.getSequenceNumber());
         messageBuf.putLong(mp.getTimestamp());
 
         return messageBuf.array();
@@ -29,7 +29,7 @@ public class MessageGenerator {
     public static MessagePayload toMessagePayload(byte[] body) throws IOException {
         DataInputStream data = new DataInputStream(new ByteArrayInputStream(body));
         Integer stream = data.readInt();
-        Integer seqNumber = data.readInt();
+        Long seqNumber = data.readLong();
         long timestamp = data.readLong();
 
         MessagePayload mp = new MessagePayload();

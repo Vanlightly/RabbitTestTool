@@ -3,6 +3,7 @@ package com.jackvanlightly.rabbittesttool.register;
 import com.jackvanlightly.rabbittesttool.CmdArguments;
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
+import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
 import com.jackvanlightly.rabbittesttool.model.Violation;
 import com.jackvanlightly.rabbittesttool.model.ViolationType;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
@@ -125,12 +126,21 @@ public class FileRegister implements BenchmarkRegister {
                             violation.getPriorMessagePayload().getTimestamp()
                     ));
                 }
-                else {
-                    printWriter.println(MessageFormat.format("Type: {0}, Stream: {1}, SeqNo: {2}, Timestamp {3}",
+                else if(violation.getMessagePayload() != null) {
+                    printWriter.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}",
                             violation.getViolationType(),
                             violation.getMessagePayload().getStream(),
                             violation.getMessagePayload().getSequenceNumber(),
                             violation.getMessagePayload().getTimestamp()));
+                }
+                else {
+                    printWriter.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, Size: {2,number,#}, Low SeqNo: {3,number,#}, High SeqNo: {4,number,#}, Span ts {5,number,#}",
+                            violation.getViolationType(),
+                            violation.getSpan().getStream(),
+                            violation.getSpan().size(),
+                            violation.getSpan().getLow(),
+                            violation.getSpan().getHigh(),
+                            violation.getSpan().getCreated()));
                 }
             }
         }
@@ -154,5 +164,10 @@ public class FileRegister implements BenchmarkRegister {
             }
         }
         printWriter.flush();
+    }
+
+    @Override
+    public void logDisconnectedIntervals(String benchmarkId, List<DisconnectedInterval> disconnectedIntervals, int unavailabilityThresholdSeconds, double availability) {
+        // TODO
     }
 }

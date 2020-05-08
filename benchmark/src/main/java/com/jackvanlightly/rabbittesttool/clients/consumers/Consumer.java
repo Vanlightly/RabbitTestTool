@@ -12,10 +12,11 @@ import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -95,7 +96,8 @@ public class Consumer implements Runnable  {
                 Connection connection = null;
                 try {
                     connection = getConnection();
-                    if(connection.isOpen()) {
+                    if (connection.isOpen()) {
+                        messageModel.clientConnected(consumerId);
                         logger.info("Consumer " + consumerId + " opened connection");
 
                         ConsumerExitReason exitReason = ConsumerExitReason.None;
@@ -104,34 +106,38 @@ public class Consumer implements Runnable  {
                             exitReason = startChannel(connection, currentStep);
                         }
                     }
+                } finally {
+                    tryClose(connection);
                 }
-                finally {
-                    if (connection != null && connection.isOpen()) {
-                        connection.close(AMQP.REPLY_SUCCESS, "Closed by RabbitTestTool", 3000);
-                        logger.info("Consumer " + consumerId + " closed connection");
-                    }
-                }
-            } catch (IOException e) {
+            } catch (TimeoutException | IOException e) {
                 if(!isCancelled.get())
                     stats.handleConnectionError();
-                logger.error("Consumer " + consumerId + " has failed in step " + step, e);
-            } catch (TimeoutException e) {
-                if(!isCancelled.get())
-                    stats.handleConnectionError();
-                logger.error("Consumer " + consumerId + " failed to connect in step " + step, e);
+                logger.error("Consumer " + consumerId + " connection failed in step " + step);
+                messageModel.clientDisconnected(consumerId);
             } catch (Exception e) {
                 if(!isCancelled.get())
                     stats.handleConnectionError();
                 logger.error("Consumer " + consumerId + " has failed unexpectedly in step " + step, e);
+                messageModel.clientDisconnected(consumerId);
             }
 
             if(!isCancelled.get()) {
-                recreateConsumerExecutor();
+                recreateWait();
             }
         }
     }
 
-    private void recreateConsumerExecutor() {
+    private void tryClose(Connection connection) {
+        try {
+            messageModel.clientDisconnected(consumerId);
+            if (connection != null && connection.isOpen()) {
+                connection.close(AMQP.REPLY_SUCCESS, "Closed by RabbitTestTool", 3000);
+            }
+        }
+        catch(Exception e){}
+    }
+
+    private void recreateWait() {
         logger.info("Consumer " + consumerId + " will restart in 5 seconds");
         ClientUtils.waitFor(5000, isCancelled);
     }

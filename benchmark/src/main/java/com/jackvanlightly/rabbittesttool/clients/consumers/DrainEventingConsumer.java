@@ -1,13 +1,6 @@
 package com.jackvanlightly.rabbittesttool.clients.consumers;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
-import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
-import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
-import com.jackvanlightly.rabbittesttool.clients.consumers.ConsumerStats;
-import com.jackvanlightly.rabbittesttool.clients.publishers.MessageGenerator;
-import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.model.ReceivedMessage;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
 
