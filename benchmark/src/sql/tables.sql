@@ -111,3 +111,16 @@ CREATE TABLE CONSUME_INTERVALS (
 	END_MS bigint null,
 	PRIMARY KEY(BENCHMARK_ID, INTERVAL_ID)
 );
+
+CREATE TABLE public.disconnected_intervals
+(
+    benchmark_id uuid NOT NULL,
+    interval_id SERIAL,
+    client_id character varying(200) NOT NULL,
+    duration_seconds integer NOT NULL,
+    start_time timestamp NOT NULL,
+    start_ms bigint NOT NULL,
+    end_time timestamp NOT NULL,
+    end_ms bigint NOT NULL,
+    CONSTRAINT disconnected_intervals_pkey PRIMARY KEY (benchmark_id, interval_id)
+);
