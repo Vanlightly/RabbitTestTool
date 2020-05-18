@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class EventingConsumer extends DefaultConsumer {
 
@@ -23,14 +26,16 @@ public class EventingConsumer extends DefaultConsumer {
     private String queue;
     private Stats stats;
     private MessageModel messageModel;
-    private int ackInterval;
-    private long delTagLastAcked;
-    private long delTagLastReceived;
-    private Instant lastAckedTime;
-    private int prefetch;
-    private int processingMs;
+    private volatile int ackInterval;
+    private volatile int ackIntervalMs;
+    private volatile int prefetch;
+    private volatile int processingMs;
+    private volatile long delTagLastAcked;
+    private volatile long delTagLastReceived;
+    private volatile Instant lastAckedTime;
     private ConsumerStats consumerStats;
     private AtomicBoolean consumerCancelled;
+    private Lock ackLock;
 
     public EventingConsumer(String consumerId,
                             String vhost,
@@ -41,6 +46,7 @@ public class EventingConsumer extends DefaultConsumer {
                             ConsumerStats consumerStats,
                             int prefetch,
                             int ackInterval,
+                            int ackIntervalMs,
                             int processingMs) {
         super(channel);
         this.logger = new BenchmarkLogger("CONSUMER");
@@ -50,6 +56,7 @@ public class EventingConsumer extends DefaultConsumer {
         this.stats = stats;
         this.messageModel = messageModel;
         this.ackInterval = ackInterval;
+        this.ackIntervalMs = ackIntervalMs;
         this.prefetch = prefetch;
         this.processingMs = processingMs;
         this.consumerStats = consumerStats;
@@ -57,23 +64,61 @@ public class EventingConsumer extends DefaultConsumer {
         consumerCancelled = new AtomicBoolean();
         delTagLastAcked = -1;
         lastAckedTime = Instant.now();
+        ackLock = new ReentrantLock();
     }
 
     public void setProcessingMs(int processingMs) {
         this.processingMs = processingMs;
     }
 
+    public void setAckInterval(int ackInterval) {
+        this.ackInterval = ackInterval;
+    }
+
+    public void setAckIntervalMs(int ackIntervalMs) {
+        this.ackIntervalMs = ackIntervalMs;
+    }
+
     public void tryAcknowledgeRemaining() {
-        if(delTagLastReceived > delTagLastAcked)
-        {
-            if(this.getChannel().isOpen()) {
-                try {
-                    getChannel().basicAck(delTagLastReceived, true);
-                }
-                catch(IOException e) {
-                    logger.warn("Failed to ack on shutdown", e);
+        ackLock.lock();
+        try {
+            if(delTagLastReceived > delTagLastAcked)
+            {
+                if(this.getChannel().isOpen()) {
+                    try {
+                        getChannel().basicAck(delTagLastReceived, true);
+                        delTagLastAcked = delTagLastReceived;
+                    }
+                    catch(IOException e) {
+                        logger.warn("Failed to ack on shutdown", e);
+                    }
                 }
             }
+        }
+        finally {
+            ackLock.unlock();
+        }
+    }
+
+    public void ensureAckTimeLimitEnforced() {
+        ackLock.lock();
+        try {
+            long msgsToAck = delTagLastReceived - delTagLastAcked;
+
+            Instant now = Instant.now();
+            if (msgsToAck > 0 && Duration.between(lastAckedTime, now).toMillis() > ackIntervalMs) {
+                try {
+                    getChannel().basicAck(delTagLastReceived, true);
+                    delTagLastAcked = delTagLastReceived;
+                    lastAckedTime = now;
+                    stats.handleAck((int) msgsToAck);
+                } catch (IOException e) {
+                    logger.warn("Failed to ack on interval ms check", e);
+                }
+            }
+        }
+        finally {
+            ackLock.unlock();
         }
     }
 
@@ -102,29 +147,39 @@ public class EventingConsumer extends DefaultConsumer {
         int headerCount = 0;
         if(properties != null && properties.getHeaders() != null)
             headerCount = properties.getHeaders().size();
-        stats.handleRecv(lag, body.length, headerCount, prefetch, ackInterval);
+        stats.handleRecv(lag, body.length, headerCount, prefetch, ackInterval, ackIntervalMs);
         consumerStats.incrementReceivedCount();
 
-        long deliveryTag = envelope.getDeliveryTag();
-        if(ackInterval == 1) {
-            getChannel().basicAck(deliveryTag, false);
-            delTagLastAcked = deliveryTag;
-        } else if (ackInterval > 1) {
-            if(deliveryTag - delTagLastAcked > ackInterval) {
-                getChannel().basicAck(deliveryTag, true);
+        ackLock.lock();
+
+        try {
+            long deliveryTag = envelope.getDeliveryTag();
+            if (ackInterval == 1) {
+                getChannel().basicAck(deliveryTag, false);
                 delTagLastAcked = deliveryTag;
-            }
-            else {
-                Instant now = Instant.now();
-                if(Duration.between(lastAckedTime, now).toMillis() > 1000) {
+                stats.handleAck(1);
+            } else if (ackInterval > 1) {
+                long msgsToAck = deliveryTag - delTagLastAcked;
+                if (msgsToAck > ackInterval || msgsToAck >= Short.MAX_VALUE-1) {
                     getChannel().basicAck(deliveryTag, true);
                     delTagLastAcked = deliveryTag;
-                    lastAckedTime = now;
+                    stats.handleAck((int) msgsToAck);
+                } else {
+                    Instant now = Instant.now();
+                    if (Duration.between(lastAckedTime, now).toMillis() > ackIntervalMs) {
+                        getChannel().basicAck(deliveryTag, true);
+                        delTagLastAcked = deliveryTag;
+                        lastAckedTime = now;
+                        stats.handleAck((int) msgsToAck);
+                    }
                 }
             }
-        }
 
-        delTagLastReceived = deliveryTag;
+            delTagLastReceived = deliveryTag;
+        }
+        finally {
+            ackLock.unlock();
+        }
     }
 
     @Override

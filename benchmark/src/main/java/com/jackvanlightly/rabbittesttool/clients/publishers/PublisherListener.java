@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
+import com.jackvanlightly.rabbittesttool.clients.FlowController;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
@@ -12,7 +13,6 @@ import com.rabbitmq.client.ReturnListener;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -23,7 +23,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     private MessageModel messageModel;
     private PublisherGroupStats publisherGroupStats;
     private ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
-    private Semaphore inflightSemaphore;
+    private FlowController flowController;
     private Set<MessagePayload> undeliverable;
     private AtomicInteger pendingConfirmCount;
     private Lock timeoutLock;
@@ -31,12 +31,12 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     public PublisherListener(MessageModel messageModel,
                              PublisherGroupStats publisherGroupStats,
                              ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms,
-                             Semaphore inflightSemaphore) {
+                             FlowController flowController) {
         this.logger = new BenchmarkLogger("PUBLISHER");
         this.messageModel = messageModel;
         this.publisherGroupStats = publisherGroupStats;
         this.pendingConfirms = pendingConfirms;
-        this.inflightSemaphore = inflightSemaphore;
+        this.flowController = flowController;
         this.undeliverable = new HashSet<>();
         this.pendingConfirmCount = new AtomicInteger();
         this.timeoutLock = new ReentrantLock();
@@ -45,14 +45,14 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     public void checkForTimeouts(long confirmTimeoutThresholdNs) {
         int removed = 0;
         timeoutLock.lock();
-        int before = inflightSemaphore.availablePermits();
+        int before = flowController.availablePermits();
 
         try {
             Long nanoNow = System.nanoTime();
             for (Map.Entry<Long, MessagePayload> mp : pendingConfirms.entrySet()) {
                 if (nanoNow - mp.getValue().getTimestamp() > confirmTimeoutThresholdNs) {
                     pendingConfirms.remove(mp.getKey());
-                    inflightSemaphore.release(1);
+                    flowController.returnSendPermits(1);
                     removed++;
                 }
             }
@@ -62,7 +62,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
         }
 
         if (removed > 0) {
-            int after = inflightSemaphore.availablePermits();
+            int after = flowController.availablePermits();
             logger.info("Discarded " + removed + " pending confirms due to timeout. Permits before: " + before + " after: " + after);
         }
     }
@@ -110,7 +110,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
             }
 
             if (numConfirms > 0) {
-                inflightSemaphore.release(numConfirms);
+                flowController.returnSendPermits(numConfirms);
                 publisherGroupStats.handleConfirm(numConfirms, latencies);
                 pendingConfirmCount.set(pendingConfirms.size());
             }
@@ -131,7 +131,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
             pendingConfirms.remove(seqNo);
             numConfirms = 1;
         }
-        inflightSemaphore.release(numConfirms);
+        flowController.returnSendPermits(numConfirms);
         publisherGroupStats.handleNack(numConfirms);
         pendingConfirmCount.set(pendingConfirms.size());
     }

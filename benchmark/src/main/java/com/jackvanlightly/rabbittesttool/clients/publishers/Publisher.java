@@ -12,8 +12,6 @@ import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -56,8 +54,6 @@ public class Publisher implements Runnable {
     private int inFlightLimit;
 
     // for message publishing and confirms
-    //private ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
-    //private Semaphore inflightSemaphore;
     private MessageGenerator messageGenerator;
     private List<Map<String,Object>> availableMessageHeaderCombinations;
     private int availableHeaderCount;
@@ -184,10 +180,6 @@ public class Publisher implements Runnable {
     }
 
     public void setInFlightLimit(int inFlightLimit) {
-        int diff = inFlightLimit - publisherSettings.getPublisherMode().getInFlightLimit();
-        if(diff < 0)
-            throw new RuntimeException("Can only increase InFlightLimit");
-
         publisherSettings.getPublisherMode().setInFlightLimit(inFlightLimit);
         this.inFlightLimit = inFlightLimit;
     }
@@ -219,8 +211,8 @@ public class Publisher implements Runnable {
                 connection = getConnection();
                 channel = connection.createChannel();
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
-                Semaphore inflightSemaphore = new Semaphore(1000);
-                PublisherListener initSendListener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
+                FlowController flowController = new FlowController(1000);
+                PublisherListener initSendListener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, flowController);
 
                 logger.info("Publisher " + publisherId + " opened channel for initial publish");
 
@@ -230,7 +222,7 @@ public class Publisher implements Runnable {
 
                 int currentStream = 0;
                 while (!isCancelled.get()) {
-                    inflightSemaphore.acquire();
+                    flowController.getSendPermit();
 
                     publish(channel, currentStream, pendingConfirms, true);
                     sentCount++;
@@ -274,8 +266,8 @@ public class Publisher implements Runnable {
             try {
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
 
-                Semaphore inflightSemaphore = new Semaphore(publisherSettings.getPublisherMode().getInFlightLimit());
-                listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, inflightSemaphore);
+                FlowController flowController = new FlowController(publisherSettings.getPublisherMode().getInFlightLimit());
+                listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, flowController);
 
                 connection = getConnection();
                 channel = connection.createChannel();
@@ -312,16 +304,19 @@ public class Publisher implements Runnable {
                 boolean reconnect = false;
                 while (!isCancelled.get() && !reconnect) {
                     if (this.useConfirms) {
-                        // is this is a multi-step benchmark with increasing in flight limit, might need to add more slots to the semaphore
+                        // is this is a multi-step benchmark with increasing in flight limit
                         if(this.inFlightLimit != currentInFlightLimit) {
                             int diff = this.inFlightLimit - currentInFlightLimit;
                             if(diff > 0)
-                                inflightSemaphore.release(diff);
+                                flowController.increaseInflightLimit(diff);
+                            else
+                                flowController.decreaseInflightLimit(diff);
+
                             currentInFlightLimit = this.inFlightLimit;
                         }
 
                         // keep trying to acquire until the cancelation or connection dies
-                        while(!isCancelled.get() && !inflightSemaphore.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
+                        while(!isCancelled.get() && !flowController.tryGetSendPermit(1000, TimeUnit.MILLISECONDS)) {
                             if (!channel.isOpen()) {
                                 reconnect = true;
                                 break;

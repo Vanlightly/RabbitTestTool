@@ -65,10 +65,19 @@ public class Consumer implements Runnable  {
 
     public void setAckInterval(int ackInterval) {
         this.consumerSettings.getAckMode().setAckInterval(ackInterval);
+        if(this.eventingConsumer != null)
+            this.eventingConsumer.setAckInterval(ackInterval);
     }
 
-    public void setPrefetch(int prefetch) {
+    public void setAckIntervalMs(int ackIntervalMs) {
+        this.consumerSettings.getAckMode().setAckIntervalMs(ackIntervalMs);
+        if(this.eventingConsumer != null)
+            this.eventingConsumer.setAckIntervalMs(ackIntervalMs);
+    }
+
+    public void setPrefetch(short prefetch) {
         this.consumerSettings.getAckMode().setConsumerPrefetch(prefetch);
+        // we do not update the consumer as a new channel is required
     }
 
     public void setProcessingMs(int processingMs) {
@@ -147,13 +156,7 @@ public class Consumer implements Runnable  {
         Channel channel = connection.createChannel();
         logger.info("Consumer " + consumerId + " opened channel");
         try {
-            boolean noAck = false;
-
-            if (consumerSettings.getAckMode().isManualAcks()) {
-                channel.confirmSelect();
-            } else {
-                noAck = true;
-            }
+            boolean autoAck = !consumerSettings.getAckMode().isManualAcks();
 
             if (consumerSettings.getAckMode().getConsumerPrefetch() > 0) {
                 channel.basicQos(consumerSettings.getAckMode().getConsumerPrefetch());
@@ -168,9 +171,10 @@ public class Consumer implements Runnable  {
                     consumerStats,
                     consumerSettings.getAckMode().getConsumerPrefetch(),
                     consumerSettings.getAckMode().getAckInterval(),
+                    consumerSettings.getAckMode().getAckIntervalMs(),
                     consumerSettings.getProcessingMs());
 
-            String consumerTag = channel.basicConsume(consumerSettings.getQueue(), noAck, eventingConsumer);
+            String consumerTag = channel.basicConsume(consumerSettings.getQueue(), autoAck, eventingConsumer);
             logger.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());
 
             while (!isCancelled.get() && currentStep.equals(step) && channel.isOpen() && !eventingConsumer.isConsumerCancelled()) {
@@ -180,9 +184,12 @@ public class Consumer implements Runnable  {
                     exitReason = ConsumerExitReason.Cancelled;
                     break;
                 }
+
+                if(consumerSettings.getAckMode().isManualAcks())
+                    eventingConsumer.ensureAckTimeLimitEnforced();
             }
 
-            if(isCancelled.get())
+            if(isCancelled.get() && consumerSettings.getAckMode().isManualAcks())
                 eventingConsumer.tryAcknowledgeRemaining();
 
             if(exitReason == ConsumerExitReason.None) {

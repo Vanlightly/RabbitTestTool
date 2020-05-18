@@ -613,6 +613,9 @@ public class Orchestrator {
             case ConsumerAckInterval:
                 nextConsumerAckIntervalStep(variableConfig, (int)value);
                 break;
+            case ConsumerAckIntervalMs:
+                nextConsumerAckIntervalMsStep(variableConfig, (int)value);
+                break;
             case ConsumerPrefetch:
                 nextConsumerPrefetchStep(variableConfig, (int)value);
                 break;
@@ -699,15 +702,15 @@ public class Orchestrator {
         logger.info("Next step in CONSUMER PREFETCH variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
             if(variableConfig.getGroup() == null) {
-                consumerGroup.setConsumerPrefetch(value);
+                consumerGroup.setConsumerPrefetch((short)value);
             }
             else if(consumerGroup.getGroup().equals(variableConfig.getGroup())) {
-                consumerGroup.setConsumerPrefetch(value);
+                consumerGroup.setConsumerPrefetch((short)value);
             }
         }
     }
 
-    private void nextConsumerAckIntervalStep(VariableConfig variableConfig, int value) throws IOException{
+    private void nextConsumerAckIntervalStep(VariableConfig variableConfig, int value) {
         logger.info("Next step in CONSUMER ACKS variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
             if(variableConfig.getGroup() == null) {
@@ -715,6 +718,18 @@ public class Orchestrator {
             }
             else if(consumerGroup.getGroup().equals(variableConfig.getGroup())) {
                 consumerGroup.setAckInterval(value);
+            }
+        }
+    }
+
+    private void nextConsumerAckIntervalMsStep(VariableConfig variableConfig, int value) {
+        logger.info("Next step in CONSUMER ACK MILLISECONDS variable dimension with value: " + value);
+        for(ConsumerGroup consumerGroup : this.consumerGroups) {
+            if(variableConfig.getGroup() == null) {
+                consumerGroup.setAckIntervalMs(value);
+            }
+            else if(consumerGroup.getGroup().equals(variableConfig.getGroup())) {
+                consumerGroup.setAckIntervalMs(value);
             }
         }
     }

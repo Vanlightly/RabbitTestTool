@@ -19,6 +19,7 @@ public class ConsoleRegister implements BenchmarkRegister {
 
     private PrintStream out;
     private StepStatistics lastStats;
+    private int lastStep;
     private Instant started;
     private Instant stopped;
     private boolean printLiveStats;
@@ -85,7 +86,7 @@ public class ConsoleRegister implements BenchmarkRegister {
                     stepStatistics.getRecordingSeconds(),
                     stepStatistics.getDurationSeconds()));
 
-            if (lastStats == null) {
+            if (lastStats == null || lastStep != step) {
                 this.out.println(MessageFormat.format("    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#}",
                         stepStatistics.getSentCount(),
                         stepStatistics.getSentBytesCount(),
@@ -100,6 +101,7 @@ public class ConsoleRegister implements BenchmarkRegister {
             }
 
             lastStats = stepStatistics;
+            lastStep = step;
 
             StringBuilder latenciesSb = new StringBuilder();
             StringBuilder confirmLatenciesSb = new StringBuilder();

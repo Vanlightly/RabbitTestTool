@@ -2,24 +2,26 @@ package com.jackvanlightly.rabbittesttool.topology.model.consumers;
 
 public class AckMode {
     private boolean manualAcks;
-    private int consumerPrefetch;
+    private short consumerPrefetch;
     private int ackInterval;
+    private int ackIntervalMs;
 
     public AckMode() {
     }
 
-    public AckMode(boolean manualAcks, int consumerPrefetch, int ackInterval) {
+    public AckMode(boolean manualAcks, short consumerPrefetch, int ackInterval, int ackIntervalMs) {
         this.manualAcks = manualAcks;
         this.consumerPrefetch = consumerPrefetch;
         this.ackInterval = ackInterval;
+        this.ackIntervalMs = ackIntervalMs;
     }
 
     public static AckMode withNoAck() {
         return new AckMode();
     }
 
-    public static AckMode withManualAcks(int consumerPrefetch, int ackInterval) {
-        return new AckMode(true, consumerPrefetch, ackInterval);
+    public static AckMode withManualAcks(short consumerPrefetch, int ackInterval, int ackIntervalMs) {
+        return new AckMode(true, consumerPrefetch, ackInterval, ackIntervalMs);
     }
 
     public boolean isManualAcks() {
@@ -34,7 +36,7 @@ public class AckMode {
         return consumerPrefetch;
     }
 
-    public void setConsumerPrefetch(int consumerPrefetch) {
+    public void setConsumerPrefetch(short consumerPrefetch) {
         this.consumerPrefetch = consumerPrefetch;
     }
 
@@ -44,5 +46,13 @@ public class AckMode {
 
     public void setAckInterval(int ackInterval) {
         this.ackInterval = ackInterval;
+    }
+
+    public int getAckIntervalMs() {
+        return ackIntervalMs;
+    }
+
+    public void setAckIntervalMs(int ackIntervalMs) {
+        this.ackIntervalMs = ackIntervalMs;
     }
 }

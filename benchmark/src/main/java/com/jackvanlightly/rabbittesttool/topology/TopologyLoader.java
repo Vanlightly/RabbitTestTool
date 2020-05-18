@@ -71,8 +71,9 @@ public class TopologyLoader {
                     throw new TopologyException("Fixed topology mode requires a 'fixedDimensions' object");
                 break;
             case SingleVariable:
-                if(dimensionJson.has("singleDimension"))
+                if(dimensionJson.has("singleDimension")) {
                     topology.setVariableConfig(getSingleVariableConfig(dimensionJson.getJSONObject("singleDimension"), stepOverride));
+                }
                 else
                     throw new TopologyException("Single dimension topology mode requires a 'singleDimension' object");
                 break;
@@ -473,8 +474,9 @@ public class TopologyLoader {
                     boolean manualAcks = getMandatoryBoolValue(ackModeJson, "manualAcks");
                     if (manualAcks) {
                         cgConfig.setAckMode(AckMode.withManualAcks(
-                                getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
-                                getMandatoryIntValue(ackModeJson, "ackInterval")
+                                (short)getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
+                                getMandatoryIntValue(ackModeJson, "ackInterval"),
+                                getOptionalIntValue(ackModeJson, "ackIntervalMs", 1000)
                         ));
                     } else {
                         cgConfig.setAckMode(AckMode.withNoAck());
@@ -944,9 +946,10 @@ public class TopologyLoader {
             case "queues": return VariableDimension.Queues;
             case "prefetch": return VariableDimension.ConsumerPrefetch;
             case "ackinterval": return VariableDimension.ConsumerAckInterval;
+            case "ackintervalms": return VariableDimension.ConsumerAckIntervalMs;
             case "headerspermessage": return VariableDimension.MessageHeaders;
             case "messagesize": return VariableDimension.MessageSize;
-            case "publisherrate": return VariableDimension.PublishRatePerPublisher;
+            case "publishrate": return VariableDimension.PublishRatePerPublisher;
             case "inflightlimit": return VariableDimension.PublisherInFlightLimit;
             case "routingkeyindex": return VariableDimension.RoutingKeyIndex;
             case "processingms": return VariableDimension.ProcessingMs;
@@ -1107,19 +1110,6 @@ public class TopologyLoader {
                 }
             }
         }
-
-//        Iterator<Object> jsonArrayIterator = jsonArray.iterator();
-//        jsonArrayIterator.forEachRemaining(element -> {
-//            if(element instanceof JSONObject)
-//                handleJSONObject((JSONObject) element, variables, variableDefaults);
-//            else if(element instanceof JSONArray)
-//                handleJSONArray((JSONArray) element, variables, variableDefaults);
-//            else {
-//                String fieldValue = (String)element;
-//                String value = getVariableValue(fieldValue, variables, variableDefaults);
-//                replaceValue(element, element, variables, variableDefaults);
-//            }
-//        });
     }
 
     public void replaceValue(JSONObject json, String key, Map<String, String> variables, Map<String,String> variableDefaults) {
@@ -1155,21 +1145,6 @@ public class TopologyLoader {
         else {
             return value;
         }
-
-//        if(value.trim().contains("{{ var.")) {
-//            //String name = value.trim().replace("{{ var.", "").replace(" }}", "");
-//
-//            String name = "";
-//            if (variables.containsKey(name)) {
-//                return variables.get(name);
-//            } else if (variableDefaults.containsKey(name)) {
-//                return variableDefaults.get(name);
-//            } else
-//                throw new TopologyException("Variable " + name + " was not supplied and has no default value");
-//        }
-//        else {
-//            return value;
-//        }
     }
 
     private int getIntValue(JSONObject json, String jsonPath, Map<String, String> variables, Map<String,String> variableDefaults) {

@@ -9,6 +9,7 @@ public enum VariableDimension {
     PublishRatePerPublisher,
     ConsumerPrefetch,
     ConsumerAckInterval,
+    ConsumerAckIntervalMs,
     Queues,
     RoutingKeyIndex,
     ProcessingMs

@@ -84,7 +84,12 @@ public class ConsumerGroup {
     public void setAckInterval(int ackInterval) {
         for(Consumer consumer : this.consumers) {
             consumer.setAckInterval(ackInterval);
-            consumer.triggerNewChannel();
+        }
+    }
+
+    public void setAckIntervalMs(int ackIntervalMs) {
+        for(Consumer consumer : this.consumers) {
+            consumer.setAckIntervalMs(ackIntervalMs);
         }
     }
 
@@ -111,7 +116,7 @@ public class ConsumerGroup {
         return receiveCounts;
     }
 
-    public void setConsumerPrefetch(int prefetch) {
+    public void setConsumerPrefetch(short prefetch) {
         for(Consumer consumer : this.consumers) {
             consumer.setPrefetch(prefetch);
             consumer.triggerNewChannel();

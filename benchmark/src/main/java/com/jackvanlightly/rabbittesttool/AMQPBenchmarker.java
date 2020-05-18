@@ -40,6 +40,7 @@ public class AMQPBenchmarker {
             System.exit(1);
         }
 
+        printStage("TEST INITIATING");
         arguments.printArguments();
 
         String mode = arguments.getStr("--mode");
@@ -487,6 +488,7 @@ public class AMQPBenchmarker {
 //                }
 //            });
 
+                printStage("TEST STARTED");
                 success = orchestrator.runBenchmark(benchmarkId, topology, brokerConfig, gracePeriod, warmUp);
                 if(!success) {
                     if (attempts < attemptLimit)
@@ -494,6 +496,8 @@ public class AMQPBenchmarker {
                     else
                         logger.info("Benchmark failed, no more retries. On node " + String.join(",", brokerConfig.getNodeNames()));
                 }
+
+                printStage("TEST CLEANUP STARTED");
 
                 waitFor(10000);
 
@@ -680,5 +684,11 @@ public class AMQPBenchmarker {
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    private static void printStage(String stage) {
+        LOGGER.info("-------------------------------------------------");
+        LOGGER.info(stage);
+        LOGGER.info("-------------------------------------------------");
     }
 }

@@ -70,6 +70,6 @@ public class VirtualHost {
     }
 
     public static String getScaleSuffix(int scaleNumber) {
-        return "-s" + scaleNumber;
+        return "-g" + scaleNumber;
     }
 }

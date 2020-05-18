@@ -43,7 +43,7 @@ public class Stats {
     private final Consumer<Long> updateConfirmMultipleFlag;
     private final DoubleAccumulator published, returned, confirmed, nacked, consumed;
     private final DoubleAccumulator publishedMsgBytes, consumedMsgBytes, publishedMsgSize, consumedMsgSize, publishedMsgHeaders, consumedMsgHeaders;
-    private final DoubleAccumulator deliveryMode, consumerPrefetch, consumerAck, publisherInFlightLimit;
+    private final DoubleAccumulator deliveryMode, consumerPrefetch, consumerAck, consumerAckMs, consumerAckCount, consumerAcksMsgPerAck, publisherInFlightLimit;
     private final DoubleAccumulator consumerCount, publisherCount, queueCount, targetPublishRate, consumerConnectionError;
     private final DoubleAccumulator blockedPublisherConnectionRate, unblockedPublisherConnectionRate, routingKeyLength;
     private final DoubleAccumulator perPublisherRateMin, perPublisherRate5, perPublisherRate25, perPublisherRate50, perPublisherRate75, perPublisherRate95, perPublisherRateMax;
@@ -61,6 +61,9 @@ public class Stats {
     protected long deliveryModeInterval;
     protected long consumerPrefetchInterval;
     protected long consumerAckInterval;
+    protected long consumerAckIntervalMs;
+    protected long consumerAckCountInterval;
+    protected long consumerAckedMsgsInterval;
     protected long currentConsumerCount;
     protected long currentPublisherCount;
     protected long currentQueueCount;
@@ -148,6 +151,9 @@ public class Stats {
         deliveryMode = registry.gauge(metricsPrefix + "publish-msg-del-mode", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerPrefetch = registry.gauge(metricsPrefix + "consumer-prefetch", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerAck = registry.gauge(metricsPrefix + "consumer-ack-interval", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        consumerAckMs = registry.gauge(metricsPrefix + "consumer-ack-interval-ms", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        consumerAckCount = registry.gauge(metricsPrefix + "consumer-acks", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        consumerAcksMsgPerAck = registry.gauge(metricsPrefix + "consumer-acks-avg-msgs-per-ack", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         publisherInFlightLimit = registry.gauge(metricsPrefix + "publisher-in-flight-limit", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerCount = registry.gauge(metricsPrefix + "consumer-count", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         publisherCount = registry.gauge(metricsPrefix + "publisher-count", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
@@ -303,6 +309,14 @@ public class Stats {
         double rateConsumedBytes = rate(consumedMsgBytesInterval, elapsedInterval);
         recordReceivedBytes(rateConsumedBytes);
 
+        double ackCount = rate(consumerAckCountInterval, elapsedInterval);
+        recordConsumerAckCount(ackCount);
+
+        if(consumerAckCountInterval > 0) {
+            double avgMsgsPerAck = consumerAckedMsgsInterval / consumerAckCountInterval;
+            recordConsumerAckMsgsPerAck(avgMsgsPerAck);
+        }
+
         if(recvCountInterval > 0) {
             double avgConsumedMsgSize = consumedMsgBytesInterval / recvCountInterval;
             recordReceivedMsgSize(avgConsumedMsgSize);
@@ -312,6 +326,9 @@ public class Stats {
 
             double consumerAcks = consumerAckInterval / recvCountInterval;
             recordConsumerAck(consumerAcks);
+
+            double consumerAckMs = consumerAckIntervalMs / recvCountInterval;
+            recordConsumerAckMs(consumerAckMs);
 
             double consumerPrefetchVal = consumerPrefetchInterval / recvCountInterval;
             recordConsumerPrefetch(consumerPrefetchVal);
@@ -363,6 +380,9 @@ public class Stats {
         consumedMsgHeadersInterval = 0;
         deliveryModeInterval = 0;
         consumerAckInterval = 0;
+        consumerAckIntervalMs = 0;
+        consumerAckCountInterval = 0;
+        consumerAckedMsgsInterval = 0;
         consumerPrefetchInterval = 0;
         consumerConnectionErrorInterval = 0;
         blockedPublisherConnectionInterval = 0;
@@ -441,7 +461,12 @@ public class Stats {
         report();
     }
 
-    public synchronized void handleRecv(long latency, long msgBytes, int msgHeaders, int prefetch, int ackInterval) {
+    public synchronized void handleRecv(long latency,
+                                        long msgBytes,
+                                        int msgHeaders,
+                                        int prefetch,
+                                        int ackInterval,
+                                        int ackIntervalMs) {
         if(RecordingActive) {
             this.recvCountStepTotal++;
             this.latencies.update(latency);
@@ -454,10 +479,18 @@ public class Stats {
         consumedMsgHeadersInterval += msgHeaders;
         consumerPrefetchInterval += prefetch;
         consumerAckInterval += ackInterval;
+        consumerAckIntervalMs += ackIntervalMs;
 
         if (latency > 0) {
             this.updateLatency.accept(latency);
         }
+        report();
+    }
+
+    public synchronized void handleAck(int msgCount) {
+        consumerAckCountInterval++;
+        consumerAckedMsgsInterval += msgCount;
+
         report();
     }
 
@@ -590,6 +623,18 @@ public class Stats {
 
     protected void recordConsumerAck(double ackInterval) {
         this.consumerAck.accumulate(ackInterval);
+    }
+
+    protected void recordConsumerAckMs(double ackIntervalMs) {
+        this.consumerAckMs.accumulate(ackIntervalMs);
+    }
+
+    protected void recordConsumerAckCount(double ackCount) {
+        this.consumerAckCount.accumulate(ackCount);
+    }
+
+    protected void recordConsumerAckMsgsPerAck(double msgsPerAck) {
+        this.consumerAcksMsgPerAck.accumulate(msgsPerAck);
     }
 
     protected void recordConsumerConnError(double connectionErrors) {
