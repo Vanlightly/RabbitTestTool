@@ -1,5 +1,4 @@
 {
-    "topologyName": "PointToPoint",
     "topologyType": "fixed",
     "benchmarkType": "{{ var.benchmarkType }}",
     "variables": [
@@ -21,20 +20,20 @@
       { "name": "p2pQueueMode", "default": "default" },
 
       { "name": "p2pGroup1PublisherCount", "default": "1" },
-      { "name": "p2pGroup1MessageSize", "default": "16" },
+      { "name": "p2pGroup1MessageSize", "default": "20" },
       { "name": "p2pGroup2PublisherCount", "default": "1" },
-      { "name": "p2pGroup2MessageSize", "default": "16" },
+      { "name": "p2pGroup2MessageSize", "default": "20" },
       { "name": "p2pGroup3PublisherCount", "default": "1" },
-      { "name": "p2pGroup3MessageSize", "default": "16" },
+      { "name": "p2pGroup3MessageSize", "default": "20" },
       { "name": "p2pGroup4PublisherCount", "default": "1" },
-      { "name": "p2pGroup4MessageSize", "default": "16" },
+      { "name": "p2pGroup4MessageSize", "default": "20" },
 
       { "name": "fanoutScale", "default": "1" },
       { "name": "fanoutScaleType", "default": "single-vhost" },
       { "name": "fanoutQueuePrefix", "default": "fanout" },
       { "name": "fanoutQueueCount", "default": "1" },
       { "name": "fanoutConsumerCount", "default": "1" },
-      { "name": "fanoutMessageSize", "default": "16" },
+      { "name": "fanoutMessageSize", "default": "20" },
       { "name": "fanoutPublishRate", "default": "0"},
       { "name": "fanoutPublisherCount", "default": "1" },
       { "name": "fanoutDeliveryMode", "default": "persistent" },
@@ -52,7 +51,7 @@
       { "name": "topicQueueCount", "default": "1" },
       { "name": "topicFanout", "default": "1"},
       { "name": "topicConsumerCount", "default": "1" },
-      { "name": "topicMessageSize", "default": "16" },
+      { "name": "topicMessageSize", "default": "20" },
       { "name": "topicPublishRate", "default": "0"},
       { "name": "topicPublisherCount", "default": "1" },
       { "name": "topicDeliveryMode", "default": "persistent" },
@@ -66,7 +65,6 @@
       
       { "name": "durationSeconds", "default": "120" }
     ],
-    "description": "Point to point",
     "topologyGroups": [
       {
         "name": "p2p",

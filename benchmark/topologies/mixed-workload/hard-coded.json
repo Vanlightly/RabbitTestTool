@@ -1,8 +1,6 @@
 {
-    "topologyName": "MixedWorkload",
     "topologyType": "fixed",
     "benchmarkType": "throughput",
-    "description": "Mixed workload",
     "topologyGroups": [
       {
         "name": "p2p",

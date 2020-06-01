@@ -38,7 +38,7 @@ We also can define federation configuration in thise file.
     ],
     "policies": [
         {
-            "name": "{{ var.pattern }}",
+            "name": "{{ var.name }}",
             "applyTo": "queues",
             "pattern": "{{ var.pattern }}",
             "priority": "{{ var.priority }}",
@@ -67,7 +67,7 @@ Note that quorum queues cannot be created using actual RabbitMQ policies - suppo
     ],
     "policies": [
         {
-            "name": "{{ var.pattern }}",
+            "name": "{{ var.name }}",
             "applyTo": "queues",
             "pattern": "{{ var.pattern }}",
             "priority": "{{ var.priority }}",
@@ -109,7 +109,7 @@ Note that quorum queues cannot be created using actual RabbitMQ policies - suppo
 }
 ```
 
-Note that the policy must be applied to a queue group with the name "sharded". 
+Note that the policy must be applied to a queue with the prefix value of "sharded". 
 
 ## Federation
 

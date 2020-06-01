@@ -1,8 +1,8 @@
 # Topology File Guide
 
-A topology file defines the virtual hosts, exchanges, queues, publishers and consumers of a benchmark. It can optionally also define one or more scaling dimensions. Topology files do not reference any particular AMQP technology or connection details.
+A topology file defines one or more topology groups (exchanges, queues, publishers and consumers) of a benchmark. It can optionally also define one or more scaling dimensions. Topology files do not reference any particular AMQP technology or connection details.
 
-A large number of topologies are already defined in the deploy/topologies folder.
+A large number of topologies are already defined in the benchmark/topologies folder and most use the variable templating feature.
 
 Each benchmark should be oriented towards testing throughput, latency or stress testing. Latency numbers are not as useful when running a broker at its limit. These numbers have some utility, but mostly when testing latency, we want the broker to not be at 100% capacity. For this reason latency tests should use publisher rate limiting, whereas throughput tests usually don't specify a rate limit.
 
@@ -10,10 +10,8 @@ An example topology file with one publisher, one exchange, one queue and one con
 
 ```json
 {
-    "topologyName": "TP_FanoutBenchmark1",
     "topologyType": "fixed",
     "benchmarkType": "throughput",
-    "description": "One pub/queue/con, 16 byte msg",
     "topologyGroups": [
         {
             "name": "benchmark",
@@ -56,22 +54,21 @@ An example topology file with one publisher, one exchange, one queue and one con
 
 You can define variables in topology files to avoid the need for many similar variants of a given topology. Each variable is defined with a default value.
 
-The variables are defined in an array and placed in the topology using the "{{ var.variable_name }}" syntax.
+The variables are defined in an array and placed in the topology using the "{{ var.variable_name }}" syntax. All values are strings as they will be interpolated into the generated json file.
 
 ```json
 {
-  "topologyName": "fanout_exchange",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostScale", "default": "1" },
+    { "name": "groupScale", "default": "1" },
     { "name": "scaleType", "default": "single-vhost" },
     { "name": "queueCount", "default": "1" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
     { "name": "deliveryMode", "default": "persistent" },
-    { "name": "messageSize", "default": "16" },
+    { "name": "messageSize", "default": "20" },
     { "name": "publishRate", "default": "0"},
     { "name": "useConfirms", "default": "false" },
     { "name": "inflightLimit", "default": "0" },
@@ -81,11 +78,10 @@ The variables are defined in an array and placed in the topology using the "{{ v
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" }
   ],
-  "description": "Fanout",
   "topologyGroups": [
     {
       "name": "benchmark",
-      "scale": "{{ var.vhostScale }}",
+      "scale": "{{ var.groupScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
       "queues": [ 
@@ -141,20 +137,18 @@ The variables are defined in an array and placed in the topology using the "{{ v
 
 | Field | Mandatory | Default | Description  |
 | --- | --- | --- | --- |
-| topologyName | yes | - | The name of the topology |
-| description | no | - | A very short description of the topology. Useful when reviewing benchmark reports. |
 | topologyType | yes | - | Either FixedDimensions, SingleDimension or MultipleDimensions |
 | benchmarkType | yes | - | Either throughput, latency or stress. This information is only used to indicate to others the intent of the test and to show in reports. When we see that a test is a throughput test, we know latency numbers may not be relevant. |
-| vhosts | yes | - | The list of virtual hosts with the initially deployed artefacts. See Virtual Hosts. |
+| topologyGroups | yes | - | The list of topology groups with the initially deployed artefacts. See Topology Groups. |
 | dimensions | yes | - | The dimensions of the topology. See Dimensions. |
 
-### Virtual Hosts
+### Topology Groups
 
-At least one virtual host must be defined. Each virtual host consists of a name, optionally a scale and the list of exchanges, queues, consumers and publishers.
+At least one topology group must be defined. Each topology group consists of a name, optionally a scale and the list of exchanges, queues, consumers and publishers.
 
-Underscores ARE NOT supported in virtual host names.
+Underscores ARE NOT supported in topology group names.
 
-Virtual hosts can optionally be marked as either `upstream` (the default) or `downstream` via the **federation** field. This is required when benchmarking either federated exchanges, federated queue or shovels.
+Topology group can optionally be marked as either `upstream` (the default) or `downstream` via the **federation** field. This is required when benchmarking either federated exchanges, federated queue or shovels.
 
 ```json
 "topologyGroups": [
@@ -170,15 +164,76 @@ Virtual hosts can optionally be marked as either `upstream` (the default) or `do
 ]
 ```
 
-A virtual host can be scaled out. For example, when the virtual host "test" has its "scale" field set to 5, five copies (with all its exchanges, queue s etc) are declared, with the names:
+A topology group can be scaled out. For example, when the topology group "test" has its "scale" field set to 5, five copies (with all its exchanges, queue s etc) are declared. Each topology group is declared inside a virtual host of the name of the group. The group can be scaled out inside this virtual hosts, or across many virtual hosts.
 
-- test00001
-- test00002
-- test00003
-- test00004
-- test00005
+This topology group:
 
-#### `exchanges` Field
+```json
+{
+    "name": "test",
+    "scale": "2",
+    "scaleType": "single-vhost",
+    "queues": [ 
+        { 
+            "prefix": "myqueue", 
+            "scale": "3"
+        },
+        { 
+            "prefix": "myotherqueue", 
+            "scale": "1"
+        } 
+    ]
+}
+
+```
+
+produces this naming of vhost and queues (`sn` stands for scale number and is used to differentiate scaled queue instances within the same vhost):
+
+- vhost: test
+    - myqueue-sn1_00001
+    - myqueue-sn1_00002
+    - myqueue-sn1_00003
+    - myotherqueue-sn1_00001
+    - myqueue-sn2_00001
+    - myqueue-sn2_00002
+    - myqueue-sn2_00003
+    - myotherqueue-sn2_00001
+
+This topology group that scales out over vhosts:
+
+```json
+{
+    "name": "test",
+    "scale": "2",
+    "scaleType": "multiple-vhosts",
+    "queues": [ 
+        { 
+            "prefix": "myqueue", 
+            "scale": "3"
+        },
+        { 
+            "prefix": "myotherqueue", 
+            "scale": "1"
+        } 
+    ]
+}
+
+```
+
+produces this naming:
+
+- vhost: test00001
+    - myqueue_00001
+    - myqueue_00002
+    - myqueue_00003
+    - myotherqueue_00001
+- vhost: test00002
+    - myqueue_00001
+    - myqueue_00002
+    - myqueue_00003
+    - myotherqueue_00001
+
+#### `exchanges` Object
 
 `exchanges` is a JSON array of exchange objects.
 
@@ -186,7 +241,7 @@ A virtual host can be scaled out. For example, when the virtual host "test" has 
 | --- | --- | --- | --- |
 | name | yes | - | The name of the exchange |
 | type | yes | - | Fanout, Direct, Topic, Headers, ConsistentHash, ModulusHash |
-| bindings | no | - | An array of bindings. See Binding Fields |
+| bindings | no | - | An array of bindings. See Binding Objects |
 | shovel | no | - | See shovel field section |
 
 Example of five different exchanges.
@@ -212,7 +267,7 @@ Example of two exchanges, with an exchange to exchange binding.
 
 Exchanges also have a `shovel` field to allow for defining a shovel destination.
 
-#### Binding Fields
+#### Binding Objects
 
 Bindings can bind a queue to an exchange, or an exchange to an exchange.
 
@@ -220,9 +275,9 @@ Bindings can bind a queue to an exchange, or an exchange to an exchange.
 | --- | --- | --- | --- |
 | from | yes | - | The name of exchange to bind to |
 | bindingKey | no | - | When binding to a direct or topic exchange, the routing key or routing key pattern. Use the value "self" to set the binding key as the name of the queue/exchange. This is useful when you are scaling out a queue group and want to route based on the queue name. |
-| properties | no | - | See Properties |
+| properties | no | - | See Property Objects |
 
-#### Property Fields
+#### Property Objects
 
 Bindings and queues can have optional properties.
 
@@ -232,19 +287,19 @@ Bindings and queues can have optional properties.
 | value | yes | - | The property value |
 | type | yes | string | The type of value. Currently only int and string are supported |
 
-#### Queue Group Fields
+#### Queue Objects
 
 The queueGroups field is a JSON array of queueGroup objects.
 
 | Field | Mandatory | Default | Description  |
 | --- | --- | --- | --- |
-| group | yes | - | The name of the group |
+| prefix | yes | - | The name of the queue prefix |
 | scale | yes | - | The number of queues in the group |
 | properties | no | - | An array of properties. See Property Fields |
 | bindings | yes | - | An array of bindings. See Binding Fields |
 | shovel | no | - | See shovel field section |
 
-An example of two queue groups.
+An example of two queues.
 
 ```json
 "queues": [
@@ -268,11 +323,11 @@ Example of 10 lazy queues bound to a single exchange.
 ]    
 ```
 
-#### Publisher Group Fields
+#### Publisher Fields
 
 | Field | Mandatory | Default | Description  |
 | --- | --- | --- | --- |
-| group | yes | - | The name of the group |
+| prefix | yes | - | The name of the publisher prefix |
 | scale | yes | - | The number of queues in the group |
 | deliveryMode | yes | - | Persistent or Transient |
 | headersPerMessage | no | 0 | The number of message headers to add to each message. When > 0, the availableHeaders field must have at least one header. |
@@ -284,7 +339,7 @@ Example of 10 lazy queues bound to a single exchange.
 | sendToExchange | no | - | See SendToExchange Fields |
 | publishMode | no | - | See PublishMode fields |
 
-An example of a single publisher group with the default message size, no publishing rate limit and no publisher confirms.
+An example of a single publisher with the default message size, no publishing rate limit and no publisher confirms.
 
 ```json
 "publishers": [
@@ -300,7 +355,7 @@ An example of a single publisher group with the default message size, no publish
 ]
 ```
 
-An example of a single publisher group with the a message size, publishing rate limit and publisher confirms.
+An example of a single publisher with the a message size, publishing rate limit and publisher confirms.
 
 ```json
 "publishers": [
@@ -322,18 +377,27 @@ An example of a single publisher group with the a message size, publishing rate 
 ]
 ```
 
-##### SendToQueueGroup Fields
+##### SendToQueuePrefix Fields
 
-A publisher group can publish messages to a queue group via the default exchange. Each publisher can choose a random queue each time it sends a message, or it can send a message to its "counterpart", the queue with the same number as itself. 
+A publisher can publish messages to a queue via the default exchange. Each publisher can choose a random queue each time it sends a message, or it can send a message to its "counterpart", the queue with the same number as itself or that has a modulo of itself. For example, 10 publishers and 3 queues:
 
-When using Counterpart mode, a publisher group of 3 that sends to a queue group "q1" of the same size will have publisher 1 send to queue q1_00001, publisher 2 to queue q1_00002 and publisher 3 to queue q1_00003.
+- pub1 -> q1
+- pub2 -> q2
+- pub3 -> q3
+- pub4 -> q1
+- pub5 -> q2
+- pub6 -> q3
+- pub7 -> q1
+- pub8 -> q2
+- pub9 -> q3
+- pub10 -> q1
 
 | Field | Mandatory | Default | Description  |
 | --- | --- | --- | --- |
-| queueGroup | yes | - | The name of the queue group to send messages to |
+| queuePrefix | yes | - | The name of the queue prefix to send messages to |
 | mode | yes | - | Random or Counterpart |
 
-An example of a publisher group that sends messages directly to queues of queue group q1 (via default exchange), with each message going to a randomly chosen queue of that group each time.
+An example of a publisher that sends messages directly to queues of queue prefix q1 (via default exchange), with each message going to a randomly chosen queue of that group each time.
 
 ```json
 "queues": [
@@ -352,7 +416,7 @@ An example of a publisher group that sends messages directly to queues of queue 
 ]
 ```
 
-An example of a publisher group and queue group of the same scale where each publisher sends messages to the queue with the same number suffix as itself of queue group q1 (via default exchange).
+An example of a publisher group and queue of the same scale where each publisher sends messages to the queue with the same number suffix as itself (via default exchange).
 
 ```json
 "queues": [
@@ -373,7 +437,7 @@ An example of a publisher group and queue group of the same scale where each pub
 
 ##### SendToExchange Fields
 
-A publisher group can publish messages to a single exchange. When sending to an exchange, various routing key modes are made available, including none at all when sending messages to fanout and headers exchanges.
+A publisher can publish messages to a single exchange. When sending to an exchange, various routing key modes are made available, including none at all for when sending messages to fanout and headers exchanges.
 
 The routing key modes available are:
 
@@ -391,7 +455,7 @@ The routing key modes available are:
 | routingKey | When FixedValue mode is used | - | The routing key to use for FixedValue mode |
 | routingKeys | When MultiValue or Index mode is used | - | The routing keys available |
 
-An example where a publisher group sends messages to exchange ex1 without a routing key.
+An example where a publisher sends messages to exchange ex1 without a routing key.
 
 ```json
 "publishers": [
@@ -407,7 +471,7 @@ An example where a publisher group sends messages to exchange ex1 without a rout
 ]
 ```
 
-An example where a publisher group sends all messages to exchange ex1 with the same routing key value of rk1.
+An example where a publisher sends all messages to exchange ex1 with the same routing key value of rk1.
 
 ```json
 "publishers": [
@@ -424,7 +488,7 @@ An example where a publisher group sends all messages to exchange ex1 with the s
 ]
 ```
 
-An example where a publisher group sends messages to exchange ex1 choosing a random routing from the routingKeys array for each message.
+An example where a publisher sends messages to exchange ex1 choosing a random routing from the routingKeys array for each message.
 
 ```json
 "publishers": [
@@ -463,7 +527,7 @@ An example of using Index routing key mode. In each step of a SingleDimension to
         "values": [0, 1, 2, 3, 4],
         "stepDurationSeconds": 60,
         "rampUpSeconds": 10,
-        "applyToGroup": "p1"
+        "applyToPrefix": "p1"
     }
 }
 ```
@@ -477,18 +541,18 @@ When using confirms.
 | useConfirms | no | false | True or False |
 | inFlightLimit | When useConfirm is true | - | The maximum number of unconfirmed messages a single publisher can have in flight |
 
-#### Consumer Group Fields
+#### Consumer Fields
 
 | Field | Mandatory | Default | Description  |
 | --- | --- | --- | --- |
-| group | yes | - | The name of the group |
-| queueGroup | yes | - | The name of the queue group that the consumers will consume |
+| prefix | yes | - | The name of the consumer prefix |
+| queuePrefix | yes | - | The name of the queue prefix that the consumers will consume |
 | scale | yes | - | The number of consumers in the group |
 | frameMax | no | 0 | The frameMax setting for each consumer |
 | ackMode | no | - | Settings related to acknowledgements. See AckMode Fields. When not specified, uses NoAck mode. |
 | processingMs | no | 0 | The number of milliseconds a consumer takes to process a single message |
 
-An example of a consumer group of 5 consumers, consuming from queue group q1. Using NoAck mode and no prefetch.
+An example of a set of 5 consumers, consuming from queue prefix q1. Using NoAck mode and no prefetch.
 
 ```json
 "consumers": [
@@ -500,7 +564,7 @@ An example of a consumer group of 5 consumers, consuming from queue group q1. Us
 ]
 ```
 
-An example of a consumer group with one consumer that uses manual acks with a prefetch, acks with multiple flag every 5th message and takes 10ms to process each message.
+An example of a consumer that uses manual acks with a prefetch, acks with multiple flag every 5th message and takes 10ms to process each message.
 
 ```json
 "consumers": [
@@ -525,14 +589,15 @@ An example of a consumer group with one consumer that uses manual acks with a pr
 | manualAcks | yes | True makes the consumers use consumer acks, false is for NoAck |
 | consumerPrefetch | yes | The prefetch count per consumer |
 | ackInterval | yes | Governs the use of the multiple flag. When set to 1, each message is individually acked, when set to 5, every 5th message is acked using the multiple flag |
+| ackIntervalMs | yes | Puts an upper limit on the amount of time that can pass before sending an acknowledgement |
 
-#### `shovel` field
+#### `shovel` fields
 
 To configure a shovel, you must define it on the shovel destination which can be either an exchange or a queue.
 
 The source can also be an exchange or queue, meaning that there are 4 combinations of source and destination.
 
-> Note that is the parent is a queueGroup and that has a value > 1 for `scale` then you will end up with one shovel per queue in the group. For those cases use the `counterpart` value for srcName (see below).
+> Note that if the parent is a queue and it has a value > 1 for `scale` then you will end up with one shovel per queue in the queue prefix. For those cases use the `counterpart` value for srcName (see below).
 
 | Field | Mandatory | Description  |
 | --- | --- | --- |
@@ -541,7 +606,7 @@ The source can also be an exchange or queue, meaning that there are 4 combinatio
 | reconnectDelaySeconds | no | defaults to 5 seconds |
 | srcBroker | yes | Either `upstream` or `downstream`. In a single cluster test this should be `upstream`, in a test with an upstream and downstream broker, you would normally set this to upstream, but there's no reason you couldn't also declare shovels that source from the downstream server |
 | srcType | yes | `queue` or `exchange` |
-| srcName | yes | For exchange sources, this would be the name of the source exchange. For queue sources, either specify a queue name or use the value `counterpart` to configure the shovel to use the same name as this queue. This is important when using a `scale` > 1 as queue on queueGroup section could generate multiple queues, which will generate multiple shovels. If you use any value other than `counterpart` all the shovels will have the same source which may not be what you want. |
+| srcName | yes | For exchange sources, this would be the name of the source exchange. For queue sources, either specify a queue name or use the value `counterpart` to configure the shovel to use the same name as this queue. This is important when using a `scale` > 1 as a queue prefix with a scale > 1 will generate multiple queues, which will generate multiple shovels. If you use any value other than `counterpart` all the shovels will have the same source which may not be what you want. |
 
 Example of an exchange destination and source shovel:
 
@@ -593,13 +658,15 @@ The above would create the following shovels:
 | Field | Mandatory | Description  |
 | --- | --- | --- |
 | durationSeconds | yes | The number of seconds to run the benchmark for  |
+| rampUpSeconds | yes | The number of seconds to allow for stabilisation before recording statistics  |
 
 Example:
 
 ```json
 "dimensions" : {
     "fixedDimensions": {
-        "durationSeconds": 60
+        "durationSeconds": 60,
+        "rampUpSeconds": 10
     }
 }
 ```
@@ -611,7 +678,9 @@ Example:
 | dimension | yes | The name of the dimension to modify |
 | values | yes | The array of values to apply to the dimension |
 | stepDurationSeconds | yes | The number of seconds duration of each step |
-| applyToGroup | no | The queue, consumer or publisher group to apply the modifications to |
+| applyToPrefix | no | The queue, consumer or publisher prefix to apply the modifications to |
+| rampUpSeconds | yes | The number of seconds to allow for stabilisation before recording statistics  |
+| repeatSeries | no | The number of time to repeat the whole series of steps |
 
 Example:
 
@@ -621,7 +690,8 @@ Example:
         "dimension": "messageSize",
         "values": [16, 32, 64, 128, 256, 512],
         "stepDurationSeconds": 60,
-        "applyToGroup": "p1"
+        "rampUpSeconds": 10,
+        "applyToPrefix": "p1"
     }
 }
 ```
@@ -633,6 +703,8 @@ Example:
 | dimensions | yes | An array of the names of the dimensions to modify |
 | multiValues | yes | The array of array of values to apply to the dimensions. |
 | stepDurationSeconds | yes | The number of seconds duration of each step |
+| rampUpSeconds | yes | The number of seconds to allow for stabilisation before recording statistics  |
+
 
 Example:
 

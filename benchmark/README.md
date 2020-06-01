@@ -8,11 +8,11 @@ The RabbitTestTool is a Java tool for running performance and correctness experi
 - [Topologies and Policies](#topologies-and-policies)
     - [Example Topology and Policies Files](#example-topology-and-policies-file)
     - [Topology Basics](#topology-basics)
-        - [Virtual Hosts](#virtual-hosts)
+        - [Topology Groups](#topology-groups)
         - [Exchanges](#exchanges)
-        - [Queue Groups](#queue-groups)
-        - [Publisher Groups](#publisher-groups)
-        - [Consumer Groups](#consumer-groups)
+        - [Queues](#queues)
+        - [Publishers](#publishers)
+        - [Consumers](#consumers)
         - [Dimensions](#dimensions)
             - [Fixed dimensions](#fixed-dimensions)
             - [Single Dimension](#single-dimension)
@@ -42,12 +42,16 @@ Each topology defines one of three benchmark types:
 - latency
 - stress
 
-In general, latency tests do not make brokers reach 100% capacity, they are rate limited to avoid that. Throughput tests are not generally rate limited as they are designed to test the maximum throughput possible for a given configuration. Stress tests place more load on a broker than it can handle.
+These are labels only, used as a reminder when interpreting the results later.
+
+In general, latency tests do not make brokers reach 100% capacity, they are rate limited to avoid that. Throughput tests may have high rate limits or not rate limited at all as they are designed to test the maximum throughput possible for a given configuration. Stress tests place more load on a broker than it can handle.
 
 Each topology has two main components:
 
-- list of virtual hosts which describes the initial state (exchanges, queues etc)
+- list of topology groups which describe the initial state (exchanges, queues etc)
 - the dimensions
+
+Each topology group is a self contained topology of publishers, exchanges, queues and consumers. You add add many groups and scale out each group by either making the groups larger or creating many copies of a group.
 
 You can also supply a JSON file with a list of policies to be applied.
 
@@ -57,10 +61,8 @@ A topology file does not specify urls, users etc, just the exchanges, queues, pu
 
 ```json
 {
-    "topologyName": "TP_MessageSizeBenchmark1",
     "topologyType": "SingleDimension",
     "benchmarkType": "throughput",
-    "description": "Slowly increasing message size",
     "topologyGroups": [
         {
             "name": "benchmark",
@@ -133,19 +135,82 @@ You can define almost anything you need with a topology and policies file.
 
 ### Topology Basics
 
-#### Virtual Hosts
+#### Topology Groups
 
-One or more virtual hosts must be defined. Usually only a single virtual host is needed. Each virtual host consists of exchanges, queues, consumers and publishers.
+One or more topology groups must be defined. Usually only a single topology group is needed. Each topology group consists of exchanges, queues, consumers and publishers.
 
-A virtual host can also be scaled out. For example, when the virtual host "test" has its "scale" field set to 5, five copies (with all its exchanges, queues, publishers and consumers) are declared, with the names:
+A topology group can also be scaled out within a virtual host or across multiple virtual hosts. 
 
-- test00001
-- test00002
-- test00003
-- test00004
-- test00005
+Because we can scale out an individual queue and also scale out an entire topology group, we need a naming scheme. Depending on whether we scale out inside a single vhost or scale out across vhosts, we get different vhost and queue names.
 
-So if you have a virtual host defined with 10 exchanges, 10 queues, 10 publishers and 10 consumers, with a scale of 5 then you'll end up with 50 exchanges, queues, publishers and consumers.
+This topology group:
+
+```json
+{
+    "name": "benchmark",
+    "scale": "2",
+    "scaleType": "single-vhost",
+    "queues": [ 
+        { 
+            "prefix": "myqueue", 
+            "scale": "3"
+        },
+        { 
+            "prefix": "myotherqueue", 
+            "scale": "1"
+        } 
+    ]
+}
+
+```
+
+produces this naming (`sn` stands for scale number and is used to differentiate scaled queue instances within the same vhost):
+
+- vhost: benchmark
+    - myqueue-sn1_00001
+    - myqueue-sn1_00002
+    - myqueue-sn1_00003
+    - myotherqueue-sn1_00001
+    - myqueue-sn2_00001
+    - myqueue-sn2_00002
+    - myqueue-sn2_00003
+    - myotherqueue-sn2_00001
+
+This topology group that scales out over vhosts:
+
+```json
+{
+    "name": "benchmark",
+    "scale": "2",
+    "scaleType": "multiple-vhosts",
+    "queues": [ 
+        { 
+            "prefix": "myqueue", 
+            "scale": "3"
+        },
+        { 
+            "prefix": "myotherqueue", 
+            "scale": "1"
+        } 
+    ]
+}
+
+```
+
+produces this naming:
+
+- vhost: benchmark00001
+    - myqueue_00001
+    - myqueue_00002
+    - myqueue_00003
+    - myotherqueue_00001
+- vhost: benchmark00002
+    - myqueue_00001
+    - myqueue_00002
+    - myqueue_00003
+    - myotherqueue_00001
+
+The queue naming convention is: `queuePrefix-scaleNumber_queueOrdinal`
 
 #### Exchanges
 
@@ -158,42 +223,51 @@ The exchanges are defined in a JSON array, such as:
     ]
 ```
 
-#### Queue Groups
+#### Queues
 
-A queue group is a group of queues that share the same configuration and can be scaled out.
+A queue is defined by its prefix, scale and bindings. The prefix acts as both an identifier for the queue but also for naming when scaling out.
 
-For example, queue group q1 consists of a single queue with a binding to the topic exchange ex1. Queue group q2 consists of 10 queues, each bound to fanout exchange ex2.
+For example, queue q1 consists of a single queue with a binding to the topic exchange ex1. Queue q2 is scaled out to become 10 queues, each bound to fanout exchange ex2.
 
-Queues are named **group_ordinal**, for example:
-
-- q1_00001
-- q1_00002
-- q1_00003
-- q1_00004
-- q1_00005
+Queues are named **prefix_scaleNumber_ordinal**, for example:
 
 ```json
-"queues": [
-    {
-        "prefix": "q1",
-        "scale": 1,
-        "bindings": [
-            { "from": "ex1", "bindingKeys": ["my.*.key"] }
-        ]
-    },
-    {
-        "prefix": "q2",
-        "scale": 10,
-        "bindings": [
-            { "from": "ex2" }
-        ]
-    }
-]
+{
+    "name": "benchmark",
+    "queues": [
+        {
+            "prefix": "q1",
+            "scale": 1,
+            "bindings": [
+                { "from": "ex1", "bindingKeys": ["my.*.key"] }
+            ]
+        },
+        {
+            "prefix": "q2",
+            "scale": 5,
+            "bindings": [
+                { "from": "ex2" }
+            ]
+        }
+    ]
+}
 ```
 
-#### Publisher Groups
+creates:
 
-A publisher group is a group of publishers that share the same configuration and can be scaled out. For example, the publisher group below publishes to the ex1 exchange with each message having a randomly selected routing key from the 5 keys defined.
+- vhost: benchmark
+    - q1_sn1_00001
+    - q2_sn1_00001
+    - q2_sn1_00002
+    - q2_sn1_00003
+    - q2_sn1_00004
+    - q2_sn1_00005
+
+#### Publishers
+
+A publisher is defined by its prefix, scale and a number of publish specific properties. Just like queues, publishers can also be scaled out.
+
+For example, the publisher below publishes to the ex1 exchange with each message having a randomly selected routing key from the 5 keys defined.
 
 ```json
 "publishers": [
@@ -210,9 +284,11 @@ A publisher group is a group of publishers that share the same configuration and
     ]
 ```
 
-#### Consumer Groups
+#### Consumers
 
-A consumer group is a group of consumers that share the same configuration and can be scaled out. For example, the consumer group below will consume from the queues of queue group q1, using manual acks with a prefetch of 1000 messages and will acknowledge every 100th message with the multiple flag. The group will start with 2 consumers.
+A consumer is defined by its prefix, scale and a number of consumer specific properties. Just like queues, consumers can also be scaled out.
+
+For example, the consumer below will consume from the queues of queue prefix q1, using manual acks with a prefetch of 1000 messages and will acknowledge every 100th message with the multiple flag. The consumer is scaled out to 2 instances.
 
 ```json
 "consumers": [
@@ -229,9 +305,9 @@ A consumer group is a group of consumers that share the same configuration and c
     ]
 ```
 
-A consumer group will be spread across its queue group evenly, with each consumer only ever consuming a single queue. For example, a queue group of 5 and a consumer group of 10, will see each queue consumed by 2 consumers. Likewise, a queue group of 10 and a consumer group of 5 will see 5 queues unconsumed.
+A set of consumer will be spread across the queues of the specified queuePrefix, with each consumer only ever consuming a single queue. For example, with a set of 5 queues a set of 10 consumers, each queue will be consumed by 2 consumers. Likewise, with a set of 10 queues and a set of 5 consumers, we'll have 5 queues unconsumed.
 
-When a queue group is scaled out as a single dimension, any consumer groups that consume it will not change accordingly, meaning that new queues will remain unconsumed. In order to scale out a queue group and have the new queues consumed from, you must also scale out the consumer group. See Multiple Dimensions below for an example.
+When a queue is scaled out as a single dimension, any consumers that consume it will not change accordingly, meaning that new queues will remain unconsumed. In order to scale out a queue and have the new queues consumed from, you must also scale out the consumer. See Multiple Dimensions below for an example.
 
 #### Dimensions
 
@@ -239,19 +315,20 @@ A single run has either a fixed topology, or it can modify one or more dimension
 
 | Dimension | Description |
 | --- | --- |
-| PublisherRate | Target publish rate per second per publisher |
+| PublishRate | Target publish rate per second per publisher |
 | MessageSize | The message size in bytes |
 | HeadersPerMessage | The number of message headers to send with each message |
 | RoutingKeyIndex | The routing key to send by its index (in the array "routingKeys" in the publisher config) |
 | InFlightLimit | Publisher in-flight message limit (number of unconfirmed messages) |
 | Prefetch | Consumer prefetch count per consumer |
-| AckInterval | Consumer ack interval |
+| AckInterval | Acknowledge every nth message |
+| AckIntervalMs | Acknowledge every nth ms |
 | Publishers | Publisher count |
 | Consumers | Consumer count |
 | Queues | Queue count |
 | ProcessingMs | The number of milliseconds it takes each consumer to process each message |
 
-Dimensions can be scaled out globally or just target a single group. So if we have two publisher groups, we can scale out the message size of just one publisher group, or all publisher groups.
+Dimensions can be scaled out globally or just target a single prefix. So if we have two publisher prefixes, we can scale out the message size of just one publisher prefix, or all publisher prefixes.
 
 ##### Fixed dimensions
 
@@ -272,23 +349,23 @@ For example:
 
 When we define a single dimension, we specify the name, the values and the step duration. Each step is its own benchmark and will log its metrics as a separate benchmark which can be queried later.
 
-For example, this dimension is applied to a single publisher group and affects the target publish rate per publisher. Each value constitutes a step with a duration of 60 seconds, with 10 seconds before each step to allow for fluctuations and for the publishing/consuming rate to stabilize before recording statistics. This test consists of 11 steps with each step consisting of 10 + 60 seconds.
+For example, this dimension is applied to a single publisher prefix and affects the target publish rate per publisher. Each value constitutes a step with a duration of 60 seconds, with 10 seconds before each step to allow for fluctuations and for the publishing/consuming rate to stabilize before recording statistics. This test consists of 11 steps with each step consisting of 10 + 60 seconds.
 
 ```json
 "dimensions" : {
     "singleDimension": {
-        "dimension": "PublisherRate",
+        "dimension": "PublishRate",
         "values": [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 15000, 20000],
         "stepDurationSeconds": 60,
         "rampUpSeconds": 10,
-        "applyToGroup": "p1"
+        "applyToPrefix": "p1"
     }
 }
 ```
 
 ##### Multiple Dimensions
 
-Just like with single dimensions, we define the dimenion names, values and step duration/ramp up.
+Just like with single dimensions, we define the dimension names, values and step duration/ramp up.
 
 For example, the following defines how prefetch and ack interval are modified in each step:
 
@@ -307,12 +384,12 @@ For example, the following defines how prefetch and ack interval are modified in
         ],
         "stepDurationSeconds": 60,
         "rampUpSeconds": 10,
-        "applyToGroup": "c1"
+        "applyToPrefix": "c1"
     }
 }
 ```
 
-This example shows the scaling out of a queue and consumer group together:
+This example shows the scaling out of a queue and consumer together:
 
 ```json
 "dimensions" : {
@@ -336,25 +413,23 @@ We can specify variables with default values in our topology files. This allows 
 
 ```json
 {
-  "topologyName": "fanout_exchange",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostScale", "default": "1" },
+    { "name": "groupScale", "default": "1" },
     { "name": "scaleType", "default": "single-vhost" },
     { "name": "queueCount", "default": "1" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
-    { "name": "messageSize", "default": "16" },
+    { "name": "messageSize", "default": "20" },
     { "name": "publishRate", "default": "0"},
     { "name": "durationSeconds", "default": "120" }
   ],
-  "description": "Fanout",
   "topologyGroups": [
     {
       "name": "benchmark",
-      "scale": "{{ var.vhostScale }}",
+      "scale": "{{ var.groupScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "fanout" }],
       "queues": [ 
@@ -397,7 +472,7 @@ We can specify variables with default values in our topology files. This allows 
 Then we can override variable defaults from the command line using the "tvar" prefix:
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --topology path/to/topology-file.json \
 ...
@@ -449,7 +524,7 @@ Unlike RabbitMQ itself, we can declare queues to be quorum queues via a policy f
     ],
     "policies": [
         {
-            "name": "{{ var.pattern }}",
+            "name": "{{ var.name }}",
             "applyTo": "queues",
             "pattern": "{{ var.pattern }}",
             "priority": "{{ var.priority }}",
@@ -466,7 +541,7 @@ Unlike RabbitMQ itself, we can declare queues to be quorum queues via a policy f
 Variables can be overriden using the "pvar" prefix on command line arguments when running the RabbitTestTool. For example:
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --policies path/to/policy-file.json \
 ...
@@ -493,13 +568,17 @@ Metrics and statistics are compiled and sent to InfluxDB. Later on more provider
 - Routing key length
 - Message header count
 - Connection failures per interval
+- Blocked/unblocked connections 
 - Number of publishers
 - Number of consumers
 - Number of queues
 - Consumer prefetch
 - Consumer ack interval
+- Max ms consumer ack interval
 - Delivery mode
-- Multiple flag usage in publisher confirms
+- Acknowledgement rate
+- Messages per Acknowledgement (multiple flag usage)
+- Publisher fairness (do all publishers of a given prefix manage the same rate?)
 
 In addition, if the deployment scripts are used, then host metrics (CPU, Disk IO, Memory, Network etc) are also published to InfluxDB. JSON files for Grafana dashboards are also available.
 
@@ -560,7 +639,6 @@ Run a benchmark using the "--mode benchmark" argument.
 | broker-port | broker | Mandatory | The broker amqp port |
 | broker-user | broker | Mandatory | The broker user |
 | broker-password | broker | Mandatory | The broker password |
-| broker-vhost | broker | Mandatory | The broker virtual host |
 | run-ordinal | logging | Optional | If this benchmark is part of a wider set of benchmarks, this sets where this benchmark sits in the set. Used later to be able to identify and compare the same benchmark in different runs. Defaults to 1. See comparison mode. |
 | technology | logging | Optional | The broker technology being tested, defaults to RabbitMQ. |
 | version | logging | Optional | The broker version. |
@@ -588,33 +666,31 @@ Run a benchmark using the "--mode benchmark" argument.
 Run a benchmark with the minimum arguments:
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --topology /path/to/topology-file \
 --technology rabbitmq \
 --version 3.7.15 \
---broker-hosts localhost \
+--broker-hosts localhost:5672 \
 --broker-mgmt-port 15672 \
 --broker-port 5672 \
 --broker-user guest \
---broker-password guest \
---broker-vhost benchmark
+--broker-password guest 
 ```
 
 Run a benchmark that publishes metrics to InfluxDB:
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --topology /path/to/topology-file \
 --technology rabbitmq \
 --version 3.7.15 \
---broker-hosts localhost \
+--broker-hosts localhost:5672 \
 --broker-mgmt-port 15672 \
 --broker-port 5672 \
 --broker-user guest \
 --broker-password guest \
---broker-vhost benchmark \
 --metrics-influx-uri http://localhost:8086 \
 --metrics-influx-user amqp \
 --metrics-influx-password amqp \
@@ -625,17 +701,16 @@ java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
 Run a benchmark that publishes metrics to InfluxDB and logs all runs to PostgreSQL:
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --topology /path/to/topology-file \
 --technology rabbitmq \
 --version 3.7.15 \
---broker-hosts localhost \
+--broker-hosts localhost:5672 \
 --broker-mgmt-port 15672 \
 --broker-port 5672 \
 --broker-user guest \
 --broker-password guest \
---broker-vhost benchmark \
 --metrics-influx-uri http://localhost:8086 \
 --metrics-influx-user amqp \
 --metrics-influx-password amqp \
@@ -670,7 +745,7 @@ Alternatively, we can create a JSON file to store values that never change.
 Then run the Java program with less arguments:
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --topology /path/to/topology-file \
 --technology rabbitmq \
@@ -746,7 +821,7 @@ All those benchmarks share the same run id (as they were run at the same time by
 Then we run comparison mode:
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode comparison \
 --config-file path/to/reports.json \
 --report-dir ~/tmp/reports \
@@ -761,7 +836,7 @@ java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
 --desc-vars publisherCount,publishRate,queueCount,consumerCount
 ```
 
-    Note that the `--desc-vars` argument exists to select which variables to add to the description column of the generated csv. 
+Note that the `--desc-vars` argument exists to select which variables to add to the description column of the generated csv. 
 
 The above omitted the PostgreSQL connection details by specifying a config file.
 
@@ -783,24 +858,34 @@ Additionally, because both c1 and c2 were also run in parallel the results also 
 
 ### Running a Model Driven Property Based Test
 
-Using "--mode model" as an argument for the Java program will run a benchmark as normal but also make it run as a property based test that checks the following safety properties:
+Using "--mode model" as an argument for the Java program will run a benchmark as normal but also make it run as a model driven property-based test that checks the following safety properties:
 
 - no loss of consumer availability
 - no loss of confirmed messages
 - no messages delivered out of order (ignoring redelivered messages)
 - no messages duplicated (ignoring redelivered messages)
 
-This allows you to combine a stress test with a correctness test. However, due to the needs to store a model, the memory usage can grow large so stress tests should be short.
+This allows you to do:
+- perform test runs of an upgrade process or blue/green deployment and ensure no dataloss or loss of availability
+- get confidence that your RabbitMQ installation does not lose data while under a stress test
+- allows the RabbitMQ team to perform additional correctness checking
+
+Recent improvements to the model allow for tests that last days.
 
 The test runs a benchmark with added safety property testing with two new arguments:
 
-- --grace-period-sec which determines a wait period after publishers have stopped in order for consumers to receive all the messages. Sometimes publishers can get ahead of consumers and they need extra time to catch up. If the message loss property is checked too soon it will falsely identify a message loss property violation.
-- --unavailability-sec determines the time threshold that counts as unavailability. For example, when set to 20 seconds, if a consumer is unable to consume messages for 15 seconds then that does not acount as an unavailability period, but if it was unable to consume for 25 seconds then an unavailability period would be logged.
+| Argument | Values | Description |
+| -- | -- | -- |
+| `--grace-period-sec` | int | Determines a rolling wait period after publishers have stopped in order for consumers to receive all the messages. Sometimes publishers can get ahead of consumers and they need extra time to catch up. If the message loss property is checked too soon it will falsely identify a message loss property violation. |
+| `--unavailability-sec` | int | Determines the time threshold that counts as unavailability. For example, when set to 20 seconds, if a consumer is unable to consume messages for 15 seconds then that does not acount as an unavailability period, but if it was unable to consume for 25 seconds then an unavailability period would be logged. |
+| `--checks` | Comma separated. Possible checks: `dataloss,duplicates,ordering,availability` (or `all`) | Determines which checks to perform. By default it will check for data loss, duplication and availability. Message ordering needs to be enalbed explicitly because not all workloads allow for ordered delivery. For example, two competing consumers on the same queue will not necessarily process the messages in a total order. |
 
 ```bash
-java -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode model \
+--topology /path/to/topology-file \
 --grace-period-sec 60 \
 --unavailability-sec 30 \
+--checks all
 ... see normal benchmark arguments
 ```

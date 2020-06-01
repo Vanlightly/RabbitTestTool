@@ -9,17 +9,20 @@
     { "name": "queueCount", "default": "1" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
-    { "name": "deliveryMode", "default": "persistent" },
     { "name": "messageSize", "default": "20" },
     { "name": "publishRate", "default": "0"},
-    { "name": "useConfirms", "default": "false" },
-    { "name": "inflightLimit", "default": "0" },
-    { "name": "manualAcks", "default": "false" },
-    { "name": "consumerPrefetch", "default": "1000" },
-    { "name": "ackInterval", "default": "1" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "retentionSizeMb", "default": "20000" },
+    { "name": "segmentSizeMb", "default": "500" },
+    { "name": "maxBatchSize", "default": "0" },
+    { "name": "maxBatchSizeBytes", "default": "0" },
+    { "name": "maxBatchWaitMs", "default": "0" },
+    { "name": "initialCredit", "default": "10" },
+    { "name": "creditInterval", "default": "1" },
+    { "name": "creditIntervalMs", "default": "1000" },
     { "name": "processingMs", "default": "0" },
-    { "name": "queueMode", "default": "default" },
-    { "name": "durationSeconds", "default": "120" }
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "initialPublish", "default": "0" }
   ],
   "topologyGroups": [
     {
@@ -30,9 +33,9 @@
         { 
           "prefix": "{{ var.queuePrefix }}", 
           "scale": "{{ var.queueCount }}",
-          "properties": [
-            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
-          ]
+          "queueType": "stream",
+          "retentionSizeMb": "{{ var.retentionSizeMb }}",
+          "segmentSizeMb": "{{ var.segmentSizeMb }}"
         } 
       ],
       "publishers": [
@@ -40,27 +43,33 @@
           "prefix": "p1",
           "scale": "{{ var.publisherCount }}",
           "publishMode": {
-            "useConfirms": "{{ var.useConfirms }}",
-            "inFlightLimit": "{{ var.inflightLimit }}"
+            "useConfirms": true,
+            "protocol": "stream",
+            "inFlightLimit": "{{ var.inflightLimit }}",
+            "maxBatchSize": "{{ var.maxBatchSize }}",
+            "maxBatchSizeBytes": "{{ var.maxBatchSizeBytes }}",
+            "maxBatchWaitMs": "{{ var.maxBatchWaitMs }}"
           },
           "sendToQueuePrefix": {
-            "queuePrefix": "q1",
+            "queuePrefix": "{{ var.queuePrefix }}",
             "mode": "Counterpart"
           },
-          "deliveryMode": "{{ var.deliveryMode }}",
           "messageSize": "{{ var.messageSize }}",
-          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
         }
       ],
       "consumers": [ 
         { 
           "prefix": "c1", 
           "scale": "{{ var.consumerCount }}", 
-          "queuePrefix": "q1",
+          "queuePrefix": "{{ var.queuePrefix }}",
+          "protocol": "stream",
           "ackMode": {
-            "manualAcks": "{{ var.manualAcks }}",
-            "consumerPrefetch": "{{ var.consumerPrefetch }}",
-            "ackInterval": "{{ var.ackInterval }}"
+            "manualAcks": true,
+            "consumerPrefetch": "{{ var.initialCredit }}",
+            "ackInterval": "{{ var.creditInterval }}",
+            "ackIntervalMs": "{{ var.creditIntervalMs }}"
           },
           "processingMs": "{{ var.processingMs }}"
         } 

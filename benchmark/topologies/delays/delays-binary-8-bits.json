@@ -1,0 +1,163 @@
+{
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "1" },
+    { "name": "delayKey1", "default": "dest1.1.1.1.1.1.1.1.1" },
+    { "name": "delayKey2", "default": "dest2.1.1.1.1.1.1.1.1" },
+    { "name": "durationSeconds", "default": "120" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "exchanges": [ 
+        { "name": "delay-level-8", "type": "topic" },
+        { "name": "delay-level-7", "type": "topic", "bindings": [{ "from": "delay-level-8", "bindingKeys": ["*.0.#"] }] },
+        { "name": "delay-level-6", "type": "topic", "bindings": [{ "from": "delay-level-7", "bindingKeys": ["*.*.0.#"] }] },
+        { "name": "delay-level-5", "type": "topic", "bindings": [{ "from": "delay-level-6", "bindingKeys": ["*.*.*.0.#"] }] },
+        { "name": "delay-level-4", "type": "topic", "bindings": [{ "from": "delay-level-5", "bindingKeys": ["*.*.*.*.0.#"] }] },
+        { "name": "delay-level-3", "type": "topic", "bindings": [{ "from": "delay-level-4", "bindingKeys": ["*.*.*.*.*.0.#"] }] },
+        { "name": "delay-level-2", "type": "topic", "bindings": [{ "from": "delay-level-3", "bindingKeys": ["*.*.*.*.*.*.0.#"] }] },
+        { "name": "delay-level-1", "type": "topic", "bindings": [{ "from": "delay-level-2", "bindingKeys": ["*.*.*.*.*.*.*.0.#"] }] },
+        { "name": "route-to-dest", "type": "topic", "bindings": [{ "from": "delay-level-1", "bindingKeys": ["*.*.*.*.*.*.*.*.0"] }] }
+      ],
+      "queues": [ 
+        { 
+          "prefix": "delay-128s", "scale": 1,
+          "bindings": [{ "from": "delay-level-8", "bindingKeys": ["*.1.#"] }], 
+          "properties": [
+            { "key": "x-message-ttl", "value": "128000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "delay-level-7-g1", "type": "string" }
+          ]
+        },
+        { 
+          "prefix": "delay-64s", "scale": 1,
+          "bindings": [{ "from": "delay-level-7", "bindingKeys": ["*.*.1.#"] }],
+          "properties": [
+            { "key": "x-message-ttl", "value": "64000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "delay-level-6-g1", "type": "string" }
+          ]
+        },
+        { 
+          "prefix": "delay-32s", "scale": 1,
+          "bindings": [{ "from": "delay-level-6", "bindingKeys": ["*.*.*.1.#"] }],
+          "properties": [
+            { "key": "x-message-ttl", "value": "32000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "delay-level-5-g1", "type": "string" }
+          ]
+        },
+        { 
+          "prefix": "delay-16s", "scale": 1,
+          "bindings": [{ "from": "delay-level-5", "bindingKeys": ["*.*.*.*.1.#"] }],
+          "properties": [
+            { "key": "x-message-ttl", "value": "16000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "delay-level-4-g1", "type": "string" }
+          ]
+        },
+        { 
+          "prefix": "delay-8s", "scale": 1,
+          "bindings": [{ "from": "delay-level-4", "bindingKeys": ["*.*.*.*.*.1.#"] }],
+          "properties": [
+            { "key": "x-message-ttl", "value": "8000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "delay-level-3-g1", "type": "string" }
+          ]
+        },
+        { 
+          "prefix": "delay-4s", "scale": 1,
+          "bindings": [{ "from": "delay-level-3", "bindingKeys": ["*.*.*.*.*.*.1.#"] }],
+          "properties": [
+            { "key": "x-message-ttl", "value": "4000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "delay-level-2-g1", "type": "string" }
+          ] 
+        },
+        { 
+          "prefix": "delay-2s", "scale": 1,
+          "bindings": [{ "from": "delay-level-2", "bindingKeys": ["*.*.*.*.*.*.*.1.#"] }],
+          "properties": [
+            { "key": "x-message-ttl", "value": "2000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "delay-level-1-g1", "type": "string" }
+          ]
+        },
+        { 
+          "prefix": "delay-1s", "scale": 1,
+          "bindings": [{ "from": "delay-level-1", "bindingKeys": ["*.*.*.*.*.*.*.*.1"] }],
+          "properties": [
+            { "key": "x-message-ttl", "value": "1000", "type": "int" },
+            { "key": "x-dead-letter-exchange", "value": "route-to-dest-g1", "type": "string" }
+          ]
+        },
+        { 
+          "prefix": "dest1", "scale": 1,
+          "bindings": [{ "from": "route-to-dest", "bindingKeys": ["dest1.#"] }] 
+        },
+        { 
+          "prefix": "dest2", "scale": 1,
+          "bindings": [{ "from": "route-to-dest", "bindingKeys": ["dest2.#"] }] 
+        }
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": { "useConfirms": "true", "inFlightLimit": "1000" },
+          "sendToExchange": { "exchange": "delay-level-8", "routingKeyMode": "FixedValue", "routingKey": "{{ var.delayKey1 }}" },
+          "deliveryMode": "persistent",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        },
+        {
+          "prefix": "p2",
+          "scale": "1",
+          "publishMode": { "useConfirms": "true", "inFlightLimit": "1000" },
+          "sendToExchange": { "exchange": "delay-level-8", "routingKeyMode": "FixedValue", "routingKey": "{{ var.delayKey2 }}" },
+          "deliveryMode": "persistent",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        }
+      ],
+      "consumers": [ 
+        { 
+          "prefix": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "dest1",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}"
+          }
+        },
+        { 
+          "prefix": "c2", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "dest2",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}"
+          }
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

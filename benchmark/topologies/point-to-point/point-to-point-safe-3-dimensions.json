@@ -1,5 +1,5 @@
 {
-  "topologyType": "fixed",
+  "topologyType": "MultipleDimensions",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
@@ -15,13 +15,34 @@
     { "name": "useConfirms", "default": "true" },
     { "name": "inflightLimit", "default": "1000" },
     { "name": "manualAcks", "default": "true" },
-    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "consumerPrefetch", "default": "10" },
     { "name": "ackInterval", "default": "1" },
-    { "name": "ackIntervalMs", "default": "1000" },
+    { "name": "ackIntervalMs", "default": "100" },
     { "name": "processingMs", "default": "0" },
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" },
-    { "name": "initialPublish", "default": "0" }
+    { "name": "initialPublish", "default": "0" },
+    { "name": "dimension1", "default": "Prefetch" },
+    { "name": "dimension2", "default": "AckInterval" },
+    { "name": "dimension3", "default": "AckIntervalMs" },
+    { "name": "dim1Value1", "default": "10" },
+    { "name": "dim1Value2", "default": "50" },
+    { "name": "dim1Value3", "default": "100" },
+    { "name": "dim1Value4", "default": "200" },
+    { "name": "dim1Value5", "default": "500" },
+    { "name": "dim1Value6", "default": "1000" },
+    { "name": "dim2Value1", "default": "1" },
+    { "name": "dim2Value2", "default": "5" },
+    { "name": "dim2Value3", "default": "10" },
+    { "name": "dim2Value4", "default": "50" },
+    { "name": "dim2Value5", "default": "100" },
+    { "name": "dim2Value6", "default": "500" },
+    { "name": "dim3Value1", "default": "1" },
+    { "name": "dim3Value2", "default": "5" },
+    { "name": "dim3Value3", "default": "10" },
+    { "name": "dim3Value4", "default": "50" },
+    { "name": "dim3Value5", "default": "100" },
+    { "name": "dim3Value6", "default": "200" }
   ],
   "topologyGroups": [
     {
@@ -72,9 +93,18 @@
     }
   ],
   "dimensions" : {
-    "fixedDimensions": {
-      "durationSeconds": "{{ var.durationSeconds }}",
-      "rampUpSeconds": 10
+    "multipleDimensions": {
+        "dimensions": [ "{{ var.dimension1 }}", "{{ var.dimension2 }}", "{{ var.dimension3 }}" ],
+        "multiValues": [
+          ["{{ var.dim1Value1 }}", "{{ var.dim2Value1 }}", "{{ var.dim3Value1 }}"], 
+          ["{{ var.dim1Value2 }}", "{{ var.dim2Value2 }}", "{{ var.dim3Value2 }}"], 
+          ["{{ var.dim1Value3 }}", "{{ var.dim2Value3 }}", "{{ var.dim3Value3 }}"],
+          ["{{ var.dim1Value4 }}", "{{ var.dim2Value4 }}", "{{ var.dim3Value4 }}"],
+          ["{{ var.dim1Value5 }}", "{{ var.dim2Value5 }}", "{{ var.dim3Value5 }}"],
+          ["{{ var.dim1Value6 }}", "{{ var.dim2Value6 }}", "{{ var.dim3Value6 }}"]
+        ],
+        "stepDurationSeconds": "{{ var.durationSeconds }}",
+        "rampUpSeconds": 10
     }
   }
 }

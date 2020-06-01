@@ -1,10 +1,9 @@
 {
-  "topologyName": "queue_fill_drain",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostScale", "default": "1" },
+    { "name": "groupScale", "default": "1" },
     { "name": "scaleType", "default": "single-vhost" },
     { "name": "queueCount", "default": "1" },
     { "name": "queueMode", "default": "default" },
@@ -16,11 +15,10 @@
     { "name": "actionDelaySeconds", "default": "60"},
     { "name": "fillRate", "default": "0"}
   ],
-  "description": "fill-drain",
   "topologyGroups": [
     {
       "name": "benchmark",
-      "scale": "{{ var.vhostScale }}",
+      "scale": "{{ var.groupScale }}",
       "scaleType": "{{ var.scaleType }}",
       "queues": [ 
         { 

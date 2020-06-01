@@ -1,51 +1,49 @@
 {
-  "topologyName": "point-to-point-safe-two-vhosts",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostScale1", "default": "1" },
+    { "name": "groupScale1", "default": "1" },
     { "name": "scaleType1", "default": "single-vhost" },
     { "name": "queuePrefix1", "default": "q1" },
     { "name": "queueCount1", "default": "1" },
     { "name": "publisherCount1", "default": "1" },
     { "name": "consumerCount1", "default": "1" },
     { "name": "deliveryMode1", "default": "persistent" },
-    { "name": "messageSize1", "default": "16" },
+    { "name": "messageSize1", "default": "20" },
     { "name": "publishRate1", "default": "0"},
     { "name": "useConfirms1", "default": "true" },
     { "name": "inflightLimit1", "default": "1000" },
     { "name": "manualAcks1", "default": "true" },
     { "name": "consumerPrefetch1", "default": "1000" },
-    { "name": "ackInterval1", "default": "100" },
+    { "name": "ackInterval1", "default": "1" },
     { "name": "processingMs1", "default": "0" },
     { "name": "queueMode1", "default": "default" },
     { "name": "initialPublish1", "default": "0" },
     
-    { "name": "vhostScale2", "default": "1" },
+    { "name": "groupScale2", "default": "1" },
     { "name": "scaleType2", "default": "single-vhost" },
     { "name": "queuePrefix2", "default": "q2" },
     { "name": "queueCount2", "default": "1" },
     { "name": "publisherCount2", "default": "1" },
     { "name": "consumerCount2", "default": "1" },
     { "name": "deliveryMode2", "default": "persistent" },
-    { "name": "messageSize2", "default": "16" },
+    { "name": "messageSize2", "default": "20" },
     { "name": "publishRate2", "default": "0"},
     { "name": "useConfirms2", "default": "true" },
     { "name": "inflightLimit2", "default": "1000" },
     { "name": "manualAcks2", "default": "true" },
     { "name": "consumerPrefetch2", "default": "1000" },
-    { "name": "ackInterval2", "default": "100" },
+    { "name": "ackInterval2", "default": "1" },
     { "name": "processingMs2", "default": "0" },
     { "name": "queueMode2", "default": "default" },
     { "name": "initialPublish2", "default": "0" },
     { "name": "durationSeconds", "default": "120" }
   ],
-  "description": "Point to point",
   "topologyGroups": [
     {
       "name": "q1vhost",
-      "scale": "{{ var.vhostScale1 }}",
+      "scale": "{{ var.groupScale1 }}",
       "scaleType": "{{ var.scaleType1 }}",
       "queues": [ 
         { 
@@ -90,7 +88,7 @@
     },
     {
       "name": "q2vhost",
-      "scale": "{{ var.vhostScale2 }}",
+      "scale": "{{ var.groupScale2 }}",
       "scaleType": "{{ var.scaleType2 }}",
       "queues": [ 
         { 

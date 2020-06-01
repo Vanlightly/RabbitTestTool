@@ -1,16 +1,15 @@
 {
-  "topologyName": "headers_exchange_1_header",
   "topologyType": "fixed",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
-    { "name": "vhostScale", "default": "1" },
+    { "name": "groupScale", "default": "1" },
     { "name": "scaleType", "default": "single-vhost" },
     { "name": "queueCount", "default": "1" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
     { "name": "deliveryMode", "default": "persistent" },
-    { "name": "messageSize", "default": "16" },
+    { "name": "messageSize", "default": "20" },
     { "name": "publishRate", "default": "0"},
     { "name": "useConfirms", "default": "false" },
     { "name": "inflightLimit", "default": "0" },
@@ -24,7 +23,7 @@
   "topologyGroups": [
     {
       "name": "benchmark",
-      "scale": "{{ var.vhostScale }}",
+      "scale": "{{ var.groupScale }}",
       "scaleType": "{{ var.scaleType }}",
       "exchanges": [ { "name": "ex1", "type": "headers" }],
       "queues": [ 

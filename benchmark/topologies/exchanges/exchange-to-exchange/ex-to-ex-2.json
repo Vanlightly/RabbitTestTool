@@ -11,11 +11,11 @@
     { "name": "deliveryMode", "default": "persistent" },
     { "name": "messageSize", "default": "20" },
     { "name": "publishRate", "default": "0"},
-    { "name": "useConfirms", "default": "false" },
-    { "name": "inflightLimit", "default": "0" },
-    { "name": "manualAcks", "default": "false" },
-    { "name": "consumerPrefetch", "default": "0" },
-    { "name": "ackInterval", "default": "0" },
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "100" },
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" }
   ],
@@ -24,12 +24,14 @@
       "name": "benchmark",
       "scale": "{{ var.groupScale }}",
       "scaleType": "{{ var.scaleType }}",
-      "exchanges": [ { "name": "sharded", "type": "modulushash" }],
+      "exchanges": [ 
+        { "name": "ex1","type": "fanout" },
+        { "name": "ex2","type": "fanout", "bindings": [ { "from": "ex1" }] }
+      ],
       "queues": [ 
-        { 
-          "prefix": "sharded", 
+        { "prefix": "q1", 
           "scale": "{{ var.queueCount }}", 
-          "bindings": [{ "from": "sharded" }],
+          "bindings": [{ "from": "ex2" }],
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
           ]
