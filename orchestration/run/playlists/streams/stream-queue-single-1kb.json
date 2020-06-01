@@ -1,0 +1,34 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "creditInterval": "1" } },
+        
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "1000", "maxBatchSize": "10", "initialCredit": "10", "creditInterval": "1" } },
+        
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "10000", "maxBatchSize": "1", "initialCredit": "10", "creditInterval": "1" } },
+        
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "10000", "maxBatchSize": "10", "initialCredit": "10", "creditInterval": "1" } },
+        
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "100000", "maxBatchSize": "1", "initialCredit": "10", "creditInterval": "1" } },
+        
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "100000", "maxBatchSize": "10", "initialCredit": "10", "creditInterval": "1" } },
+        
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "10000", "maxBatchSize": "10", "initialCredit": "100", "creditInterval": "10" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/stream-queue-safe.json",
+        "topologyVariables": { 
+            "creditIntervalMs": "1000",
+            "maxBatchWaitMs": "0",
+            "maxBatchSizeBytes": "1000000",
+            "messageSize": "1000",
+            "durationSeconds": "300"
+        }
+    }
+}

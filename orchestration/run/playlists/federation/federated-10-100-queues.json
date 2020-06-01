@@ -1,0 +1,38 @@
+{
+    "benchmarks": [
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 10 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 20 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 30 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 40 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 50 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 60 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 70 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 80 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 90 }},
+        { "topology": "federation/fanout-safe.json", "policy": "federated-exchanges.json", "topologyVariables": { "groupScale": 100 }},
+        
+
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 10 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 20 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 30 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 40 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 50 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 60 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 70 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 80 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 90 }},
+        { "topology": "federation/federated-queue.json", "policy": "federated-queues.json", "topologyVariables": { "groupScale": 100 }}
+    ],
+    "commonAttributes": {
+        "topology": "federation/federated-queue.json",
+        "policy": "federated-queues.json",
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "publishRate": 100
+        },
+        "policyVariables": {
+            "fedPrefetch": 10000, 
+            "fedAckMode": "on-publish"
+        }
+    }
+}

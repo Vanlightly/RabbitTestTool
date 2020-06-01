@@ -182,7 +182,7 @@ Common argument:
 | --run-tag | None (optional) | For when a playlist is to be run on a previously and not terminated cluster |
 | --step-override-seconds | 0 | Override all step durations |
 | --step-override-repeat | 0 | Make all steps get executed repeatedly |
-| --bg-topology-file | None (optional) | A topology file that will be run on a second instance of the Java program, to generate background load that will not be recorded in Grafana or Postgres. It's virtual hosts must not clash with the main topology file. |
+| --bg-topology-file | None (optional) | A topology file that will be run on a second instance of the Java program, to generate background load that will not be recorded in Grafana or Postgres. It's topology group names must not clash with the main topology file. |
 | --bg-policies-file | None (optional) | A policies file that will be applied to the background virtual hosts |
 | --bg-delay | 0 | A delay in seconds before running the main topology |
 | --bg-step-seconds | 0 | Override all step durations in the background topology |
@@ -191,36 +191,43 @@ Common argument:
 
 Arguments that can be applied to all or specific configurations. When running multiple configurations, you can add a number suffix to match the configuration, for example --version1 3.7.17 and --version2 3.8.1.
 
-| Argument | Default | Description  |
+| Argument | Default | Cloud | Description  |
 | --- | --- | --- |
-| --config-tag | None (mandatory) | The alias for this configuration |
-| --technology | None (mandatory) | The technology being tested, rabbitmq |
-| --version | None (mandatory) | The version to be deployed |
-| --instance | None (mandatory) | The EC2 instance type of the broker instances |
-| --container-image | None (mandatory) | The docker image containing rabbitmq (typically rabbitmq:3.X) (GCP only) |
-| --container-env | None (optional) | Additional env vars to be passed to rabbitmq containers (GCP only) |
-| --machine-type | None (mandatory) | The GCP machine type of the broker instances |
-| --volume | None (mandatory) | The volume type. When EBS must be like ebs-io1 or ebs-st1 or ebs-gp2, pd-ssd or standard for GCP |
-| --volume1-size | 50 | The size in MB of the volume 1 |
-| --volume2-size | 0 | The size in MB of the volume 2. Zero signifies no volume. |
-| --volume3-size | 0 | The size in MB of the volume 3. Zero signifies no volume. |
-| --volume1-mountpoint | /volume1 | The directory that this volume mounts onto |
-| --volume2-mountpoint | /volume2 | The directory that this volume mounts onto |
-| --volume3-mountpoint | /volume3 | The directory that this volume mounts onto |
-| --data-volume | volume1 | Which volume mnesia and message store data resides on |
-| --logs-volume | volume1 | Which volume logs resides on |
-| --quorum-volume | volume1 | Which volume the quorum queue segment files resides on |
-| --wal-volume | volume1 | Which volume the WAL files resides on |
-| --filesystem | None (mandatory) | xfs or ext4 |
-| --tenancy | None (mandatory) | Default or Dedicated |
-| --core-count | None (mandatory) | The number of cores will be half the vCPU count |
-| --threads-per-core | None (mandatory) | Use 2 for hyperthreading or 1 with hyperthreading disabled |
-| --cluster-size | 1 | The number of nodes in the cluster |
-| --vars-file | None (optional) | A custom variables file for the Ansible provisioning script |
-| --policies-file | None (optional) | The path of a json file with policies to be deployed |
-| --no-tcp-delay | true | Whether Nagles algorithm is used or not, defaults to not, that is with no delay |
-| --con-connect-to-node | roundrobin | Which node will a consumer connect to. "roundrobin", "local", "non-local", "random". Local refers to the node which hosts the queue (when mirrored or quorum means the master/leader) |
-| --pub-connect-to-node | roundrobin | Which node will a publisher connect to. "roundrobin", "local", "non-local", "random". Local refers to the node which hosts the queue (only valid when using the default exchange for point-to-point messaging). |
+| --config-tag | None (mandatory) | All | The alias for this configuration |
+| --technology | None (mandatory) | All | The technology being tested, rabbitmq |
+| --version | None (mandatory) | All | The version to be deployed |
+| --instance | None (mandatory) | All | The EC2 instance type of the broker instances |
+| --container-image | None (mandatory) | GCP | The docker image containing rabbitmq (typically rabbitmq:3.X) (GCP only) |
+| --container-env | None (optional) | GCP | Additional env vars to be passed to rabbitmq containers (GCP only) |
+| --machine-type | None (mandatory) | GCP | The GCP machine type of the broker instances |
+| --volume | None (mandatory) | GCP | The volume type. When EBS must be like ebs-io1 or ebs-st1 or ebs-gp2, pd-ssd or standard for GCP |
+| --volume1-type | None (mandatory) | AWS | The volume1 type. Allowed values: ebs-io1, ebs-gp2, ebs-st1, ebs-sc1, local-nvme |
+| --volume2-type | None (mandatory) | AWS | The volume2 type. Allowed values: ebs-io1, ebs-gp2, ebs-st1, ebs-sc1, local-nvme |
+| --volume3-type | None (mandatory) | AWS | The volume3 type. Allowed values: ebs-io1, ebs-gp2, ebs-st1, ebs-sc1, local-nvme |
+| --volume1-iops-per-gb | 50 | AWS | io1 type only. The number of IOPS per GB for an io1 volume |
+| --volume2-iops-per-gb | 0 | AWS | io1 type only. The number of IOPS per GB for an io1 volume |
+| --volume3-iops-per-gb | 0 | AWS | io1 type only. The number of IOPS per GB for an io1 volume |
+| --volume-size | 50 | GCP | The size in MB of the volume 1 |
+| --volume1-size | 50 | AWS | The size in MB of the volume 1 |
+| --volume2-size | 0 | AWS | The size in MB of the volume 2. Zero signifies no volume. |
+| --volume3-size | 0 | AWS | The size in MB of the volume 3. Zero signifies no volume. |
+| --volume1-mountpoint | /volume1 | AWS | The directory that this volume mounts onto |
+| --volume2-mountpoint | /volume2 | AWS | The directory that this volume mounts onto |
+| --volume3-mountpoint | /volume3 | AWS | The directory that this volume mounts onto |
+| --data-volume | volume1 | AWS | Which volume mnesia and message store data resides on |
+| --logs-volume | volume1 | AWS | Which volume logs resides on |
+| --quorum-volume | volume1 | AWS | Which volume the quorum queue segment files resides on |
+| --wal-volume | volume1 | AWS | Which volume the WAL files resides on |
+| --filesystem | None (mandatory) | AWS | xfs or ext4 |
+| --tenancy | None (mandatory) | AWS | Default or Dedicated |
+| --core-count | None (mandatory) | AWS | The number of cores will be half the vCPU count |
+| --threads-per-core | None (mandatory) | AWS | Use 2 for hyperthreading or 1 with hyperthreading disabled |
+| --cluster-size | 1 | All | The number of nodes in the cluster |
+| --vars-file | None (optional) | AWS | A custom variables file for the Ansible provisioning script |
+| --policies-file | None (optional) | All | The path of a json file with policies to be deployed |
+| --no-tcp-delay | true | All | Whether Nagles algorithm is used or not, defaults to not, that is with no delay |
+| --con-connect-to-node | All | roundrobin | Which node will a consumer connect to. "roundrobin", "local", "non-local", "random". Local refers to the node which hosts the queue (when mirrored or quorum means the master/leader) |
+| --pub-connect-to-node | All | roundrobin | Which node will a publisher connect to. "roundrobin", "local", "non-local", "random". Local refers to the node which hosts the queue (only valid when using the default exchange for point-to-point messaging). |
 
 Example with a single configuration with one volume:
 
@@ -239,7 +246,7 @@ python3.6 run-logged-aws-playlist.py \
 --config-tag c1 \
 --technology rabbitmq \
 --instance r5.4xlarge \
---volume-type ebs-io1 \
+--volume1-type ebs-io1 \
 --volume1-size 200 \
 --filesystem xfs \
 --tenancy default \
@@ -268,9 +275,11 @@ python3.6 run-logged-aws-playlist.py \
 --config-tag c1 \
 --technology rabbitmq \
 --instance r5.4xlarge \
---volume-type ebs-io1 \
+--volume1-type ebs-io1 \
 --volume1-size 200 \
+--volume2-type ebs-gp2 \
 --volume2-size 20 \
+--volume3-type ebs-gp2 \
 --volume3-size 50 \
 --data-volume volume1 \
 --logs-volume volume1 \
@@ -299,10 +308,9 @@ python3.6 run-logged-aws-playlist.py \
 --parallel 1 \
 --tags tag1,tag2 \
 --override-step-seconds 300 \
---config-count 2 \
 --technology rabbitmq \
 --instance r5.4xlarge \
---volume-type ebs-io1 \
+--volume1-type ebs-io1 \
 --volume1-size 200 \
 --filesystem xfs \
 --tenancy default \
@@ -310,6 +318,7 @@ python3.6 run-logged-aws-playlist.py \
 --threads-per-core 2 \
 --cluster-size 3 \
 --pub-connect-to-node local \
+--config-count 2 \
 --config-tag1 c1 \
 --version1 3.8.0 \
 --generic-unix-url1 https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.0/rabbitmq-server-generic-unix-3.8.0.tar.xz \
@@ -330,14 +339,14 @@ python3.6 run-logged-aws-playlist.py \
 --parallel 1 \
 --tags tag1,tag2 \
 --override-step-seconds 300 \
---bg-topology-file background/AddRemoveCpuLoad.json \
+--bg-topology-file background/fast-slow.json \
 --bg-delay 0 \
 --bg-step-seconds 120 \
 --config-count 1 \
 --config-tag c1 \
 --technology rabbitmq \
 --instance r5.4xlarge \
---volume-type ebs-gp2 \
+--volume1-type ebs-gp2 \
 --volume1-size 200 \
 --filesystem xfs \
 --tenancy default \
@@ -421,15 +430,16 @@ When running benchmarks on EC2, there are arguments related to EC2 such as subne
 
 ### Notes on local storage and EBS volumes
 
-Up to 3 EBS volumes can be provisioned. The data, logs and wal files can be configured to use those volumes as required. Currently all volumes will share the same filesystem and volume type. io1 volumes are provisioned with 50 IOPS per GB.
+Up to 3 EBS volumes can be provisioned. The data, logs, wal and quorum segment files can be configured to use those volumes as required. Currently all volumes will share the same filesystem. io1 volumes are provisioned with 50 IOPS per GB.
 
-When using c5d and z1d class instances, things work differently. An extra EBS volume is not created and mounted. Instead the NVMe local storage volume is used. The volume-size argument is used to identify the volume to be mounted, for c5d.large, the volume size is 46.6. If you set it to 50, as described in AS docs, it will fail to mount (a better way is needed of identifying the volume to mount). Data, logs and wal are all on this single NVMe volume.
+When using c5d and z1d class instances, things work differently. An extra EBS volume is not created and mounted. Instead the NVMe local storage volume is used. The volume[1,2,3]-size argument is used to identify the volume to be mounted, for c5d.large, the volume size is 46.6. If you set it to 50, as described in AS docs, it will fail to mount (a better way is needed of identifying the volume to mount). Data, logs and wal are all on this single NVMe volume.
 
 Volumes sizes:
 - c5d.large 46.6G
 - c5d.2xlarge 186.3G
 - c5d.4xlarge 372.5G
 - c5d.9xlarge 838.2G
+- z1d.3xlarge 419.1G
 
 
 ### Notes on AWS CLI and Ansible
@@ -460,25 +470,12 @@ The scripts assume that influxdb is installed on an EC2 instance with the tag: i
 
 There are three dashboards:
 
-- One Node
-- Node A vs Node B
+- One Cluster
+- Cluster A vs Cluster B - see two separate runs overlaid each other
 - Broker Server Metrics
-- Broker Server
-- RabbitMQ Overview
+- RabbitMQ Overview (InfluxDB port of offical Prometheus dashboard of same name)
+- Erlang Distribution (InfluxDB port of offical Prometheus dashboard of same name)
+- Erlang Memory Allocators (InfluxDB port of offical Prometheus dashboard of same name)
+- 6 Way - View up to 6 concurrent benchmarks
 
-Find the json dashboard files under deployment/grafana-dashboards.
-
-#### One Node Dashboard
-
-Has variables for choosing the technology and the node number. If you just ran a single benchmark then likely the node number is 1. If it was a Logged benchmark then you can find the configuration in Postgres.
-
-#### Node A vs Node B Dashboard
-
-This dashboard assumes you have run multiple benchmarks concurrently (either as a single benchmark run that was parallelised or a aide-by-side run). It allows you to select two benchmarks via technology and node number and show both results in each chart.
-
-If it was a Logged benchmark run then you can find the configurations in Postgres.
-
-#### Broker Server Metrics Dashboard
-
-Shows the usual CPU, memory, disk and network stats sourced from the VM where the broker is running, extracted by Telegraf.
-check_user_pass_login
+Find the json dashboard files under orchestration/deployment/grafana-dashboards.

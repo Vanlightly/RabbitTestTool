@@ -1,0 +1,66 @@
+{
+    "benchmarks": [
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "20", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "20", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "20", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "20", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "20", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "20", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "20", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "20", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "20", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "20", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "20", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "20", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "20", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "20", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "20", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+      
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "1000", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "1000", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "1000", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "1000", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "1000", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "1000", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "1000", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "1000", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "1000", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "1000", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "1000", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "1000", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "10000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "10000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "10000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "10000", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "10000", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "10000", "publishRate": "4000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "10000", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "10000", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "10000", "publishRate": "400", "publisherCount": "100", "queueCount": "100", "consumerCount": "100"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "10000", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "10000", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "10000", "publishRate": "140", "publisherCount": "300", "queueCount": "100", "consumerCount": "300"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "2" }, "topologyVariables": { "messageSize": "10000", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "32" }, "topologyVariables": { "messageSize": "10000", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} },
+        { "brokerConfiguration": { "quorum_commands_soft_limit": "256" }, "topologyVariables": { "messageSize": "10000", "publishRate": "70", "publisherCount": "600", "queueCount": "100", "consumerCount": "600"} }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "inflightLimit": "1000", 
+            "useConfirms": "true", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

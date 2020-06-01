@@ -234,6 +234,9 @@ for i in range(common_conf.repeat_count):
             elif entry.broker_action == "restart-broker":
                 console_out("RUNNER", "Restarting one broker per cluster...")
                 broker_actions.restart_one_broker(configurations, common_conf)
+            elif entry.broker_action == "stop-broker":
+                console_out("RUNNER", "Stopping one broker per cluster...")
+                broker_actions.stop_one_broker(configurations, common_conf)
 
         # wait for the benchmark thread to complete
         try:

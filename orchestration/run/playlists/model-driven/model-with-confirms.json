@@ -1,0 +1,50 @@
+{
+    "benchmarks": [
+        { 
+            "topologyVariables": { 
+                "publisherCount": "1", "inflightLimit": "1000", "publishRate": "0", 
+                "queueCount": "1", 
+                "consumerCount": "1", "consumerPrefetch": "1000", "ackInterval": "10"
+            }
+        },
+        { 
+            "topologyVariables": { 
+                "publisherCount": "1", "inflightLimit": "1000", "publishRate": "0", 
+                "queueCount": "1", 
+                "consumerCount": "1", "consumerPrefetch": "1000", "ackInterval": "1"
+            },
+            "policy": "quorum-queue-mem-limit.json",
+            "policyVariables": { 
+                "maxInMemoryLength": "0" 
+            }
+        },
+        { 
+            "topologyVariables": { 
+                "publisherCount": "1", "inflightLimit": "1000", "publishRate": "0", 
+                "queueCount": "1", 
+                "consumerCount": "1", "consumerPrefetch": "1000", "ackInterval": "10"
+            },
+            "policy": "mirrored-queue.json",
+            "policyVariables": { 
+                "haMode": "exactly",
+                "haParams": "2"
+            }
+        },
+        { 
+            "topologyVariables": { 
+                "publisherCount": "10", "inflightLimit": "100", "publishRate": "5000", 
+                "queueCount": "1", 
+                "consumerCount": "10", "consumerPrefetch": "1000", "ackInterval": "10"
+            }
+        },
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "durationSeconds": "900",
+            "messageSize": "1000"
+        },
+        "gracePeriodSec": 300
+    }
+}

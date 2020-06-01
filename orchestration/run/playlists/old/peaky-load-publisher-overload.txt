@@ -1,6 +1,0 @@
-experimental/PeakyLoadBenchmark1.json
-experimental/PeakyLoadBenchmark2.json
-experimental/PeakyLoadBenchmark3.json
-experimental/PeakyLoadBenchmark4.json
-experimental/PeakyLoadBenchmark5.json
-experimental/PeakyLoadBenchmark6.json

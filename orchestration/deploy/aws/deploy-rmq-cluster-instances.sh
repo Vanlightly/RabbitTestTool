@@ -28,14 +28,24 @@ TENANCY="${12}"
 echo "TENANCY=$TENANCY"
 TPC="${13}"
 echo "TPC=$TPC"
-VOL1_SIZE="${14}"
+VOL1_IOPS_PER_GB="${14}"
+echo "VOL1_IOPS_PER_GB=$VOL1_IOPS_PER_GB"
+VOL2_IOPS_PER_GB="${15}"
+echo "VOL2_IOPS_PER_GB=$VOL2_IOPS_PER_GB"
+VOL3_IOPS_PER_GB="${16}"
+echo "VOL3_IOPS_PER_GB=$VOL3_IOPS_PER_GB"
+VOL1_SIZE="${17}"
 echo "VOL1_SIZE=$VOL1_SIZE"
-VOL2_SIZE="${15}"
+VOL2_SIZE="${18}"
 echo "VOL2_SIZE=$VOL2_SIZE"
-VOL3_SIZE="${16}"
+VOL3_SIZE="${19}"
 echo "VOL3_SIZE=$VOL3_SIZE"
-VOL_TYPE="${17}"
-echo "VOL_TYPE=$VOL_TYPE"
+VOL1_TYPE="${20}"
+echo "VOL1_TYPE=$VOL1_TYPE"
+VOL2_TYPE="${21}"
+echo "VOL2_TYPE=$VOL2_TYPE"
+VOL3_TYPE="${22}"
+echo "VOL3_TYPE=$VOL3_TYPE"
 echo "------------------------------"
 
 set -e
@@ -64,10 +74,10 @@ do
         fi
 
         # if its a local storage instance then do not add extra ebs volume
-        if [[ $INSTANCE == c5d* ]] || [[ $INSTANCE == i3* ]]; then
+        if [[ $INSTANCE == c5d* ]] || [[ $INSTANCE == i3* ]] || [[ $INSTANCE == z1d* ]]; then
             bash deploy-local-storage-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INCLUDED $LG_INSTANCE $LG_SG $NODE $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC
         else
-            bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INCLUDED $LG_INSTANCE $LG_SG $NODE $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC $VOL1_SIZE $VOL2_SIZE $VOL3_SIZE $VOL_TYPE
+            bash deploy-ebs-instance.sh $AMI $CORE_COUNT $INSTANCE $KEY_PAIR $LG_INCLUDED $LG_INSTANCE $LG_SG $NODE $RUN_TAG $SG $SN "rabbitmq" $TENANCY $TPC $VOL1_IOPS_PER_GB $VOL2_IOPS_PER_GB $VOL3_IOPS_PER_GB $VOL1_SIZE $VOL2_SIZE $VOL3_SIZE $VOL1_TYPE $VOL2_TYPE $VOL3_TYPE
         fi
     else
         echo "Node $NODE: Instance already exists, skipping EC2 instance creation"

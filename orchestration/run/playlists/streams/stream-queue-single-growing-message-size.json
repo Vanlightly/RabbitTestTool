@@ -1,0 +1,28 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "messageSize": "20" } },
+        { "topologyVariables": { "messageSize": "100" } },
+        { "topologyVariables": { "messageSize": "500" } },
+        { "topologyVariables": { "messageSize": "1000" } },
+        { "topologyVariables": { "messageSize": "5000" } },
+        { "topologyVariables": { "messageSize": "10000" } },
+        { "topologyVariables": { "messageSize": "100000" } },
+        { "topologyVariables": { "messageSize": "1000000" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/stream-queue-safe.json",
+        "topologyVariables": { 
+            "creditIntervalMs": "1000",
+            "maxBatchWaitMs": "0",
+            "maxBatchSizeBytes": "10000000",
+            "publisherCount": "1", 
+            "queueCount": "1", 
+            "consumerCount": "1", 
+            "inflightLimit": "1000", 
+            "maxBatchSize": "1", 
+            "initialCredit": "10", 
+            "creditInterval": "1",
+            "durationSeconds": "600"
+        }
+    }
+}

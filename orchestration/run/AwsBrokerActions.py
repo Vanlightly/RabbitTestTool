@@ -31,6 +31,20 @@ class AwsBrokerActions(BrokerActions):
         else:
             self._action_status[status_id] = "success"
 
+    def stop_broker(self, technology, node, common_conf):
+        status_id = technology + node
+        exit_code = subprocess.call(["bash", "stop-broker.sh",
+                                     common_conf.key_pair,
+                                     node,
+                                     common_conf.run_tag,
+                                     technology])
+        
+        if exit_code != 0:
+            console_out(self.actor, f"Shutdown of broker on node {node} failed with exit code {exit_code}")
+            self._action_status[status_id] = "failed"   
+        else:
+            self._action_status[status_id] = "success"
+
     def restart_broker_with_new_config(self, technology, node, common_conf, config):
         status_id = technology + node
         

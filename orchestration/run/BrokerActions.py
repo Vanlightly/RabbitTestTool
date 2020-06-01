@@ -96,6 +96,34 @@ class BrokerActions:
                     console_out(self.actor, f"Broker restart failed for node {unique_conf.technology}{unique_conf.node_number}")
                     if not common_conf.no_deploy:
                         self._deployer.teardown_all(configurations, common_conf, False)
+
+    def stop_one_broker(self, configurations, common_conf):
+        r_threads = list()
+        for config_tag in configurations:
+            console_out(self.actor, f"BROKER SHUTDOWN FOR configuration {config_tag}")
+            unique_conf_list = configurations[config_tag]
+            # iterate over configurations
+            for p in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[p]
+                restart = threading.Thread(target=self.stop_broker, args=(unique_conf.technology, str(unique_conf.node_number), common_conf))
+                r_threads.append(restart)
+
+        for rt in r_threads:
+            rt.start()
+        
+        for rt in r_threads:
+            rt.join()
+        
+        for config_tag in configurations:
+            unique_conf_list = configurations[config_tag]
+            
+            for p in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[p]
+                status_id = f"{unique_conf.technology}{unique_conf.node_number}"
+                if self._action_status[status_id] != "success":
+                    console_out(self.actor, f"Broker shutdown failed for node {unique_conf.technology}{unique_conf.node_number}")
+                    if not common_conf.no_deploy:
+                        self._deployer.teardown_all(configurations, common_conf, False)
                 
 
     def restart_broker(self, technology, node, run_tag, key_pair):
@@ -108,6 +136,20 @@ class BrokerActions:
         
         if exit_code != 0:
             console_out(self.actor, f"Restart of broker on node {node} failed with exit code {exit_code}")
+            self._action_status[status_id] = "failed"   
+        else:
+            self._action_status[status_id] = "success"
+
+    def stop_broker(self, technology, node, run_tag, key_pair):
+        status_id = technology + node
+        exit_code = subprocess.call(["bash", "stop-broker.sh", 
+                        key_pair, 
+                        node, 
+                        run_tag,
+                        technology])
+        
+        if exit_code != 0:
+            console_out(self.actor, f"Shutdown of broker on node {node} failed with exit code {exit_code}")
             self._action_status[status_id] = "failed"   
         else:
             self._action_status[status_id] = "success"

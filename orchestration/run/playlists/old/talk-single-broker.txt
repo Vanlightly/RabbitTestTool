@@ -1,7 +1,0 @@
-talk/009_PersistentMultiplePubQueueCon.json
-talk/010_PersistentMultiplePubQueueCon.json
-talk/011_PersistentMultiplePubQueueCon.json
-talk/012_PersistentLazySingleFixed.json
-talk/013_PersistentLazyMultipleFixed.json
-talk/014_PersistentNonLazySinglePubOnly.json
-talk/015_PersistentLazySinglePubOnly.json

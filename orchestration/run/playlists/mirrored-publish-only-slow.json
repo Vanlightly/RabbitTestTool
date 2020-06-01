@@ -1,0 +1,24 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "0" }}
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json", 
+        "topologyVariables": {
+            "publishRate": "50",
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "messageSize": "12000", 
+            "queueMode": "lazy",
+            "durationSeconds": "3600"
+        },
+        "policy": "mirrored-queue.json", 
+        "policyVariables": { 
+            "haMode": "exactly", 
+            "haParams": "2" 
+        }
+    }
+}

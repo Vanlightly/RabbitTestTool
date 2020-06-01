@@ -104,10 +104,11 @@ class Deployer:
                 if common_conf.no_deploy:
                     deploy = threading.Thread(target=self.update_single, args=(unique_conf, common_conf,))
                 else:
-                    if unique_conf.cluster_size == 1:
-                        deploy = threading.Thread(target=self.deploy_single, args=(unique_conf, common_conf,))
-                    else:
-                        deploy = threading.Thread(target=self.deploy_rabbitmq_cluster, args=(unique_conf, common_conf,))
+                    deploy = threading.Thread(target=self.deploy_rabbitmq_cluster, args=(unique_conf, common_conf,))
+                    # if unique_conf.cluster_size == 1:
+                    #     deploy = threading.Thread(target=self.deploy_single, args=(unique_conf, common_conf,))
+                    # else:
+                    #     deploy = threading.Thread(target=self.deploy_rabbitmq_cluster, args=(unique_conf, common_conf,))
 
                 d_threads.append(deploy)
 

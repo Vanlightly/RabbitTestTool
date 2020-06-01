@@ -1,0 +1,42 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publishRate": "0", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+                
+        { "topologyVariables": { "publishRate": "1000", "inflightLimit": "20", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+
+        { "topologyVariables": { "publishRate": "2000", "inflightLimit": "40", "publisherCount": "20", "queueCount": "10", "consumerCount": "20" } },
+        
+        { "topologyVariables": { "publishRate": "30", "inflightLimit": "2", "publisherCount": "500", "queueCount": "100", "consumerCount": "500", "consumerPrefetch": "100" } },
+        
+        { "topologyVariables": { "publishRate": "60", "inflightLimit": "2", "publisherCount": "500", "queueCount": "100", "consumerCount": "500", "consumerPrefetch": "100" } },
+
+        { "topologyVariables": { "publishRate": "100", "inflightLimit": "2", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "consumerPrefetch": "100" } },
+
+        { "topologyVariables": { "publishRate": "100", "inflightLimit": "50", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "consumerPrefetch": "100" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe-single-dimension.json",
+        "topologyVariables": { 
+            "useConfirms": "true",
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "messageSize": "1000",
+            "durationSeconds": "300",
+            "dimension": "AckInterval",
+            "value1": "1", 
+            "value2": "5", 
+            "value3": "10", 
+            "value4": "20", 
+            "value5": "50"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        },
+        "brokerConfiguration": { 
+            "wal_max_batch_size": "4096", 
+            "quorum_commands_soft_limit": "32" 
+        }
+    }
+}

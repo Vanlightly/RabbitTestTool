@@ -56,43 +56,44 @@ class AwsDeployer(Deployer):
 
 
     def deploy_single_broker(self, status_id, unique_conf, common_conf, node_number):
-        volume_type = unique_conf.volume.split("-")[1]
-        exit_code = subprocess.call(["bash", "deploy-single-broker.sh", 
-                            common_conf.ami, 
-                            unique_conf.broker_version, 
-                            unique_conf.core_count,
-                            unique_conf.filesystem, 
-                            unique_conf.generic_unix_url,
-                            unique_conf.instance, 
-                            common_conf.key_pair, 
-                            common_conf.loadgen_instance, 
-                            common_conf.loadgen_sg, 
-                            common_conf.log_level,
-                            str(node_number), 
-                            common_conf.run_tag, 
-                            common_conf.broker_sg, 
-                            common_conf.subnet, 
-                            unique_conf.technology, 
-                            unique_conf.tenancy, 
-                            unique_conf.threads_per_core, 
-                            unique_conf.vars_file, 
-                            unique_conf.data_volume,
-                            unique_conf.logs_volume,
-                            unique_conf.quorum_volume,
-                            unique_conf.wal_volume,
-                            unique_conf.volume1_size,
-                            unique_conf.volume1_mountpoint,
-                            unique_conf.volume2_size,
-                            unique_conf.volume2_mountpoint,
-                            unique_conf.volume3_size,
-                            unique_conf.volume3_mountpoint,
-                            volume_type], cwd="../deploy/aws")
+        print("OH NO!!!!")
+        # volume_type = unique_conf.volume.split("-")[1]
+        # exit_code = subprocess.call(["bash", "deploy-single-broker.sh", 
+        #                     common_conf.ami, 
+        #                     unique_conf.broker_version, 
+        #                     unique_conf.core_count,
+        #                     unique_conf.filesystem, 
+        #                     unique_conf.generic_unix_url,
+        #                     unique_conf.instance, 
+        #                     common_conf.key_pair, 
+        #                     common_conf.loadgen_instance, 
+        #                     common_conf.loadgen_sg, 
+        #                     common_conf.log_level,
+        #                     str(node_number), 
+        #                     common_conf.run_tag, 
+        #                     common_conf.broker_sg, 
+        #                     common_conf.subnet, 
+        #                     unique_conf.technology, 
+        #                     unique_conf.tenancy, 
+        #                     unique_conf.threads_per_core, 
+        #                     unique_conf.vars_file, 
+        #                     unique_conf.data_volume,
+        #                     unique_conf.logs_volume,
+        #                     unique_conf.quorum_volume,
+        #                     unique_conf.wal_volume,
+        #                     unique_conf.volume1_size,
+        #                     unique_conf.volume1_mountpoint,
+        #                     unique_conf.volume2_size,
+        #                     unique_conf.volume2_mountpoint,
+        #                     unique_conf.volume3_size,
+        #                     unique_conf.volume3_mountpoint,
+        #                     volume_type], cwd="../deploy/aws")
 
-        if exit_code != 0:
-            console_out(self.actor, f"deploy {node_number} failed with exit code {exit_code}")
-            self._deploy_status[status_id] = "failed"   
-        else:
-            self._deploy_status[status_id] = "success"
+        # if exit_code != 0:
+        #     console_out(self.actor, f"deploy {node_number} failed with exit code {exit_code}")
+        #     self._deploy_status[status_id] = "failed"   
+        # else:
+        #     self._deploy_status[status_id] = "success"
 
     def deploy_rabbitmq_cluster(self, unique_conf, common_conf):
         master_node = int(unique_conf.node_number)
@@ -128,7 +129,9 @@ class AwsDeployer(Deployer):
         
 
     def deploy_single_rabbitmq_cluster(self, status_id, unique_conf, common_conf, master_node, node_range_start, node_range_end):
-        volume_type = unique_conf.volume.split("-")[1]
+        volume1_type = unique_conf.volume1_type.split("-")[1]
+        volume2_type = unique_conf.volume2_type.split("-")[1]
+        volume3_type = unique_conf.volume3_type.split("-")[1]
 
         exit_code = subprocess.call(["bash", "deploy-rmq-cluster-instances.sh", 
                                 common_conf.ami, 
@@ -144,22 +147,27 @@ class AwsDeployer(Deployer):
                                 common_conf.subnet, 
                                 unique_conf.tenancy, 
                                 unique_conf.threads_per_core, 
+                                unique_conf.volume1_iops_per_gb,
+                                unique_conf.volume2_iops_per_gb,
+                                unique_conf.volume3_iops_per_gb,
                                 unique_conf.volume1_size,
                                 unique_conf.volume2_size,
                                 unique_conf.volume3_size,
-                                volume_type], cwd="../deploy/aws")
+                                volume1_type,
+                                volume2_type,
+                                volume3_type], cwd="../deploy/aws")
         if exit_code != 0:
             console_out(self.actor, f"deploy {master_node} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed" 
             return  
         
         # deploy master
-        self.deploy_master(status_id, unique_conf, common_conf, volume_type, master_node, node_range_start, node_range_end)
+        self.deploy_master(status_id, unique_conf, common_conf, master_node, node_range_start, node_range_end)
 
         # deploy joinees in parallel
         joinee_threads = list()
         for node in range(node_range_start+1, node_range_end+1):
-            deploy = threading.Thread(target=self.deploy_joinee, args=(status_id, unique_conf, common_conf, volume_type, node, node_range_start, node_range_end))
+            deploy = threading.Thread(target=self.deploy_joinee, args=(status_id, unique_conf, common_conf, node, node_range_start, node_range_end))
             joinee_threads.append(deploy)
 
         for jt in joinee_threads:
@@ -183,7 +191,7 @@ class AwsDeployer(Deployer):
                 self._deploy_status[status_id] = "success"
     
     
-    def deploy_master(self, status_id, unique_conf, common_conf, volume_type, node, node_range_start, node_range_end):
+    def deploy_master(self, status_id, unique_conf, common_conf, node, node_range_start, node_range_end):
         exit_code = subprocess.call(["bash", "deploy-rmq-cluster-broker.sh", 
                                 common_conf.ami, 
                                 unique_conf.broker_version, 
@@ -212,13 +220,12 @@ class AwsDeployer(Deployer):
                                 unique_conf.volume2_size,
                                 unique_conf.volume2_mountpoint,
                                 unique_conf.volume3_size,
-                                unique_conf.volume3_mountpoint,
-                                volume_type], cwd="../deploy/aws")
+                                unique_conf.volume3_mountpoint], cwd="../deploy/aws")
         if exit_code != 0:
             console_out(self.actor, f"deploy of master rabbitmq{node} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed"
     
-    def deploy_joinee(self, status_id, unique_conf, common_conf, volume_type, node, node_range_start, node_range_end):
+    def deploy_joinee(self, status_id, unique_conf, common_conf, node, node_range_start, node_range_end):
         exit_code = subprocess.call(["bash", "deploy-rmq-cluster-broker.sh", 
                                 common_conf.ami, 
                                 unique_conf.broker_version, 
@@ -247,8 +254,7 @@ class AwsDeployer(Deployer):
                                 unique_conf.volume2_size,
                                 unique_conf.volume2_mountpoint,
                                 unique_conf.volume3_size,
-                                unique_conf.volume3_mountpoint,
-                                volume_type], cwd="../deploy/aws")    
+                                unique_conf.volume3_mountpoint], cwd="../deploy/aws")    
         if exit_code != 0:
             console_out(self.actor, f"deploy of joinee rabbitmq{node} failed with exit code {exit_code}")
             self._deploy_status[status_id] = "failed"   

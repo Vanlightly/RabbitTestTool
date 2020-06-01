@@ -1,0 +1,26 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publishRate": "125", "inflightLimit": "25" } },
+        { "topologyVariables": { "publishRate": "250", "inflightLimit": "50" } },
+        { "topologyVariables": { "publishRate": "375", "inflightLimit": "75" } },
+        { "topologyVariables": { "publishRate": "500", "inflightLimit": "100" } },
+        { "topologyVariables": { "publishRate": "625", "inflightLimit": "125" } },
+        { "topologyVariables": { "publishRate": "750", "inflightLimit": "150" } },
+        { "topologyVariables": { "publishRate": "875", "inflightLimit": "175" } },
+        { "topologyVariables": { "publishRate": "1000", "inflightLimit": "200" } },
+        { "topologyVariables": { "publishRate": "1125", "inflightLimit": "225" } },
+        { "topologyVariables": { "publishRate": "1250", "inflightLimit": "250" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "messageSize": "1000",
+            "publisherCount": "200", 
+            "queueCount": "100", 
+            "consumerCount": "0",
+            "queueMode": "lazy",
+            "durationSeconds": "300"
+        }
+    }
+}

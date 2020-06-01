@@ -1,0 +1,34 @@
+{
+    "benchmarks": [
+
+        { "topologyVariables": { 
+            "useConfirms": "false", "manualAcks": "false", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }
+        },
+        { "topologyVariables": { 
+            "useConfirms": "false", "manualAcks": "true", "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "consumerPrefetch": "1000", "ackInterval": "100"}
+        },
+        { "topologyVariables": { 
+            "useConfirms": "true", "manualAcks": "false", "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "inflightLimit": "1000" }
+        },
+        { "topologyVariables": { 
+            "useConfirms": "true", "manualAcks": "true", "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "1000", "consumerPrefetch": "1000", "ackInterval": "100"}
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "ackIntervalMs": "1000",
+            "messageSize": "1000",
+            "durationSeconds": "300"
+        },
+        "policy": "mirrored-queue.json",
+        "policyVariables": { 
+            "haMode": "exactly",
+            "haParams": "2"
+        }
+    }
+}

@@ -1,0 +1,48 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "10", "value2": "20", "value3": "50", "value4": "100", "value5": "200", "value6": "1000",
+            "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20", "consumerPrefetch": "1000", "ackInterval": "1" } },
+
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "20", "value2": "40", "value3": "100", "value4": "200", "value5": "400", "value6": "2000",
+            "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20", "consumerPrefetch": "2000", "ackInterval": "1" } },
+        
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "2", "value2": "3", "value3": "6", "value4": "15", "value5": "30", "value6": "60",
+            "publishRate": "30", "publisherCount": "500", "queueCount": "100", "consumerCount": "500", "consumerPrefetch": "30", "ackInterval": "1" } },
+        
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "2", "value2": "6", "value3": "12", "value4": "30", "value5": "60", "value6": "120",
+            "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500", "consumerPrefetch": "60", "ackInterval": "1" } },
+
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "2", "value2": "5", "value3": "10", "value4": "20", "value5": "100", "value6": "200",
+            "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "consumerPrefetch": "100", "ackInterval": "1" } },
+
+
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "10", "value2": "20", "value3": "50", "value4": "100", "value5": "200", "value6": "1000",
+            "publishRate": "1000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20", "consumerPrefetch": "1000", "ackInterval": "100" } },
+
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "20", "value2": "40", "value3": "100", "value4": "200", "value5": "400", "value6": "2000",
+            "publishRate": "2000", "publisherCount": "20", "queueCount": "10", "consumerCount": "20", "consumerPrefetch": "2000", "ackInterval": "200" } },
+        
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "2", "value2": "3", "value3": "6", "value4": "15", "value5": "30", "value6": "60",
+            "publishRate": "30", "publisherCount": "500", "queueCount": "100", "consumerCount": "500", "consumerPrefetch": "30", "ackInterval": "3" }, "ackIntervalMs": "50" },
+        
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "2", "value2": "6", "value3": "12", "value4": "30", "value5": "60", "value6": "120",
+            "publishRate": "60", "publisherCount": "500", "queueCount": "100", "consumerCount": "500", "consumerPrefetch": "60", "ackInterval": "6" }, "ackIntervalMs": "50" },
+
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "2", "value2": "5", "value3": "10", "value4": "20", "value5": "100", "value6": "200",
+            "publishRate": "100", "publisherCount": "1000", "queueCount": "200", "consumerCount": "1000", "consumerPrefetch": "100", "ackInterval": "10", "ackIntervalMs": "50" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe-1-dimension.json",
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "messageSize": "1000",
+            "ackIntervalMs": "200",
+            "durationSeconds": "300"
+        },
+        "policy": "mirrored-queue.json",
+        "policyVariables": { 
+            "haMode": "exactly",
+            "haParams": "2"
+        }
+    }
+}

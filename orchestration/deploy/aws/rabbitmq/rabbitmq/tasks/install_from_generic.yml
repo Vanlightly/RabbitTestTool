@@ -129,6 +129,14 @@
   delay: 20
   register: result
   until: result.rc == 0
+
+- name: Enable RabbitMQ Shovel
+  command: /rabbitmq/sbin/rabbitmq-plugins enable rabbitmq_stream
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
+  when: enable_stream_plugin
   
   
 - name: Create benchmark user

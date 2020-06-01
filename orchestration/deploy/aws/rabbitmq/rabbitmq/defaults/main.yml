@@ -7,10 +7,11 @@ allocation_strategy: rss
 disk_limit: 1000000000
 log_level: info
 use_config: raft
-raft_segment_max_entries: 32768
 data_volume: volume1
 logs_volume: volume1
 wal_volume: volume1
 quorum_volume: volume1
-quorum_commands_soft_limit: 256
-wal_max_batch_size: 32768
+raft_segment_max_entries: 0
+quorum_commands_soft_limit: 0
+wal_max_batch_size: 0
+enable_stream_plugin: false

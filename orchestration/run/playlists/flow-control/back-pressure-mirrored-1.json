@@ -1,0 +1,41 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "1", "value2": "5", "value3": "20", "value4": "200", "value5": "1000", "value6": "10000", 
+            "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "consumerPrefetch": "1000", "ackInterval": "1"},
+            "topology": "point-to-point/point-to-point-safe-1-dimension.json" },
+
+        { "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" },
+            "topology": "point-to-point/point-to-point-safe.json" },
+        { "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "10", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" },
+            "topology": "point-to-point/point-to-point-safe.json" },
+        { "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "100", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" },
+            "topology": "point-to-point/point-to-point-safe.json" },
+        { "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "1000", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" },
+            "topology": "point-to-point/point-to-point-safe.json" },
+        { "topologyVariables": { "useConfirms": "true", "consumerPrefetch": "10000", "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" },
+            "topology": "point-to-point/point-to-point-safe.json" },
+
+        { "topologyVariables": { "useConfirms": "true", "dimension": "AckInterval", "value1": "1", "value2": "10", "value3": "50", "value4": "100", "value5": "250", "value6": "500", 
+            "inflightLimit": "1000", "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "consumerPrefetch": "1000" },
+            "topology": "point-to-point/point-to-point-safe-1-dimension.json" },
+
+        { "topologyVariables": { "useConfirms": "true", "dimension": "InflightLimit", "value1": "1", "value2": "5", "value3": "20", "value4": "200", "value5": "1000", "value6": "10000", 
+            "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "consumerPrefetch": "1000", "ackInterval": "100" },
+            "topology": "point-to-point/point-to-point-safe-1-dimension.json" }
+    ],
+    "commonAttributes": {
+        "topologyVariables": { 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1" ,
+            "ackIntervalMs": "1000",
+            "messageSize": "1000",
+            "durationSeconds": "300"
+        },
+        "policy": "mirrored-queue.json",
+        "policyVariables": { 
+            "haMode": "exactly",
+            "haParams": "2"
+        }
+    }
+}

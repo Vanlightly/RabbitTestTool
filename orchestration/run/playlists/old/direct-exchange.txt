@@ -1,3 +1,0 @@
-throughput/exchanges/DirectBenchmark1.json
-throughput/exchanges/DirectBenchmark2.json
-latency/exchanges/DirectBenchmark1.json

@@ -1,4 +1,4 @@
-java -jar ../target/rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+java -jar ../target/rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --topology "$1" \
 --policies "$6" \

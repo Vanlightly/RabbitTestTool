@@ -1,9 +1,13 @@
 [
     {rabbit, [
-        {quorum_commands_soft_limit, {{ quorum_commands_soft_limit }} }
+        {% if quorum_commands_soft_limit > 0 %}
+            {quorum_commands_soft_limit, {{ quorum_commands_soft_limit }} }
+        {% endif %}
     ]},
     {ra, [
-        {wal_data_dir, '/{{ wal_volume }}/wal'},
-        {segment_max_entries, {{ raft_segment_max_entries }}}
+        {wal_data_dir, '/{{ wal_volume }}/wal'}
+        {% if raft_segment_max_entries > 0 %}
+            ,{segment_max_entries, {{ raft_segment_max_entries }}}
+        {% endif %}
     ]}
 ].

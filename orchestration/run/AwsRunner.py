@@ -39,7 +39,7 @@ class AwsRunner(Runner):
                                 unique_conf.technology, 
                                 unique_conf.broker_version, 
                                 unique_conf.instance, 
-                                unique_conf.volume, 
+                                unique_conf.volume1_type, 
                                 unique_conf.filesystem, 
                                 common_conf.hosting, 
                                 unique_conf.tenancy, 

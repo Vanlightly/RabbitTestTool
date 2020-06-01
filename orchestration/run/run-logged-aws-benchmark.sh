@@ -8,6 +8,7 @@ INFLUX_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values
 echo "Will connect to InfluxDB at ip $INFLUX_IP"
 
 BROKER_IPS=""
+STREAM_PORTS=""
 if [ "${29}" != "" ]; then
     BROKER_IPS="${29}"
 else
@@ -17,8 +18,10 @@ else
 
         if [[ $NODE != $LAST_NODE ]]; then
             BROKER_IPS+="${BROKER_IP}:5672,"
+            STREAM_PORTS+="5555,"
         else
             BROKER_IPS+="${BROKER_IP}:5672"
+            STREAM_PORTS+="5555"
         fi
     done
 fi
@@ -28,7 +31,7 @@ LOADGEN_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Value
 echo "Will connect to load gen server at ip $LOADGEN_IP"
 echo "Will connect to $3 at ipS $BROKER_IPs"
 
-ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@$LOADGEN_IP java -Xms1024m -Xmx8192m -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" ubuntu@$LOADGEN_IP java -Xms1024m -Xmx8192m -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode "${32}" \
 --topology "topologies/${14}" \
 --policies "policies/${24}" \
@@ -52,6 +55,7 @@ ssh -i "~/.ssh/$2.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev
 --metrics-influx-database metrics \
 --metrics-influx-interval 10 \
 --broker-hosts "$BROKER_IPS" \
+--stream-ports "$STREAM_PORTS" \
 --broker-mgmt-port 15672 \
 --broker-user "${16}" \
 --broker-password "${17}" \

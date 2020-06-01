@@ -9,7 +9,7 @@
   when: volume1|int > 0
 
 - name: Get name of volume1
-  shell: "lsblk | grep {{ volume1_size_label }} | cut -d' ' -f1"
+  shell: "lsblk | grep -E '{{ volume1_size_label }}' | cut -d' ' -f1"
   register: volume1_name
   when: volume1|int > 0
 
@@ -52,7 +52,7 @@
   when: volume2|int > 0
 
 - name: Get name of volume2
-  shell: "lsblk | grep {{ volume2_size_label }} | cut -d' ' -f1"
+  shell: "lsblk | grep -E '{{ volume2_size_label }}' | cut -d' ' -f1"
   register: volume2_name
   when: volume2|int > 0
 
@@ -95,7 +95,7 @@
   when: volume3|int > 0
 
 - name: Get name of volume3
-  shell: "lsblk | grep {{ volume3_size_label }} | cut -d' ' -f1"
+  shell: "lsblk | grep -E '{{ volume3_size_label }}' | cut -d' ' -f1"
   register: volume3_name
   when: volume3|int > 0
 

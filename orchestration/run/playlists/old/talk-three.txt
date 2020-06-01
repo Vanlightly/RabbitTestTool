@@ -1,2 +1,0 @@
-talk/ch/034_ConsistentHashBenchmarkSlowConsumers.json
-talk/005_PersistentOneQueueMultipleConsumers.json

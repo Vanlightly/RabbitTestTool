@@ -50,7 +50,7 @@ LOADGEN_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Value
 
 echo "Starting background load from instance at ip $LOADGEN_IP against cluster with ips $BROKER_IPS"
 
-ssh -i "~/.ssh/$KEY_PAIR.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" -q ubuntu@$LOADGEN_IP java -Xms4096m -Xmx8192m -jar rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+ssh -i "~/.ssh/$KEY_PAIR.pem" -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" -q ubuntu@$LOADGEN_IP java -Xms4096m -Xmx8192m -jar rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
 --mode benchmark \
 --topology "./topologies/${TOPOLOGY}" \
 --policies "./policies/${POLICY}" \

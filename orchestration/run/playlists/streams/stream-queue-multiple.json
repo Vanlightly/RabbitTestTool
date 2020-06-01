@@ -1,0 +1,58 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "ackInterval": "1" } },
+        
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "ackInterval": "1" } },
+
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "10", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "ackInterval": "1" } },    
+
+        { "topologyVariables": { "publisherCount": "100", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "ackInterval": "1" } },
+
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "100", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "ackInterval": "1" } },    
+
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "10", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "ackInterval": "1" } },
+
+        { "topologyVariables": { "publisherCount": "100", "queueCount": "100", "consumerCount": "100", 
+            "inflightLimit": "1000", "maxBatchSize": "1", "initialCredit": "10", "ackInterval": "1" } },
+
+
+
+
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "100000", "maxBatchSize": "1000", "initialCredit": "100", "ackInterval": "10" } },
+        
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "100000", "maxBatchSize": "1000", "initialCredit": "100", "ackInterval": "10" } },
+
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "10", 
+            "inflightLimit": "100000", "maxBatchSize": "1000", "initialCredit": "100", "ackInterval": "10" } },    
+
+        { "topologyVariables": { "publisherCount": "100", "queueCount": "1", "consumerCount": "1", 
+            "inflightLimit": "100000", "maxBatchSize": "1000", "initialCredit": "100", "ackInterval": "10" } },
+
+        { "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "100", 
+            "inflightLimit": "100000", "maxBatchSize": "1000", "initialCredit": "100", "ackInterval": "10" } },    
+
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "10", 
+            "inflightLimit": "100000", "maxBatchSize": "1000", "initialCredit": "100", "ackInterval": "10" } },
+
+        { "topologyVariables": { "publisherCount": "100", "queueCount": "100", "consumerCount": "100", 
+            "inflightLimit": "100000", "maxBatchSize": "1000", "initialCredit": "100", "ackInterval": "10" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/stream-queue-safe.json",
+        "topologyVariables": { 
+            "creditIntervalMs": "1000",
+            "maxBatchWaitMs": "0",
+            "maxBatchSizeBytes": "1000000",
+            "messageSize": "20",
+            "durationSeconds": "120"
+        }
+    }
+}

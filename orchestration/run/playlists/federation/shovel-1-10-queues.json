@@ -1,0 +1,54 @@
+{
+    "benchmarks": [
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 1 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 2 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 3 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 4 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 5 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 6 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 7 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 8 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 9 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "groupScale": 10 }},
+        
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 1 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 2 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 3 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 4 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 5 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 6 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 7 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 8 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 9 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "groupScale": 10 }},
+        
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 1 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 2 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 3 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 4 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 5 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 6 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 7 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 8 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 9 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "groupScale": 10 }},
+
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 1 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 2 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 3 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 4 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 5 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 6 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 7 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 8 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 9 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "groupScale": 10 }}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": 300,
+            "shovelPrefetch": 10000, 
+            "shovelAckMode": "on-publish"
+        }
+    }
+}

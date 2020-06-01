@@ -1,8 +1,0 @@
-throughput/message-size/MessageSizeBenchmark1.json
-throughput/message-size/MessageSizeBenchmark2.json
-throughput/message-size/MessageSizeBenchmark3.json
-throughput/message-size/MessageSizeBenchmark4.json
-throughput/message-size/MessageSizeBenchmark5.json
-latency/message-size/MessageSizeBenchmark1.json
-latency/message-size/MessageSizeBenchmark2.json
-latency/message-size/MessageSizeBenchmark3.json

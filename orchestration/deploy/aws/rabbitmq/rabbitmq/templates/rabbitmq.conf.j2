@@ -1,4 +1,6 @@
 vm_memory_calculation_strategy = {{ allocation_strategy }}
 disk_free_limit.absolute = {{ disk_limit }}
 log.file.level = {{ log_level }}
+{% if wal_max_batch_size > 0 %}
 raft.wal_max_batch_size = {{ wal_max_batch_size }}
+{% endif %}

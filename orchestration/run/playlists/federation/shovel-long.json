@@ -1,0 +1,89 @@
+{
+    "benchmarks": [
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm" }},
+
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm" }},
+        
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm" }},
+
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 1000, "shovelAckMode": "on-confirm" }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm" }},
+
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 100, "publishRate": 1000 }},
+
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-queue-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 100, "publishRate": 1000 }},
+
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-queue.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 100, "publishRate": 1000 }},
+
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "no-ack", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-publish", "groupScale": 100, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 10, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 50, "publishRate": 1000 }},
+        { "topology": "shovel/src-exchange-dest-exchange.json", "topologyVariables": { "shovelPrefetch": 10000, "shovelAckMode": "on-confirm", "groupScale": 100, "publishRate": 1000 }}
+        
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": 300
+        }
+    }
+}
