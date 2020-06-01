@@ -11,7 +11,7 @@ FROM openjdk:11.0-jre
 WORKDIR /rabbittesttool
 
 COPY --from=builder \
-    /workspace/target/rabbittesttool-1.0-SNAPSHOT-jar-with-dependencies.jar \
+    /workspace/target/rabbittesttool-1.1-SNAPSHOT-jar-with-dependencies.jar \
     rabbittesttool.jar
 
 COPY benchmark/topologies topologies
