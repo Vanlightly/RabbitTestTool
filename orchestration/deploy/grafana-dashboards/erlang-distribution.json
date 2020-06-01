@@ -1,0 +1,2836 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Erlang cluster metrics",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": 11,
+  "iteration": 1591019441490,
+  "links": [],
+  "panels": [
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#C4162A",
+        "#1F60C4",
+        "#37872D"
+      ],
+      "datasource": "datasource-influxdb",
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "id": 25,
+      "interval": "30s",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(255, 255, 255, 0)",
+        "full": false,
+        "lineColor": "rgb(255, 255, 255)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            }
+          ],
+          "measurement": "erlang_vm_dist_node_state",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(\"gauge\") FROM \"erlang_vm_dist_node_state\" WHERE (\"host\" =~ /^$hosts$/) AND $timeFilter GROUP BY time($interval)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            },
+            {
+              "condition": "AND",
+              "key": "peer",
+              "operator": "=~",
+              "value": "/^$brokers$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": "2,6",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "All distribution links",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#C4162A",
+        "#1F60C4",
+        "#37872D"
+      ],
+      "datasource": "datasource-influxdb",
+      "description": "When a connection between a node and peer is established, the distribution link is considered to be `up`",
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 27,
+      "interval": "",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(255, 255, 255, 0)",
+        "full": false,
+        "lineColor": "rgb(255, 255, 255)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "erlang_vm_dist_node_state",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(\"gauge\") FROM \"erlang_vm_dist_node_state\" WHERE (\"host\" =~ /^$hosts$/ AND \"gauge\" = 3) AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            },
+            {
+              "condition": "AND",
+              "key": "field(gauge)",
+              "operator": "=",
+              "value": "3"
+            }
+          ]
+        }
+      ],
+      "thresholds": "2,6",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Established distribution links",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#37872D",
+        "#1F60C4",
+        "#C4162A"
+      ],
+      "datasource": "datasource-influxdb",
+      "description": "When a new connection is exchanging information between the node and the peer the distribution link is considered to be `pending`",
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 26,
+      "interval": "",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(255, 255, 255, 0)",
+        "full": false,
+        "lineColor": "rgb(255, 255, 255)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(\"gauge\") FROM \"erlang_vm_dist_node_state\" WHERE (\"host\" =~ /^$hosts$/ AND \"gauge\" = 1) AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": "1,6",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Connecting distribution links",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#37872D",
+        "#1F60C4",
+        "#C4162A"
+      ],
+      "datasource": "datasource-influxdb",
+      "description": "When a new connection is established and there is an existing connection between the node and the peer, this connection needs to wait for the initial connection to go down before it can become active. The distribution link is considered `up_pending`",
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 28,
+      "interval": "",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(255, 255, 255, 0)",
+        "full": false,
+        "lineColor": "rgb(255, 255, 255)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT count(\"gauge\") FROM \"erlang_vm_dist_node_state\" WHERE (\"host\" =~ /^$hosts$/ AND \"gauge\" = 2) AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": "1,6",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Waiting distribution links",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "id": 74,
+      "panels": [],
+      "title": "distribution links",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "hiddenSeries": false,
+      "id": 3,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "peer"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "erlang_vm_dist_send_bytes",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT non_negative_derivative(max(\"gauge\"), 1s) FROM \"erlang_vm_dist_send_bytes\" WHERE (\"host\" =~ /^$hosts$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"peer\"",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              },
+              {
+                "params": [
+                  "1s"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Data sent to peer node / s",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 1,
+          "format": "Bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "Data currently buffered in the output queue of the distribution link\n\nAny values above the 64MB threshold hint to an overloaded distribution\n\nBy default, RabbitMQ sets an upper limit of 128MB for the distribution buffer\n\n* [erlang/otp#2270](https://github.com/erlang/otp/pull/2270)\n* [erl +zdbbl](http://erlang.org/doc/man/erl.html#+zdbbl)\n",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "hiddenSeries": false,
+      "id": 62,
+      "interval": "120s",
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "erlang_vm_statistics_run_queues_length_total",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 65536000,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Erlang Run Queues Length",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "Data currently buffered in the output queue of the distribution link\n\nAny values above the 64MB threshold hint to an overloaded distribution\n\nBy default, RabbitMQ sets an upper limit of 128MB for the distribution buffer\n\n* [erlang/otp#2270](https://github.com/erlang/otp/pull/2270)\n* [erl +zdbbl](http://erlang.org/doc/man/erl.html#+zdbbl)\n",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 77,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "peer"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "erlang_vm_dist_port_queue_size_bytes",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 65536000,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Data buffered in the distribution links queue",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 9,
+      "panels": [],
+      "title": "inet socket",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "Number of inet packets sent to the distribution link port.\n\nIf too few messages are sent and data sits in the port driver buffer, increasing the `inet_dist_connect_options` as well as `inet_dist_listen_options` buffer values will result in more stable throughput.",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "peer"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "erlang_vm_dist_send_cnt",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT non_negative_derivative(max(\"gauge\"), 1s) FROM \"erlang_vm_dist_send_cnt\" WHERE (\"host\" =~ /^$hosts$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"peer\" fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              },
+              {
+                "params": [
+                  "1s"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Distribution messages sent to peer node / s",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "hiddenSeries": false,
+      "id": 75,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "peer"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "erlang_vm_dist_recv_bytes",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              },
+              {
+                "params": [
+                  "1s"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Data received from peer node / s",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 1,
+          "format": "Bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "Number of inet packets sent to the distribution link port.\n\nIf too few messages are sent and data sits in the port driver buffer, increasing the `inet_dist_connect_options` as well as `inet_dist_listen_options` buffer values will result in more stable throughput.",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "hiddenSeries": false,
+      "id": 76,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "peer"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "erlang_vm_dist_recv_cnt",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              },
+              {
+                "params": [
+                  "1s"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Distribution messages received from peer node / s",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 11,
+      "panels": [],
+      "title": "port driver",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "The total number of bytes allocated for this port by the runtime system. The port itself can have allocated memory that is not included.",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 12,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "peer"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "erlang_vm_dist_port_memory_bytes",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT max(\"gauge\") FROM \"erlang_vm_dist_port_memory_bytes\" WHERE (\"host\" =~ /^$hosts$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"peer\" fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Memory used by the port driver",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "The total number of bytes queued by the port using the ERTS driver queue implementation\n\nAny values above a few KBs hint to an overloaded distribution",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 7,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/rabbit/",
+          "color": "#C4162A"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT max(\"gauge\") FROM \"erlang_vm_dist_port_queue_size_bytes\" WHERE (\"host\" =~ /^$hosts$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"peer\" fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 0,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Data in the port driver buffer",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 14,
+      "panels": [],
+      "repeat": "erlang_vm_dist_proc_type",
+      "scopedVars": {
+        "erlang_vm_dist_proc_type": {
+          "selected": false,
+          "text": "dist",
+          "value": "dist"
+        }
+      },
+      "title": "$erlang_vm_dist_proc_type process",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "The size in bytes of process memory. This includes call stack, heap, and internal structures.",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 15,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "erlang_vm_dist_proc_type": {
+          "selected": false,
+          "text": "dist",
+          "value": "dist"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT max(\"gauge\") FROM \"erlang_vm_dist_proc_memory_bytes\" WHERE (\"host\" =~ /^$hosts$/ AND \"type\" =~ /^$erlang_vm_dist_proc_type$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"peer\" fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Memory used by the process",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "The number of messages currently in the message queue of the process\n\nAny values above 0 hint to an overloaded distribution",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "id": 16,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "erlang_vm_dist_proc_type": {
+          "selected": false,
+          "text": "dist",
+          "value": "dist"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "/rabbit/",
+          "color": "#C4162A"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "peer"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "erlang_vm_dist_proc_message_queue_len",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT max(\"gauge\") FROM \"erlang_vm_dist_proc_message_queue_len\" WHERE (\"host\" =~ /^$hosts$/ AND \"type\" =~ /^$erlang_vm_dist_proc_type$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"peer\" fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            },
+            {
+              "condition": "AND",
+              "key": "type",
+              "operator": "=~",
+              "value": "/^$erlang_vm_dist_proc_type$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 0,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Messages in the process queue",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "The length of the dirty IO scheduler run queues",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "id": 17,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "erlang_vm_dist_proc_type": {
+          "selected": false,
+          "text": "dist",
+          "value": "dist"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "erlang_vm_statistics_dirty_io_run_queue_length",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "gauge"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$hosts$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Dirty IO Schedulers Run Queue Length",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "datasource-influxdb",
+      "description": "The size in bytes of process memory. This includes call stack, heap, and internal structures.",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 37
+      },
+      "id": 78,
+      "interval": "30s",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": false,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "erlang_vm_dist_proc_type": {
+          "selected": false,
+          "text": "dist",
+          "value": "dist"
+        }
+      },
+      "seriesOverrides": [
+        {
+          "alias": "/^rabbit@\\w+0/",
+          "color": "#56A64B"
+        },
+        {
+          "alias": "/^rabbit@\\w+1/",
+          "color": "#F2CC0C"
+        },
+        {
+          "alias": "/^rabbit@\\w+2/",
+          "color": "#3274D9"
+        },
+        {
+          "alias": "/^rabbit@\\w+3/",
+          "color": "#A352CC"
+        },
+        {
+          "alias": "/^rabbit@\\w+4/",
+          "color": "#FF780A"
+        },
+        {
+          "alias": "/^rabbit@\\w+5/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/^rabbit@\\w+6/",
+          "color": "#FFEE52"
+        },
+        {
+          "alias": "/^rabbit@\\w+7/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/^rabbit@\\w+8/",
+          "color": "#CA95E5"
+        },
+        {
+          "alias": "/^rabbit@\\w+9/",
+          "color": "#FFB357"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_host -> $tag_peer",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT max(\"gauge\") FROM \"erlang_vm_dist_proc_memory_bytes\" WHERE (\"host\" =~ /^$hosts$/ AND \"type\" =~ /^$erlang_vm_dist_proc_type$/) AND $timeFilter GROUP BY time($__interval), \"host\", \"peer\" fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Memory used by the process",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 19,
+  "style": "dark",
+  "tags": [
+    "rabbitmq-prometheus"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "rabbit@rabbitmq1",
+          "value": "rabbit@rabbitmq1"
+        },
+        "datasource": "datasource-influxdb",
+        "definition": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_cluster\"",
+        "hide": 0,
+        "includeAll": false,
+        "label": "RabbitMQ Cluster",
+        "multi": false,
+        "name": "rabbitmq_cluster",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_cluster\"",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "datasource-influxdb",
+        "definition": "SHOW TAG VALUES FROM \"erlang_vm_dist_proc_status\" WITH key = \"type\"",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Process type",
+        "multi": true,
+        "name": "erlang_vm_dist_proc_type",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"erlang_vm_dist_proc_status\" WITH key = \"type\"",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "rabbit@rabbitmq1",
+          "value": "rabbit@rabbitmq1"
+        },
+        "datasource": "datasource-influxdb",
+        "definition": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_node\" WHERE rabbitmq_cluster =~ /$rabbitmq_cluster/",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": true,
+        "name": "brokers",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_node\" WHERE rabbitmq_cluster =~ /$rabbitmq_cluster/",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "rabbitmq1 + rabbitmq2 + rabbitmq3",
+          "value": [
+            "rabbitmq1",
+            "rabbitmq2",
+            "rabbitmq3"
+          ]
+        },
+        "datasource": "datasource-influxdb",
+        "definition": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_node\" WHERE rabbitmq_cluster =~ /$rabbitmq_cluster/",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": true,
+        "name": "hosts",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_node\" WHERE rabbitmq_cluster =~ /$rabbitmq_cluster/",
+        "refresh": 2,
+        "regex": "rabbit@(rabbitmq[0-9]+)",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "15s",
+      "30s",
+      "1m",
+      "5m",
+      "10m"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "7d"
+    ]
+  },
+  "timezone": "",
+  "title": "Erlang-Distribution",
+  "uid": "ckViWejZk",
+  "version": 43
+}

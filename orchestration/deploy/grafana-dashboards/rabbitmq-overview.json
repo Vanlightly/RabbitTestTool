@@ -17,7 +17,7 @@
   "gnetId": 10991,
   "graphTooltip": 1,
   "id": 5,
-  "iteration": 1584604883452,
+  "iteration": 1591018852118,
   "links": [
     {
       "icon": "doc",
@@ -86,7 +86,7 @@
         "lineColor": "rgb(255, 255, 255)",
         "show": true
       },
-      "tableColumn": "gauge",
+      "tableColumn": "sum",
       "targets": [
         {
           "expr": "sum(rabbitmq_queue_messages_ready * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{rabbitmq_cluster=\"$rabbitmq_cluster\"})",
@@ -108,6 +108,10 @@
                   "gauge"
                 ],
                 "type": "field"
+              },
+              {
+                "params": [],
+                "type": "sum"
               }
             ]
           ],
@@ -115,7 +119,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -200,12 +204,13 @@
       "tableColumn": "",
       "targets": [
         {
+          "alias": "",
           "expr": "sum(rate(rabbitmq_channel_messages_published_total[60s]) * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{rabbitmq_cluster=\"$rabbitmq_cluster\"})",
           "format": "time_series",
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "$interval"
               ],
               "type": "time"
             },
@@ -222,6 +227,8 @@
           "measurement": "rabbitmq_channel_messages_published_total",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT non_negative_derivative(\"counter\", 1s) FROM \"rabbitmq_channel_messages_published_total\" WHERE (\"host\" =~ \"rabbitmq1\") AND $timeFilter GROUP BY time($interval) fill(null)",
+          "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -234,7 +241,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -248,7 +255,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -366,7 +373,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -374,7 +381,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -492,7 +499,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "sum"
               }
             ]
           ],
@@ -500,7 +507,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -581,7 +588,7 @@
         "lineColor": "rgb(255, 255, 255)",
         "show": true
       },
-      "tableColumn": "last",
+      "tableColumn": "sum",
       "targets": [
         {
           "expr": "sum(rabbitmq_queue_messages_unacked * on(instance) group_left(rabbitmq_cluster) rabbitmq_identity_info{rabbitmq_cluster=\"$rabbitmq_cluster\"})",
@@ -606,7 +613,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "sum"
               }
             ]
           ],
@@ -614,7 +621,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -746,8 +753,8 @@
           "tags": [
             {
               "key": "host",
-              "operator": "=~",
-              "value": "/^$broker$/"
+              "operator": "=",
+              "value": "rabbitmq1"
             }
           ]
         }
@@ -865,7 +872,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "sum"
               }
             ]
           ],
@@ -873,7 +880,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -991,7 +998,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "sum"
               }
             ]
           ],
@@ -999,7 +1006,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -1030,8 +1037,15 @@
       },
       "id": 4,
       "panels": [],
-      "repeat": null,
-      "title": "RESOURCES",
+      "repeat": "brokers",
+      "scopedVars": {
+        "brokers": {
+          "selected": true,
+          "text": "rabbitmq1",
+          "value": "rabbitmq1"
+        }
+      },
+      "title": "RESOURCES OF $brokers",
       "type": "row"
     },
     {
@@ -1073,6 +1087,13 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
+      "scopedVars": {
+        "brokers": {
+          "selected": true,
+          "text": "rabbitmq1",
+          "value": "rabbitmq1"
+        }
+      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
@@ -1117,7 +1138,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         },
@@ -1152,7 +1173,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "max"
               }
             ]
           ],
@@ -1160,7 +1181,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -1169,7 +1190,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "RabbitMQ Memory Usage",
+      "title": "RabbitMQ Memory Usage for $brokers",
       "tooltip": {
         "shared": true,
         "sort": 1,
@@ -1246,6 +1267,13 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
+      "scopedVars": {
+        "brokers": {
+          "selected": true,
+          "text": "rabbitmq1",
+          "value": "rabbitmq1"
+        }
+      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
@@ -1295,7 +1323,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         },
@@ -1343,7 +1371,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -1352,7 +1380,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Disk Space Used",
+      "title": "Disk Space Used for $brokers",
       "tooltip": {
         "shared": true,
         "sort": 1,
@@ -1430,6 +1458,13 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
+      "scopedVars": {
+        "brokers": {
+          "selected": true,
+          "text": "rabbitmq1",
+          "value": "rabbitmq1"
+        }
+      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
@@ -1479,7 +1514,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         },
@@ -1527,7 +1562,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -1536,7 +1571,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "File Descriptors Used",
+      "title": "File Descriptors Used for for $brokers",
       "tooltip": {
         "shared": true,
         "sort": 1,
@@ -1613,6 +1648,13 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
+      "scopedVars": {
+        "brokers": {
+          "selected": true,
+          "text": "rabbitmq1",
+          "value": "rabbitmq1"
+        }
+      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
@@ -1662,7 +1704,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         },
@@ -1710,7 +1752,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -1719,7 +1761,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Open TCP Sockets",
+      "title": "Open TCP Sockets for for $brokers",
       "tooltip": {
         "shared": true,
         "sort": 1,
@@ -1870,6 +1912,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -1893,7 +1941,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -1901,7 +1949,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -2046,6 +2094,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -2069,7 +2123,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -2077,7 +2131,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -2231,15 +2285,15 @@
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "$interval"
               ],
               "type": "time"
             },
             {
               "params": [
-                "null"
+                "host"
               ],
-              "type": "fill"
+              "type": "tag"
             }
           ],
           "instant": false,
@@ -2248,6 +2302,8 @@
           "measurement": "rabbitmq_queue_messages_published_total",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT non_negative_derivative(sum(\"counter\"), 1s) FROM \"rabbitmq_queue_messages_published_total\" WHERE (\"host\" =~ /^$brokers$/) AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2260,7 +2316,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -2274,7 +2330,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -2419,6 +2475,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -2442,7 +2504,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -2456,7 +2518,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -2601,6 +2663,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -2624,7 +2692,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -2638,7 +2706,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -2783,6 +2851,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -2806,7 +2880,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -2814,7 +2888,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -2901,17 +2975,13 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "/rabbit/",
-          "color": "#C4162A"
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
       "steppedLine": false,
       "targets": [
         {
+          "alias": "$tag_host",
           "expr": "sum(rate(rabbitmq_channel_messages_unroutable_dropped_total[60s]) * on(instance) group_left(rabbitmq_cluster, rabbitmq_node) rabbitmq_identity_info{rabbitmq_cluster=\"$rabbitmq_cluster\"}) by(rabbitmq_node)",
           "format": "time_series",
           "groupBy": [
@@ -2920,6 +2990,12 @@
                 "$__interval"
               ],
               "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
             },
             {
               "params": [
@@ -2946,7 +3022,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -2960,7 +3036,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -3102,7 +3178,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -3116,7 +3192,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -3268,7 +3344,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -3282,7 +3358,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -3450,7 +3526,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -3464,7 +3540,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -3570,7 +3646,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -3582,6 +3658,12 @@
                 "$__interval"
               ],
               "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
             },
             {
               "params": [
@@ -3608,7 +3690,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -3622,7 +3704,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -3790,7 +3872,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -3804,7 +3886,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -3893,7 +3975,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
@@ -3905,6 +3987,12 @@
                 "$__interval"
               ],
               "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
             },
             {
               "params": [
@@ -3931,7 +4019,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -3945,7 +4033,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -4077,7 +4165,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -4091,7 +4179,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -4233,7 +4321,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -4247,7 +4335,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -4388,7 +4476,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -4402,7 +4490,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -4570,6 +4658,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -4593,7 +4687,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -4601,7 +4695,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -4769,7 +4863,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -4783,7 +4877,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -4968,7 +5062,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -4982,7 +5076,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -5167,7 +5261,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -5181,7 +5275,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -5357,6 +5451,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -5380,7 +5480,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -5388,7 +5488,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -5555,7 +5655,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -5569,7 +5669,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -5754,7 +5854,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -5768,7 +5868,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -5944,6 +6044,12 @@
             },
             {
               "params": [
+                "host"
+              ],
+              "type": "tag"
+            },
+            {
+              "params": [
                 "null"
               ],
               "type": "fill"
@@ -5967,7 +6073,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               }
             ]
           ],
@@ -5975,7 +6081,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -6144,7 +6250,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -6158,7 +6264,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -6343,7 +6449,7 @@
               },
               {
                 "params": [],
-                "type": "mean"
+                "type": "sum"
               },
               {
                 "params": [
@@ -6357,7 +6463,7 @@
             {
               "key": "host",
               "operator": "=~",
-              "value": "/^$broker$/"
+              "value": "/^$brokers$/"
             }
           ]
         }
@@ -6422,7 +6528,7 @@
       }
     }
   ],
-  "refresh": false,
+  "refresh": "15s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [
@@ -6433,31 +6539,47 @@
       {
         "allValue": null,
         "current": {
-          "text": "rabbitmq1",
-          "value": "rabbitmq1"
+          "text": "rabbit@rabbitmq1",
+          "value": "rabbit@rabbitmq1"
         },
         "datasource": "datasource-influxdb",
-        "definition": "SHOW TAG VALUES FROM rabbitmq_queue_messages WITH KEY=host",
+        "definition": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_cluster\"",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
-        "name": "broker",
-        "options": [
-          {
-            "selected": true,
-            "text": "rabbitmq1",
-            "value": "rabbitmq1"
-          },
-          {
-            "selected": false,
-            "text": "rabbitmq2",
-            "value": "rabbitmq2"
-          }
-        ],
-        "query": "SHOW TAG VALUES FROM rabbitmq_queue_messages WITH KEY=host",
-        "refresh": 0,
-        "regex": "rabbit.*",
+        "name": "rabbitmq_cluster",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_cluster\"",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "rabbitmq1",
+          "value": [
+            "rabbitmq1"
+          ]
+        },
+        "datasource": "datasource-influxdb",
+        "definition": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_node\" WHERE rabbitmq_cluster =~ /$rabbitmq_cluster$/",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": true,
+        "name": "brokers",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"rabbitmq_identity_info\" WITH key = \"rabbitmq_node\" WHERE rabbitmq_cluster =~ /$rabbitmq_cluster$/",
+        "refresh": 2,
+        "regex": "rabbit@(rabbitmq[0-9]+)",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
@@ -6469,8 +6591,8 @@
     ]
   },
   "time": {
-    "from": "2020-03-19T09:18:39.360Z",
-    "to": "2020-03-19T09:52:33.220Z"
+    "from": "now-15m",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -6495,5 +6617,5 @@
   "timezone": "",
   "title": "RabbitMQ-Overview",
   "uid": "Kn5xm-gZk",
-  "version": 5
+  "version": 21
 }
