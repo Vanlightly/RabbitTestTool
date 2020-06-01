@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
+import com.jackvanlightly.rabbittesttool.topology.model.QueueType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,5 +87,16 @@ public class QueueGroup {
         nodeIndex++;
         if(nodeIndex >= nodes.size())
             nodeIndex = 0;
+    }
+
+    public String getVhostName() {
+        return vhostName;
+    }
+
+    public List<String> getStreamQueues() {
+        if(queueConfig.getQueueType() == QueueType.Stream)
+            return queues;
+        else
+            return new ArrayList<>();
     }
 }

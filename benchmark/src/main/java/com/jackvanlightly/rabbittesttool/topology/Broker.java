@@ -1,18 +1,24 @@
 package com.jackvanlightly.rabbittesttool.topology;
 
 public class Broker {
-    private String ip;
-    private String port;
-    private String nodeName;
+    String ip;
+    String port;
+    String nodeName;
+    String streamPort;
 
-    public Broker(String ip, String port, String nodeName) {
+    public Broker(String ip, String port, String nodeName, String streamPort) {
         this.ip = ip;
         this.port = port;
         this.nodeName = nodeName;
+        this.streamPort = streamPort;
     }
 
     public String getIp() {
         return ip;
+    }
+
+    public int getStreamPort() {
+        return Integer.valueOf(streamPort);
     }
 
     public void setIp(String ip) {

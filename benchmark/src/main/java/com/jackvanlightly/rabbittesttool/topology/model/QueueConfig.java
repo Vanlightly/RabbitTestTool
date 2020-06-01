@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.topology.model;
 
 import com.jackvanlightly.rabbittesttool.topology.model.actions.ActionListConfig;
+import com.rabbitmq.stream.ByteCapacity;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -9,27 +10,56 @@ import java.util.List;
 public class QueueConfig {
     private String group;
     private String vhostName;
+    private QueueType queueType;
     private boolean isDownstream;
     private int scale;
     private List<Property> properties;
     private List<BindingConfig> bindings;
     private ShovelConfig shovelConfig;
     private ActionListConfig actionList;
+    private ByteCapacity retentionSize;
+    private ByteCapacity segmentSize;
 
     public QueueConfig() {
         properties = new ArrayList<>();
         bindings = new ArrayList<>();
     }
 
-    public QueueConfig(String group, String vhostName, boolean isDownstream, int scale, List<Property> properties, List<BindingConfig> bindings, ShovelConfig shovelConfig, ActionListConfig actionList) {
+    public QueueConfig(String group,
+                       String vhostName,
+                       QueueType queueType,
+                       boolean isDownstream,
+                       int scale,
+                       List<Property> properties,
+                       List<BindingConfig> bindings,
+                       ShovelConfig shovelConfig,
+                       ActionListConfig actionList) {
+        this(group, vhostName, queueType, isDownstream, scale,
+                properties, bindings, shovelConfig, actionList,
+                ByteCapacity.B(0), ByteCapacity.B(0));
+    }
+
+    public QueueConfig(String group,
+                       String vhostName,
+                       QueueType queueType,
+                       boolean isDownstream,
+                       int scale, List<Property> properties,
+                       List<BindingConfig> bindings,
+                       ShovelConfig shovelConfig,
+                       ActionListConfig actionList,
+                       ByteCapacity retentionBytes,
+                       ByteCapacity segmentSize) {
         this.group = group;
         this.vhostName = vhostName;
+        this.queueType = queueType;
         this.isDownstream = isDownstream;
         this.scale = scale;
         this.properties = properties;
         this.bindings = bindings;
         this.shovelConfig = shovelConfig;
         this.actionList = actionList;
+        this.retentionSize = retentionBytes;
+        this.segmentSize = segmentSize;
     }
 
     public QueueConfig clone(int scaleNumber) {
@@ -45,12 +75,15 @@ public class QueueConfig {
         return new QueueConfig(
                 this.group + VirtualHost.getScaleSuffix(scaleNumber),
                 this.vhostName,
+                this.queueType,
                 this.isDownstream,
                 this.scale,
                 this.properties,
                 newBindings,
                 sc,
-                this.actionList);
+                this.actionList,
+                this.retentionSize,
+                this.segmentSize);
     }
 
     public String getGroup() {
@@ -67,6 +100,14 @@ public class QueueConfig {
 
     public void setVhostName(String vhostName) {
         this.vhostName = vhostName;
+    }
+
+    public QueueType getQueueType() {
+        return queueType;
+    }
+
+    public void setQueueType(QueueType queueType) {
+        this.queueType = queueType;
     }
 
     public boolean isDownstream() {
@@ -133,5 +174,21 @@ public class QueueConfig {
 
     public void setActionList(ActionListConfig actionList) {
         this.actionList = actionList;
+    }
+
+    public void setRetentionSize(ByteCapacity retentionSize) {
+        this.retentionSize = retentionSize;
+    }
+
+    public void setSegmentSize(ByteCapacity segmentSize) {
+        this.segmentSize = segmentSize;
+    }
+
+    public ByteCapacity getRetentionSize() {
+        return retentionSize;
+    }
+
+    public ByteCapacity getSegmentSize() {
+        return segmentSize;
     }
 }

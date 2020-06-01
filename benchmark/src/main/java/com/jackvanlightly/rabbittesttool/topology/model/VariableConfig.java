@@ -3,15 +3,16 @@ package com.jackvanlightly.rabbittesttool.topology.model;
 import java.util.*;
 
 public class VariableConfig {
-    private VariableDimension dimension;
-    private VariableDimension[] multiDimensions;
-    private List<Double> values;
-    private List<Double[]> multiValues;
-    private ValueType valueType;
-    private int stepDurationSeconds;
-    private int stepRampUpSeconds;
-    private String group;
-    private StepOverride stepOverride;
+    VariableDimension dimension;
+    VariableDimension[] multiDimensions;
+    List<Double> values;
+    List<Double[]> multiValues;
+    ValueType valueType;
+    int stepDurationSeconds;
+    int stepRampUpSeconds;
+    int repeatWholeSeriesCount;
+    String group;
+    StepOverride stepOverride;
 
     public VariableConfig() {
         values = new ArrayList<>();
@@ -140,5 +141,13 @@ public class VariableConfig {
 
     public void setStepOverride(StepOverride stepOverride) {
         this.stepOverride = stepOverride;
+    }
+
+    public int getRepeatWholeSeriesCount() {
+        return repeatWholeSeriesCount;
+    }
+
+    public void setRepeatWholeSeriesCount(int repeatWholeSeriesCount) {
+        this.repeatWholeSeriesCount = repeatWholeSeriesCount;
     }
 }

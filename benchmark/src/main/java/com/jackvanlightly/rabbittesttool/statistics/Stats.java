@@ -44,6 +44,7 @@ public class Stats {
     private final DoubleAccumulator published, returned, confirmed, nacked, consumed;
     private final DoubleAccumulator publishedMsgBytes, consumedMsgBytes, publishedMsgSize, consumedMsgSize, publishedMsgHeaders, consumedMsgHeaders;
     private final DoubleAccumulator deliveryMode, consumerPrefetch, consumerAck, consumerAckMs, consumerAckCount, consumerAcksMsgPerAck, publisherInFlightLimit;
+    private final DoubleAccumulator consumedStreamBatches, messagesPerStreamBatch, maxBatchSize, maxBatchSizeBytes, maxBatchWaitMs;
     private final DoubleAccumulator consumerCount, publisherCount, queueCount, targetPublishRate, consumerConnectionError;
     private final DoubleAccumulator blockedPublisherConnectionRate, unblockedPublisherConnectionRate, routingKeyLength;
     private final DoubleAccumulator perPublisherRateMin, perPublisherRate5, perPublisherRate25, perPublisherRate50, perPublisherRate75, perPublisherRate95, perPublisherRateMax;
@@ -64,6 +65,12 @@ public class Stats {
     protected long consumerAckIntervalMs;
     protected long consumerAckCountInterval;
     protected long consumerAckedMsgsInterval;
+    protected long consumedStreamBatchInterval;
+    protected long consumedStreamMessageInterval;
+    protected long maxBatchSizeCount;
+    protected long maxBatchSizeBytesCount;
+    protected long maxBatchWaitMsCount;
+    protected long messagesPerBatchInterval;
     protected long currentConsumerCount;
     protected long currentPublisherCount;
     protected long currentQueueCount;
@@ -154,6 +161,11 @@ public class Stats {
         consumerAckMs = registry.gauge(metricsPrefix + "consumer-ack-interval-ms", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerAckCount = registry.gauge(metricsPrefix + "consumer-acks", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerAcksMsgPerAck = registry.gauge(metricsPrefix + "consumer-acks-avg-msgs-per-ack", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        consumedStreamBatches = registry.gauge(metricsPrefix + "stream-consumed-batches", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        messagesPerStreamBatch = registry.gauge(metricsPrefix + "stream-messages-per-batch", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        maxBatchSize = registry.gauge(metricsPrefix + "stream-max-batch-size", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        maxBatchSizeBytes = registry.gauge(metricsPrefix + "stream-max-batch-size-bytes", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        maxBatchWaitMs = registry.gauge(metricsPrefix + "stream-max-batch-wait-ms", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         publisherInFlightLimit = registry.gauge(metricsPrefix + "publisher-in-flight-limit", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerCount = registry.gauge(metricsPrefix + "consumer-count", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         publisherCount = registry.gauge(metricsPrefix + "publisher-count", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
@@ -246,6 +258,9 @@ public class Stats {
         recordQueueCount(currentQueueCount);
         recordInFlightLimit(publisherInFlightLimitCount);
         recordTargetPublishRate(targetPublishRateCount);
+        recordMaxBatchSize(maxBatchSizeCount);
+        recordMaxBatchSizeBytes(maxBatchSizeBytesCount);
+        recordMaxBatchWaitMs(maxBatchWaitMsCount);
 
         double ratePublished = rate(sendCountInterval, elapsedInterval);
         recordPublished(ratePublished);
@@ -317,6 +332,14 @@ public class Stats {
             recordConsumerAckMsgsPerAck(avgMsgsPerAck);
         }
 
+        if(consumedStreamMessageInterval > 0) {
+            double avgMsgsPerBatch = consumedStreamMessageInterval / consumedStreamBatchInterval;
+            recordMessagesPerBatch(avgMsgsPerBatch);
+
+            double batchRate = rate(consumedStreamBatchInterval, elapsedInterval);
+            recordConsumedStreamBatchCount(batchRate);
+        }
+
         if(recvCountInterval > 0) {
             double avgConsumedMsgSize = consumedMsgBytesInterval / recvCountInterval;
             recordReceivedMsgSize(avgConsumedMsgSize);
@@ -383,6 +406,9 @@ public class Stats {
         consumerAckIntervalMs = 0;
         consumerAckCountInterval = 0;
         consumerAckedMsgsInterval = 0;
+        consumedStreamBatchInterval = 0;
+        consumedStreamMessageInterval = 0;
+        messagesPerBatchInterval = 0;
         consumerPrefetchInterval = 0;
         consumerConnectionErrorInterval = 0;
         blockedPublisherConnectionInterval = 0;
@@ -421,6 +447,18 @@ public class Stats {
 
     public void setPublisherInFlightLimit(int inFlightLimit) {
         publisherInFlightLimitCount = inFlightLimit;
+    }
+
+    public void setMaxBatchSize(int batchSize) {
+        maxBatchSizeCount = batchSize;
+    }
+
+    public void setMaxBatchSizeBytes(int batchSizeBytes) {
+        maxBatchSizeBytesCount = batchSizeBytes;
+    }
+
+    public void setMaxBatchWaitMs(int batchWaitMs) {
+        maxBatchWaitMsCount = batchWaitMs;
     }
 
     public synchronized void handleSend(long msgBytes,
@@ -466,11 +504,15 @@ public class Stats {
                                         int msgHeaders,
                                         int prefetch,
                                         int ackInterval,
-                                        int ackIntervalMs) {
+                                        int ackIntervalMs,
+                                        boolean isStream) {
         if(RecordingActive) {
             this.recvCountStepTotal++;
             this.latencies.update(latency);
         }
+
+        if(isStream)
+            consumedStreamMessageInterval++;
 
         recvCountInterval++;
 
@@ -485,6 +527,10 @@ public class Stats {
             this.updateLatency.accept(latency);
         }
         report();
+    }
+
+    public synchronized void handleRecvBatch() {
+        consumedStreamBatchInterval++;
     }
 
     public synchronized void handleAck(int msgCount) {
@@ -635,6 +681,26 @@ public class Stats {
 
     protected void recordConsumerAckMsgsPerAck(double msgsPerAck) {
         this.consumerAcksMsgPerAck.accumulate(msgsPerAck);
+    }
+
+    protected void recordConsumedStreamBatchCount(double batchCount) {
+        this.consumedStreamBatches.accumulate(batchCount);
+    }
+
+    protected void recordMessagesPerBatch(double msgCount) {
+        this.messagesPerStreamBatch.accumulate(msgCount);
+    }
+
+    protected void recordMaxBatchSize(double batchSize) {
+        this.maxBatchSize.accumulate(batchSize);
+    }
+
+    protected void recordMaxBatchSizeBytes(double batchSizeBytes) {
+        this.maxBatchSizeBytes.accumulate(batchSizeBytes);
+    }
+
+    protected void recordMaxBatchWaitMs(double batchWaitMs) {
+        this.maxBatchWaitMs.accumulate(batchWaitMs);
     }
 
     protected void recordConsumerConnError(double connectionErrors) {

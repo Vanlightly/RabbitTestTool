@@ -147,7 +147,7 @@ public class EventingConsumer extends DefaultConsumer {
         int headerCount = 0;
         if(properties != null && properties.getHeaders() != null)
             headerCount = properties.getHeaders().size();
-        stats.handleRecv(lag, body.length, headerCount, prefetch, ackInterval, ackIntervalMs);
+        stats.handleRecv(lag, body.length, headerCount, prefetch, ackInterval, ackIntervalMs, false);
         consumerStats.incrementReceivedCount();
 
         ackLock.lock();

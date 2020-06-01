@@ -134,6 +134,8 @@ public class Orchestrator {
                     deletedCount++;
             }
 
+//            topologyGenerator.deleteVHost(VirtualHost.getDefaultVHost());
+
             logger.info("Deleted " + deletedCount + " vhosts");
             if(deletedCount > 0) {
                 logger.info("Waiting 5 seconds to give extra time for vhost deletion");
@@ -143,6 +145,8 @@ public class Orchestrator {
             for(VirtualHost vhost : topology.getVirtualHosts()) {
                 topologyGenerator.declareVHost(vhost);
             }
+
+//            topologyGenerator.declareVHost(VirtualHost.getDefaultVHost());
         }
 
         logger.info("Waiting 2 seconds to give extra time for vhost creation");
@@ -173,12 +177,29 @@ public class Orchestrator {
 
         ClientUtils.waitFor(5000, jumpToCleanup);
         List<String> vhosts = topology.getVirtualHosts().stream().map(x -> x.getName()).collect(Collectors.toList());
+
+        // get the list of stream queues to monitor per vhost
+        Map<String, List<String>> streamQueuesToMonitor = new HashMap<>();
+        for(QueueGroup qg : queueGroups) {
+            if(qg.getStreamQueues().isEmpty())
+                continue;
+
+            if(!streamQueuesToMonitor.containsKey(qg.getVhostName()))
+                streamQueuesToMonitor.put(qg.getVhostName(), new ArrayList<>());
+
+            List<String> currentQueues = streamQueuesToMonitor.get(qg.getVhostName());
+            currentQueues.addAll(qg.getStreamQueues());
+            streamQueuesToMonitor.put(qg.getVhostName(), currentQueues);
+        }
+
         queueHosts.updateQueueHosts(vhosts);
-        queueHostsExecutor.submit(() -> queueHosts.monitorQueueHosts(vhosts));
+        queueHosts.updateStreamQueueHosts(streamQueuesToMonitor);
+        queueHostsExecutor.submit(() -> queueHosts.monitorQueueHosts(vhosts, streamQueuesToMonitor));
 
         if(downstreamQueueHosts.clusterExists()) {
             downstreamQueueHosts.updateQueueHosts(vhosts);
-            queueHostsExecutor.submit(() -> downstreamQueueHosts.monitorQueueHosts(vhosts));
+            queueHosts.updateStreamQueueHosts(streamQueuesToMonitor);
+            queueHostsExecutor.submit(() -> downstreamQueueHosts.monitorQueueHosts(vhosts, streamQueuesToMonitor));
         }
     }
 
@@ -274,6 +295,9 @@ public class Orchestrator {
         setQueueCountStats();
         setTargetPublisherRateStats();
         setPublisherInFlightLimitStats();
+        setPublisherMaxBatchSizeStats();
+        setPublisherMaxBatchSizeBytesStats();
+        setPublisherMaxBatchWaitMsStats();
     }
 
     private void setConsumerCountStats() {
@@ -318,6 +342,45 @@ public class Orchestrator {
                     .map(x -> x.getPublisherCount() * x.getInFlightLimit())
                     .reduce(0, Integer::sum) / totalPublishers;
             stats.setPublisherInFlightLimit(averageInFlightLimit);
+        }
+    }
+
+    private void setPublisherMaxBatchSizeStats() {
+        if(!publisherGroups.isEmpty()) {
+            int totalPublishers = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount())
+                    .reduce(0, Integer::sum);
+
+            int averageMaxBatchSize = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount() * x.getMaxBatchSize())
+                    .reduce(0, Integer::sum) / totalPublishers;
+            stats.setMaxBatchSize(averageMaxBatchSize);
+        }
+    }
+
+    private void setPublisherMaxBatchSizeBytesStats() {
+        if(!publisherGroups.isEmpty()) {
+            int totalPublishers = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount())
+                    .reduce(0, Integer::sum);
+
+            int averageMaxBatchSizeBytes = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount() * x.getMaxBatchSizeBytes())
+                    .reduce(0, Integer::sum) / totalPublishers;
+            stats.setMaxBatchSizeBytes(averageMaxBatchSizeBytes);
+        }
+    }
+
+    private void setPublisherMaxBatchWaitMsStats() {
+        if(!publisherGroups.isEmpty()) {
+            int totalPublishers = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount())
+                    .reduce(0, Integer::sum);
+
+            int averageMaxBatchWaitMs = publisherGroups.stream()
+                    .map(x -> x.getPublisherCount() * x.getMaxBatchWaitMs())
+                    .reduce(0, Integer::sum) / totalPublishers;
+            stats.setMaxBatchWaitMs(averageMaxBatchWaitMs);
         }
     }
 
@@ -391,43 +454,47 @@ public class Orchestrator {
                                             Topology topology) throws IOException {
         int step = 1;
 
-        // execute each step
-        for (int i = 0; i < variableConfig.getStepCount(); i++) {
-            int counter = 0;
-            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup.get()) {
-                // configure step dimension
-                setSingleDimensionStepValue(variableConfig,
-                        variableConfig.getDimension(),
-                        variableConfig.getValues().get(i));
-                resetMessageSentCounts();
-                setCountStats();
+        // execute series of steps, potentially on repeat
+        for(int r=0; r<variableConfig.getRepeatWholeSeriesCount(); r++) {
 
-                // wait for the ramp up time before recording and timing the step
-                waitFor(variableConfig.getStepRampUpSeconds() * 1000);
-                benchmarkRegister.logStepStart(runId, step, topology.getVariableConfig().getStepDurationSeconds(), variableConfig.getValues().get(i).toString());
-                stats.startRecordingStep();
+            // execute each step
+            for (int i = 0; i < variableConfig.getStepCount(); i++) {
+                int counter = 0;
+                while (counter < variableConfig.getStepRepeat() && !jumpToCleanup.get()) {
+                    // configure step dimension
+                    setSingleDimensionStepValue(variableConfig,
+                            variableConfig.getDimension(),
+                            variableConfig.getValues().get(i));
+                    resetMessageSentCounts();
+                    setCountStats();
 
-                StopWatch sw = new StopWatch();
-                sw.start();
+                    // wait for the ramp up time before recording and timing the step
+                    waitFor(variableConfig.getStepRampUpSeconds() * 1000);
+                    benchmarkRegister.logStepStart(runId, step, topology.getVariableConfig().getStepDurationSeconds(), variableConfig.getValues().get(i).toString());
+                    stats.startRecordingStep();
 
-                // wait for step duration seconds to pass
-                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup.get()) {
-                    if(reachedStopCondition())
-                        break;
+                    StopWatch sw = new StopWatch();
+                    sw.start();
 
-                    waitFor(1000);
-                    StepStatistics liveStepStats = stats.readCurrentStepStatistics(variableConfig.getStepDurationSeconds());
-                    benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
+                    // wait for step duration seconds to pass
+                    while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup.get()) {
+                        if (reachedStopCondition())
+                            break;
+
+                        waitFor(1000);
+                        StepStatistics liveStepStats = stats.readCurrentStepStatistics(variableConfig.getStepDurationSeconds());
+                        benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
+                    }
+
+                    stats.stopRecordingStep();
+                    benchmarkRegister.logStepEnd(runId, step, stats.getStepStatistics(variableConfig.getStepDurationSeconds()));
+
+                    step++;
+                    counter++;
+
+                    if (reachedStopCondition())
+                        return;
                 }
-
-                stats.stopRecordingStep();
-                benchmarkRegister.logStepEnd(runId, step, stats.getStepStatistics(variableConfig.getStepDurationSeconds()));
-
-                step++;
-                counter++;
-
-                if(reachedStopCondition())
-                    return;
             }
         }
     }
@@ -458,50 +525,55 @@ public class Orchestrator {
                                            VariableConfig variableConfig,
                                            Topology topology) throws IOException {
         int step = 1;
-        // execute each step
-        for(int i=0; i< variableConfig.getStepCount(); i++) {
 
-            int counter = 0;
-            while(counter < variableConfig.getStepRepeat() && !jumpToCleanup.get()) {
-                String stepValues = "";
-                for (int vd = 0; vd < variableConfig.getMultiDimensions().length; vd++) {
-                    setSingleDimensionStepValue(variableConfig,
-                            variableConfig.getMultiDimensions()[vd],
-                            variableConfig.getMultiValues().get(i)[vd]);
+        // execute series of steps, potentially on repeat
+        for(int r=0; r<variableConfig.getRepeatWholeSeriesCount(); r++) {
 
-                    if (vd > 0)
-                        stepValues += ",";
-                    stepValues += variableConfig.getMultiValues().get(i)[vd].toString();
+            // execute each step
+            for (int i = 0; i < variableConfig.getStepCount(); i++) {
+
+                int counter = 0;
+                while (counter < variableConfig.getStepRepeat() && !jumpToCleanup.get()) {
+                    String stepValues = "";
+                    for (int vd = 0; vd < variableConfig.getMultiDimensions().length; vd++) {
+                        setSingleDimensionStepValue(variableConfig,
+                                variableConfig.getMultiDimensions()[vd],
+                                variableConfig.getMultiValues().get(i)[vd]);
+
+                        if (vd > 0)
+                            stepValues += ",";
+                        stepValues += variableConfig.getMultiValues().get(i)[vd].toString();
+                    }
+                    resetMessageSentCounts();
+                    setCountStats();
+
+                    // wait for the ramp up time before recording and timing the step
+                    waitFor(variableConfig.getStepRampUpSeconds() * 1000);
+                    benchmarkRegister.logStepStart(runId, step, topology.getVariableConfig().getStepDurationSeconds(), stepValues);
+                    stats.startRecordingStep();
+
+                    StopWatch sw = new StopWatch();
+                    sw.start();
+
+                    // wait for step duration seconds to pass
+                    while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup.get()) {
+                        if (reachedStopCondition())
+                            break;
+
+                        waitFor(1000);
+                        StepStatistics liveStepStats = stats.readCurrentStepStatistics(variableConfig.getStepDurationSeconds());
+                        benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
+                    }
+
+                    stats.stopRecordingStep();
+                    benchmarkRegister.logStepEnd(runId, step, stats.getStepStatistics(variableConfig.getStepDurationSeconds()));
+
+                    step++;
+                    counter++;
+
+                    if (reachedStopCondition())
+                        return;
                 }
-                resetMessageSentCounts();
-                setCountStats();
-
-                // wait for the ramp up time before recording and timing the step
-                waitFor(variableConfig.getStepRampUpSeconds() * 1000);
-                benchmarkRegister.logStepStart(runId, step, topology.getVariableConfig().getStepDurationSeconds(), stepValues);
-                stats.startRecordingStep();
-
-                StopWatch sw = new StopWatch();
-                sw.start();
-
-                // wait for step duration seconds to pass
-                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup.get()) {
-                    if(reachedStopCondition())
-                        break;
-
-                    waitFor(1000);
-                    StepStatistics liveStepStats = stats.readCurrentStepStatistics(variableConfig.getStepDurationSeconds());
-                    benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
-                }
-
-                stats.stopRecordingStep();
-                benchmarkRegister.logStepEnd(runId, step, stats.getStepStatistics(variableConfig.getStepDurationSeconds()));
-
-                step++;
-                counter++;
-
-                if(reachedStopCondition())
-                    return;
             }
         }
     }

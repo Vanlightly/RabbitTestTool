@@ -5,6 +5,7 @@ import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
+import com.rabbitmq.stream.Client;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
@@ -17,8 +18,6 @@ import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,9 +31,9 @@ public class TopologyGenerator {
     private BenchmarkLogger logger;
     private ConnectionSettings connectionSettings;
     private BrokerConfiguration brokerConfig;
-    private String baseUrl;
+    private List<String> baseUrls;
     private String baseAmqpUri;
-    private String downstreamBaseUrl;
+    private List<String> downstreamBaseUrls;
     private Random rand;
     private int retryBudget=30;
 
@@ -43,11 +42,15 @@ public class TopologyGenerator {
         this.logger = new BenchmarkLogger("TOPOLOGY_GEN");
         this.connectionSettings = connectionSettings;
         this.brokerConfig = brokerConfig;
-        this.baseUrl = "http://" + brokerConfig.getHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
+        this.baseUrls = new ArrayList<>();
+        for(Broker b : brokerConfig.getHosts())
+            baseUrls.add("http://" + b.getIp() + ":" + connectionSettings.getManagementPort());
+
         this.baseAmqpUri = "amqp://" + connectionSettings.getUser() + ":" + connectionSettings.getPassword() + "@";
 
-        if(!brokerConfig.getDownstreamHosts().isEmpty())
-            this.downstreamBaseUrl = "http://" + brokerConfig.getDownstreamHosts().get(0).getIp() + ":" + connectionSettings.getManagementPort();
+        this.downstreamBaseUrls = new ArrayList();
+        for(Broker dsb : brokerConfig.getDownstreamHosts())
+            this.downstreamBaseUrls.add("http://" + dsb.getIp() + ":" + connectionSettings.getManagementPort());
 
         this.rand = new Random();
     }
@@ -148,6 +151,15 @@ public class TopologyGenerator {
     }
 
     public void declareQueue(QueueConfig queueConfig, int ordinal, int nodeIndex) {
+        String queueName = queueConfig.getQueueName(ordinal);
+        if(queueConfig.getQueueType() == QueueType.Standard)
+            declareStandardQueue(queueConfig, queueName, ordinal, nodeIndex);
+        else
+            declareStreamQueue(queueConfig, queueName, nodeIndex);
+    }
+
+    private void declareStandardQueue(QueueConfig queueConfig, String queueName, int ordinal, int nodeIndex) {
+
         JSONObject arguments = new JSONObject();
 
         boolean isQuorum = queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("x-queue-type") && x.getValue().equals("quorum"));
@@ -165,8 +177,6 @@ public class TopologyGenerator {
                 arguments.put(prop.getKey(), prop.getValue());
             }
         }
-
-        String queueName = queueConfig.getQueueName(ordinal);
 
         JSONObject queue = new JSONObject();
         queue.put("auto_delete", false);
@@ -212,7 +222,7 @@ public class TopologyGenerator {
             String srcName = "";
             if(sc.getSrcTargetType() == ShovelTarget.Queue
                     && sc.getSrcTargetName().toLowerCase().equals("counterpart")) {
-                    srcName = queueName;
+                srcName = queueName;
             }
             else {
                 srcName = sc.getSrcTargetName();
@@ -230,6 +240,26 @@ public class TopologyGenerator {
                     sc.getReconnectDelaySeconds(),
                     sc.getAckMode());
         }
+    }
+
+    private void declareStreamQueue(QueueConfig queueConfig, String queueName, int nodeIndex) {
+        Broker broker = queueConfig.isDownstream()
+                ? brokerConfig.getDownstreamHosts().get(nodeIndex)
+                : brokerConfig.getHosts().get(nodeIndex);
+
+        Client client = new Client(new Client.ClientParameters()
+                    .host(broker.getIp())
+                    .port(broker.getStreamPort())
+                    .virtualHost(queueConfig.getVhostName())
+                    .username(connectionSettings.getUser())
+                    .password(connectionSettings.getPassword())
+            );
+
+        client.create(queueName, new Client.StreamParametersBuilder()
+                .maxLengthBytes(queueConfig.getRetentionSize())
+                .maxSegmentSizeBytes(queueConfig.getSegmentSize()).build());
+//        client.create(queueName);
+        client.close();
     }
 
     private boolean deleteQueue(String vhost, String queueName, boolean isDownstream) {
@@ -307,64 +337,67 @@ public class TopologyGenerator {
         put(url, wrapper.toString());
     }
 
-    public JSONArray getQueues(String vhost, boolean isDownstream) {
-        String url = getQueuesUrl(vhost, isDownstream);
-
-        try {
-            RequestConfig.Builder requestConfig = RequestConfig.custom();
-            requestConfig.setConnectTimeout(60 * 1000);
-            requestConfig.setConnectionRequestTimeout(60 * 1000);
-            requestConfig.setSocketTimeout(60 * 1000);
-
-            CloseableHttpClient client = HttpClients.createDefault();
-            HttpGet httpGet = new HttpGet(url);
-            httpGet.addHeader("accepts", "application/json");
-            httpGet.setConfig(requestConfig.build());
-
-            UsernamePasswordCredentials creds
-                    = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
-            httpGet.addHeader(new BasicScheme().authenticate(creds, httpGet, null));
-
-            CloseableHttpResponse response = client.execute(httpGet);
-            int responseCode = response.getStatusLine().getStatusCode();
-
-            if(responseCode != 200) {
-                throw new TopologyException("Received a non success response code executing GET " + url
-                        + " Code:" + responseCode
-                        + " Response: " + response.toString());
-            }
-
-            String json = EntityUtils.toString(response.getEntity(), "UTF-8");
-            client.close();
+    public JSONArray getQueues(String vhost, boolean isDownstream, int attemptLimit) {
+        int attempts = 1;
+        TopologyException lastEx = null;
+        while(attempts <= attemptLimit) {
+            attempts++;
+            String url = getQueuesUrl(vhost, isDownstream);
 
             try {
-                return new JSONArray(json);
-            }
-            catch(JSONException je) {
-                if(je.getMessage().startsWith("Duplicate key")) {
-                    //System.out.println("Duplicate key bug!");
-                    String pattern = "\\\"(.+)\\\"";
-                    Pattern r = Pattern.compile(pattern);
-                    Matcher m = r.matcher(je.getMessage());
-                    if(m.find()) {
-                        String duplicateKey = m.group(1);
-                        while (json.contains(duplicateKey))
-                            json = json.replaceFirst(duplicateKey, UUID.randomUUID().toString());
+                RequestConfig.Builder requestConfig = RequestConfig.custom();
+                requestConfig.setConnectTimeout(60 * 1000);
+                requestConfig.setConnectionRequestTimeout(60 * 1000);
+                requestConfig.setSocketTimeout(60 * 1000);
 
-                        return new JSONArray(json);
-                    }
-                    else {
+                CloseableHttpClient client = HttpClients.createDefault();
+                HttpGet httpGet = new HttpGet(url);
+                httpGet.addHeader("accepts", "application/json");
+                httpGet.setConfig(requestConfig.build());
+
+                UsernamePasswordCredentials creds
+                        = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
+                httpGet.addHeader(new BasicScheme().authenticate(creds, httpGet, null));
+
+                CloseableHttpResponse response = client.execute(httpGet);
+                int responseCode = response.getStatusLine().getStatusCode();
+
+                if (responseCode != 200) {
+                    throw new TopologyException("Received a non success response code executing GET " + url
+                            + " Code:" + responseCode
+                            + " Response: " + response.toString());
+                }
+
+                String json = EntityUtils.toString(response.getEntity(), "UTF-8");
+                client.close();
+
+                try {
+                    return new JSONArray(json);
+                } catch (JSONException je) {
+                    if (je.getMessage().startsWith("Duplicate key")) {
+                        //System.out.println("Duplicate key bug!");
+                        String pattern = "\\\"(.+)\\\"";
+                        Pattern r = Pattern.compile(pattern);
+                        Matcher m = r.matcher(je.getMessage());
+                        if (m.find()) {
+                            String duplicateKey = m.group(1);
+                            while (json.contains(duplicateKey))
+                                json = json.replaceFirst(duplicateKey, UUID.randomUUID().toString());
+
+                            return new JSONArray(json);
+                        } else {
+                            throw je;
+                        }
+                    } else {
                         throw je;
                     }
                 }
-                else {
-                    throw je;
-                }
+            } catch (Exception e) {
+                lastEx = new TopologyException("An exception occurred executing GET " + url, e);
             }
         }
-        catch(Exception e) {
-            throw new TopologyException("An exception occurred executing GET " + url, e);
-        }
+
+        throw lastEx;
     }
 
     public List<String> getNodeNames() {
@@ -610,7 +643,7 @@ public class TopologyGenerator {
     }
 
     private String getNodesUrl() {
-        return this.baseUrl + "/api/nodes";
+        return this.baseUrls + "/api/nodes";
     }
 
     private String getVHostUserPermissionsUrl(String vhost, String user, boolean isDownstream) {
@@ -647,12 +680,12 @@ public class TopologyGenerator {
 
     private String getUpstreamUri() {
         // for now just get random broker from upstream cluster
-        return baseAmqpUri+brokerConfig.getHosts().get(rand.nextInt(brokerConfig.getHosts().size())).getIp();
+        return baseAmqpUri +brokerConfig.getHosts().get(rand.nextInt(brokerConfig.getHosts().size())).getIp();
     }
 
     private String getDownstreamUri() {
         // for now just get random broker from downstream cluster
-        return baseAmqpUri+brokerConfig.getDownstreamHosts().get(rand.nextInt(brokerConfig.getDownstreamHosts().size())).getIp();
+        return baseAmqpUri +brokerConfig.getDownstreamHosts().get(rand.nextInt(brokerConfig.getDownstreamHosts().size())).getIp();
     }
 
     private String getShovelUrl(String shovelName, String vhost, boolean isDownstream) {
@@ -660,13 +693,20 @@ public class TopologyGenerator {
     }
 
     private String getFederationUrl(String name, String vhost) {
-        return downstreamBaseUrl + "/api/parameters/federation-upstream/" + vhost +"/" + name;
+        return downstreamBaseUrls + "/api/parameters/federation-upstream/" + vhost +"/" + name;
     }
 
     private String chooseUrl(boolean isDownstream) {
-        if(isDownstream)
-            return downstreamBaseUrl;
+        if(isDownstream) {
+            if(downstreamBaseUrls.size() == 1)
+                return downstreamBaseUrls.get(0);
+            else
+                return downstreamBaseUrls.get(rand.nextInt(downstreamBaseUrls.size() - 1));
+        }
 
-        return baseUrl;
+        if(baseUrls.size() == 1)
+            return baseUrls.get(0);
+        else
+            return baseUrls.get(rand.nextInt(baseUrls.size()-1));
     }
 }

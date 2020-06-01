@@ -262,9 +262,9 @@ public class Consumer implements Runnable  {
             else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Random))
                 host = queueHosts.getRandomHost();
             else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.Local))
-                host = queueHosts.getHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+                host = queueHosts.getHost(consumerSettings.getQueue());
             else if (connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.NonLocal))
-                host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), consumerSettings.getQueue());
+                host = queueHosts.getRandomOtherHost(consumerSettings.getQueue());
             else
                 throw new TopologyException("ConnectToNode value not supported: " + connectionSettings.getConsumerConnectToNode());
 
@@ -286,7 +286,7 @@ public class Consumer implements Runnable  {
             }
         }
         else if(connectionSettings.getConsumerConnectToNode().equals(ConnectToNode.NonLocal)) {
-            if(queueHosts.isQueueHost(connectionSettings.getVhost(), consumerSettings.getQueue(), currentHost)) {
+            if(queueHosts.isQueueHost(consumerSettings.getQueue(), currentHost)) {
                 logger.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
                 return true;
             }

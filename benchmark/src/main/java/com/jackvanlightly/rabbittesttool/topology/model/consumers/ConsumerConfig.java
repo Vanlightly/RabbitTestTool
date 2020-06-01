@@ -1,26 +1,37 @@
 package com.jackvanlightly.rabbittesttool.topology.model.consumers;
 
+import com.jackvanlightly.rabbittesttool.topology.model.Protocol;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 
 import java.util.List;
 
 public class ConsumerConfig {
-    private String group;
-    private String vhostName;
-    private AckMode ackMode;
-    private int scale;
-    private String queueGroup;
-    private int frameMax;
-    private int processingMs;
-    private boolean isDownstream;
+    String group;
+    String vhostName;
+    Protocol protocol;
+    AckMode ackMode;
+    int scale;
+    String queueGroup;
+    int frameMax;
+    int processingMs;
+    boolean isDownstream;
 
     public ConsumerConfig() {
     }
 
-    public ConsumerConfig(String group, String vhostName, AckMode ackMode, int scale, String queueGroup, int frameMax, int processingMs, boolean isDownstream) {
+    public ConsumerConfig(String group,
+                          String vhostName,
+                          Protocol protocol,
+                          AckMode ackMode,
+                          int scale,
+                          String queueGroup,
+                          int frameMax,
+                          int processingMs,
+                          boolean isDownstream) {
         this.group = group;
         this.vhostName = vhostName;
+        this.protocol = protocol;
         this.ackMode = ackMode;
         this.scale = scale;
         this.queueGroup = queueGroup;
@@ -32,6 +43,7 @@ public class ConsumerConfig {
     public ConsumerConfig clone(int scaleNumber) {
         return new ConsumerConfig(this.group + VirtualHost.getScaleSuffix(scaleNumber),
             this.vhostName,
+            this.protocol,
             this.ackMode,
             this.scale,
             this.queueGroup + VirtualHost.getScaleSuffix(scaleNumber),
@@ -111,5 +123,13 @@ public class ConsumerConfig {
 
     public void setDownstream(boolean downstream) {
         isDownstream = downstream;
+    }
+
+    public Protocol getProtocol() {
+        return protocol;
+    }
+
+    public void setProtocol(Protocol protocol) {
+        this.protocol = protocol;
     }
 }

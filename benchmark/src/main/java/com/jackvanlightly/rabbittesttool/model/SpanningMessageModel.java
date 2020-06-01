@@ -581,7 +581,9 @@ public class SpanningMessageModel {
     // this is the unconsumed tail of expected messages. Given that unavailability can cause this
     // we cannot classify these as lost
     private List<Span> identifyMissingRemainder() {
-        long remainderLow = actualReceivedClosed.get(actualReceivedClosed.size()-1).getHigh()+1;
+        long remainderLow = actualReceivedClosed.size() == 0
+                ? 0
+                : actualReceivedClosed.get(actualReceivedClosed.size()-1).getHigh()+1;
 
         List<Span> remainder = new ArrayList<>();
         for(Span span : expectsToReceive) {

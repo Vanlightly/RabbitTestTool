@@ -6,11 +6,13 @@ import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
+import com.jackvanlightly.rabbittesttool.topology.model.Protocol;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.PublisherConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.SendToMode;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class PublisherGroup {
     private BenchmarkLogger logger;
     private List<Publisher> publishers;
+    private List<StreamPublisher> streamPublishers;
     private PublisherGroupStats publisherGroupStats;
     private List<String> currentQueuesInGroup;
     private ConnectionSettings connectionSettings;
@@ -45,12 +48,10 @@ public class PublisherGroup {
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
         this.publishers = new ArrayList<>();
+        this.streamPublishers = new ArrayList<>();
 
         this.publisherCounter = 0;
-        //this.executorService = Executors.newFixedThreadPool(maxScale, new NamedThreadFactory(getExecutorId()));
         this.executorService = Executors.newCachedThreadPool(new NamedThreadFactory(getExecutorId()));
-        this.publishers = new ArrayList<>();
-
 
         if(publisherConfig.getSendToMode() == SendToMode.QueueGroup) {
             for (QueueConfig queueConfig : vhost.getQueues()) {
@@ -70,9 +71,22 @@ public class PublisherGroup {
     }
 
     public boolean performInitialPublish() {
-        ExecutorService publishExecutor = Executors.newFixedThreadPool(this.publishers.size(), new NamedThreadFactory(getInitialPublishExecutorId()));
-        for(Publisher publisher : this.publishers) {
-            publishExecutor.submit(() -> publisher.performInitialSend());
+        ExecutorService publishExecutor = null;
+        if(!publishers.isEmpty()) {
+            publishExecutor = Executors.newFixedThreadPool(this.publishers.size(),
+                    new NamedThreadFactory(getInitialPublishExecutorId()));
+
+            for (Publisher publisher : this.publishers) {
+                publishExecutor.submit(() -> publisher.performInitialSend());
+            }
+        }
+        else {
+            publishExecutor = Executors.newFixedThreadPool(this.streamPublishers.size(),
+                    new NamedThreadFactory(getInitialPublishExecutorId()));
+
+            for (StreamPublisher publisher : this.streamPublishers) {
+                publishExecutor.submit(() -> publisher.performInitialSend());
+            }
         }
 
         logger.info("Waiting for initial publish to complete");
@@ -94,33 +108,57 @@ public class PublisherGroup {
     }
 
     public void startInitialPublishers() {
-        for(Publisher publisher : this.publishers) {
-            this.executorService.execute(publisher);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers) {
+                this.executorService.execute(publisher);
+            }
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers) {
+                this.executorService.execute(publisher);
+            }
         }
     }
 
     public void setWarmUpModifier(double modifier) {
-        for(Publisher publisher : this.publishers) {
-            publisher.setWarmUpModifier(modifier);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers) {
+                publisher.setWarmUpModifier(modifier);
+            }
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers) {
+                publisher.setWarmUpModifier(modifier);
+            }
         }
     }
 
     public void endWarmUp() {
-        for(Publisher publisher : this.publishers) {
-            publisher.endWarmUp();
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers) {
+                publisher.endWarmUp();
+            }
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers) {
+                publisher.endWarmUp();
+            }
         }
     }
 
     public int getPublisherCount() {
-        return this.publishers.size();
+        if(!publishers.isEmpty())
+            return this.publishers.size();
+        else
+            return this.streamPublishers.size();
     }
 
     public void addAndStartPublisher() {
-        Publisher publisher = addPublisher();
+        Runnable publisher = addPublisher();
         this.executorService.execute(publisher);
     }
 
-    private Publisher addPublisher() {
+    private Runnable addPublisher() {
         this.publisherCounter++;
 
         PublisherSettings settings = null;
@@ -149,19 +187,35 @@ public class PublisherGroup {
         settings.setMessageHeadersPerMessage(publisherConfig.getHeadersPerMessage());
         settings.setAvailableHeaders(publisherConfig.getAvailableHeaders());
 
-        Publisher publisher = new Publisher(
-                getPublisherId(publisherCounter),
-                messageModel,
-                publisherGroupStats,
-                connectionSettings,
-                queueHosts,
-                settings,
-                currentQueuesInGroup,
-                executorService);
+        if(settings.getPublisherMode().getProtocol() == Protocol.AMQP091) {
+            Publisher publisher = new Publisher(
+                    getPublisherId(publisherCounter),
+                    messageModel,
+                    publisherGroupStats,
+                    connectionSettings,
+                    queueHosts,
+                    settings,
+                    currentQueuesInGroup,
+                    executorService);
 
-        this.publishers.add(publisher);
+            this.publishers.add(publisher);
 
-        return publisher;
+            return publisher;
+        }
+        else {
+            StreamPublisher publisher = new StreamPublisher(
+                    getPublisherId(publisherCounter),
+                    messageModel,
+                    publisherGroupStats,
+                    connectionSettings,
+                    this.queueHosts,
+                    settings,
+                    currentQueuesInGroup);
+
+            this.streamPublishers.add(publisher);
+
+            return publisher;
+        }
     }
 
     public void addQueue(String queueGroup, String queue) {
@@ -169,79 +223,179 @@ public class PublisherGroup {
             && publisherConfig.getSendToQueueGroup().getQueueGroup().equals(queueGroup)) {
             currentQueuesInGroup.add(queue);
 
-            for (Publisher publisher : this.publishers)
-                publisher.addQueue(queue);
+            if(!publishers.isEmpty()) {
+                for (Publisher publisher : this.publishers)
+                    publisher.addQueue(queue);
+            }
+            else {
+                for (StreamPublisher publisher : this.streamPublishers)
+                    publisher.addQueue(queue);
+            }
         }
     }
 
     public void setMessageSize(int bytes) {
-        for(Publisher publisher : this.publishers)
-            publisher.setMessageSize(bytes);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.setMessageSize(bytes);
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                publisher.setMessageSize(bytes);
+        }
     }
 
     public void setMessageHeaders(int headers) {
-        for(Publisher publisher : this.publishers)
-            publisher.setMessageHeaders(headers);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.setMessageHeaders(headers);
+        }
+        else
+            throw new NotImplementedException();
     }
 
     public int getPublishRatePerSecond() {
-        return this.publishers.get(0).getPublishRatePerSecond();
+        if(!publishers.isEmpty())
+            return this.publishers.get(0).getPublishRatePerSecond();
+        else
+            return this.streamPublishers.get(0).getPublishRatePerSecond();
     }
 
     public void setPublishRatePerSecond(int msgsPerSecond) {
-        for(Publisher publisher : this.publishers)
-            publisher.setPublishRatePerSecond(msgsPerSecond);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.setPublishRatePerSecond(msgsPerSecond);
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                publisher.setPublishRatePerSecond(msgsPerSecond);
+        }
     }
 
     public void modifyPublishRatePerSecond(double percentModification) {
-        for(Publisher publisher : this.publishers)
-            publisher.modifyPublishRatePerSecond(percentModification);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.modifyPublishRatePerSecond(percentModification);
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                publisher.modifyPublishRatePerSecond(percentModification);
+        }
     }
 
     public int getInFlightLimit() {
-        return this.publishers.get(0).getInFlightLimit();
+        if(!publishers.isEmpty())
+            return this.publishers.get(0).getInFlightLimit();
+        else
+            return this.streamPublishers.get(0).getInFlightLimit();
+    }
+
+    public int getMaxBatchSize() {
+        if(streamPublishers.isEmpty())
+            return 0;
+        else
+            return this.streamPublishers.get(0).getMaxBatchSize();
+    }
+
+    public int getMaxBatchSizeBytes() {
+        if(streamPublishers.isEmpty())
+            return 0;
+        else
+            return this.streamPublishers.get(0).getMaxBatchSizeBytes();
+    }
+
+    public int getMaxBatchWaitMs() {
+        if(streamPublishers.isEmpty())
+            return 0;
+        else
+            return this.streamPublishers.get(0).getMaxBatchWaitMs();
     }
 
     public void setInFlightLimit(int inFlightLimit) {
-        for(Publisher publisher : this.publishers)
-            publisher.setInFlightLimit(inFlightLimit);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.setInFlightLimit(inFlightLimit);
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                publisher.setInFlightLimit(inFlightLimit);
+        }
     }
 
     public void setRoutingKeyIndex(int rkIndex) {
-        for(Publisher publisher : this.publishers)
-            publisher.setRoutingKeyIndex(rkIndex);
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.setRoutingKeyIndex(rkIndex);
+        }
+        else {
+            throw new NotImplementedException();
+        }
     }
 
     public void resetSendCount() {
-        for(Publisher publisher : this.publishers)
-            publisher.resetSendCount();
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.resetSendCount();
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                publisher.resetSendCount();
+        }
     }
 
     public List<Long> getRecordedSendCounts() {
         List<Long> sendCounts = new ArrayList<>();
-        for(Publisher publisher : this.publishers)
-            sendCounts.add(publisher.getRecordedSendCount());
+
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                sendCounts.add(publisher.getRecordedSendCount());
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                sendCounts.add(publisher.getRecordedSendCount());
+        }
 
         return sendCounts;
     }
 
     public List<Long> getRealSendCounts() {
         List<Long> sendCounts = new ArrayList<>();
-        for(Publisher publisher : this.publishers)
-            sendCounts.add(publisher.getRealSendCount());
+
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                sendCounts.add(publisher.getRealSendCount());
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                sendCounts.add(publisher.getRealSendCount());
+        }
 
         return sendCounts;
     }
 
     public void stopAllPublishers() {
-        for(Publisher publisher : this.publishers)
-            publisher.signalStop();
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                publisher.signalStop();
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                publisher.signalStop();
+        }
     }
 
     public int getPendingConfirmCount() {
         int total = 0;
-        for(Publisher publisher : this.publishers) {
-            total += publisher.getPendingConfirmCount();
+
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers) {
+                total += publisher.getPendingConfirmCount();
+            }
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers) {
+                total += publisher.getPendingConfirmCount();
+            }
         }
 
         return total;

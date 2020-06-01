@@ -70,6 +70,14 @@ public class VirtualHost {
     }
 
     public static String getScaleSuffix(int scaleNumber) {
-        return "-g" + scaleNumber;
+        return "-sn" + scaleNumber;
     }
+
+//    public static VirtualHost getDefaultVHost() {
+//        VirtualHost vhost = new VirtualHost();
+//        vhost.setName("%2f");
+//        vhost.setDownstream(false);
+//
+//        return vhost;
+//    }
 }

@@ -19,52 +19,49 @@ import java.util.stream.Collectors;
 
 public class Publisher implements Runnable {
 
-    private BenchmarkLogger logger;
-    private long confirmTimeoutThresholdNs;
+    BenchmarkLogger logger;
+    long confirmTimeoutThresholdNs;
 
-    private String publisherId;
-    private MessageModel messageModel;
-    private PublisherGroupStats publisherGroupStats;
-    private ConnectionSettings connectionSettings;
-    private ConnectionFactory factory;
-    private QueueHosts queueHosts;
-    private ExecutorService executorService;
-    private PublisherSettings publisherSettings;
-    private AtomicBoolean isCancelled;
-    private int routingKeyIndex;
-    private PublisherStats publisherStats;
-    private PublisherListener listener;
-    private Broker currentHost;
-    private int checkHostInterval = 100000;
+    String publisherId;
+    MessageModel messageModel;
+    PublisherGroupStats publisherGroupStats;
+    ConnectionSettings connectionSettings;
+    ConnectionFactory factory;
+    QueueHosts queueHosts;
+    ExecutorService executorService;
+    PublisherSettings publisherSettings;
+    AtomicBoolean isCancelled;
+    int routingKeyIndex;
+    PublisherStats publisherStats;
+    PublisherListener listener;
+    Broker currentHost;
+    int checkHostInterval = 100000;
 
     // for stream round robin
-    private int maxStream;
-    private Map<Integer, Long> streamCounter;
+    int maxStream;
+    Map<Integer, Long> streamCounter;
 
     // for send to queue round robin
-    private List<String> queuesInGroup;
-    private int queueCount;
+    List<String> queuesInGroup;
+    int queueCount;
 
     // for quick logic decisions
-    private boolean useConfirms;
-    private boolean isFixedRoutingKey;
-    private String fixedExchange;
-    private String fixedRoutingKey;
-    private int routingKeyCount;
-    private int inFlightLimit;
+    boolean useConfirms;
+    boolean isFixedRoutingKey;
+    String fixedExchange;
+    String fixedRoutingKey;
+    int routingKeyCount;
+    int inFlightLimit;
 
     // for message publishing and confirms
-    private MessageGenerator messageGenerator;
-    private List<Map<String,Object>> availableMessageHeaderCombinations;
-    private int availableHeaderCount;
-    private Random rand = new Random();
+    MessageGenerator messageGenerator;
+    List<Map<String,Object>> availableMessageHeaderCombinations;
+    int availableHeaderCount;
+    Random rand = new Random();
 
     // for publishing rate
     private boolean rateLimit;
-    private double warmUpModifier;
-    private int sentInPeriod;
-    private int limitInPeriod;
-    private int periodNs;
+    RateLimiter rateLimiter;
     private long sentCount;
     private long sendLimit;
 
@@ -101,14 +98,15 @@ public class Publisher implements Runnable {
             this.routingKeyCount = publisherSettings.getSendToExchange().getRoutingKeys().length;
         }
 
-        //this.executorService = Executors.newSingleThreadExecutor(new NamedThreadFactory("Publisher-" + publisherId));
-
         this.availableMessageHeaderCombinations = initializeHeaders(publisherSettings.getMessageHeadersPerMessage());
         this.availableHeaderCount = this.availableMessageHeaderCombinations.size();
         this.inFlightLimit = this.publisherSettings.getPublisherMode().getInFlightLimit();
+
         this.sendLimit = this.publisherSettings.getMessageLimit();
-        this.warmUpModifier = 1.0;
         this.rateLimit = this.publisherSettings.getPublishRatePerSecond() > 0;
+
+        this.rateLimiter = new RateLimiter();
+
         initializeStreamCounter();
         initializeRouting();
 
@@ -150,29 +148,29 @@ public class Publisher implements Runnable {
 
     public void setPublishRatePerSecond(int msgsPerSecond) {
         this.publisherSettings.setPublishRatePerSecond(msgsPerSecond);
-        configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
+        this.rateLimiter.configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
     }
 
     public void modifyPublishRatePerSecond(double percentModification) {
         int newPublishRate = (int)(percentModification * this.publisherSettings.getPublishRatePerSecond());
         this.publisherSettings.setPublishRatePerSecond(newPublishRate);
-        configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
+        this.rateLimiter.configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
     }
 
     public void setWarmUpModifier(double warmUpModifier) {
         this.rateLimit = true;
-        this.warmUpModifier = warmUpModifier;
+        this.rateLimiter.setWarmUpModifier(warmUpModifier);
         int rate = this.publisherSettings.getPublishRatePerSecond() > 0
                 ? this.publisherSettings.getPublishRatePerSecond()
                 : 10000;
-        configureRateLimit(rate);
+        this.rateLimiter.configureRateLimit(rate);
     }
 
     public void endWarmUp() {
-        warmUpModifier = 1.0;
+        this.rateLimiter.setWarmUpModifier(1.0);
         rateLimit = publisherSettings.getPublishRatePerSecond() > 0;
         if(rateLimit)
-            configureRateLimit(publisherSettings.getPublishRatePerSecond());
+            this.rateLimiter.configureRateLimit(publisherSettings.getPublishRatePerSecond());
     }
 
     public int getInFlightLimit() {
@@ -285,19 +283,10 @@ public class Publisher implements Runnable {
 
                 connection.addBlockedListener(listener);
 
-                // period and limit for rate limiting
-                long periodStartNs = System.nanoTime();
-
-                if (rateLimit)
-                    configureRateLimit(publisherSettings.getPublishRatePerSecond());
-
-                // examples:
-                //nextPublishRatePerSecondStep
-                //  Msgs per sec: 1	    measurementPeriod: 1000ms		limit: 1
-                //  Msgs per sec: 2	    measurementPeriod: 500ms		limit: 1
-                //  Msgs per sec: 10    measurementPeriod: 100ms		limit: 1
-                //  Msgs per sec: 100   measurementPeriod: 10ms		    limit: 1
-                //  Msgs per sec: 10000	measurementPeriod: 10ms		    limit: 100
+                if (rateLimit) {
+                    this.rateLimiter.configureRateLimit(publisherSettings.getPublishRatePerSecond());
+                    this.checkHostInterval = this.rateLimiter.getLimitInSecond()*30;
+                }
 
                 int currentInFlightLimit = publisherSettings.getPublisherMode().getInFlightLimit();
                 int currentStream = 0;
@@ -336,24 +325,8 @@ public class Publisher implements Runnable {
                         if (currentStream > maxStream)
                             currentStream = 0;
 
-                        if (rateLimit) {
-                            this.sentInPeriod++;
-                            long now = System.nanoTime();
-                            long elapsedNs = now - periodStartNs;
-
-                            if (this.sentInPeriod >= this.limitInPeriod) {
-                                long waitNs = this.periodNs - elapsedNs;
-                                if (waitNs > 0)
-                                    waitFor((int) (waitNs / 990000));
-
-                                // may need to adjust for drift over time
-                                periodStartNs = System.nanoTime();
-                                this.sentInPeriod = 0;
-                            } else if (now - periodStartNs > this.periodNs) {
-                                periodStartNs = now;
-                                this.sentInPeriod = 0;
-                            }
-                        }
+                        if (rateLimit)
+                            rateLimiter.rateLimit();
 
                         if(sentCount % this.checkHostInterval == 0) {
                             if(reconnectToNewHost()) {
@@ -406,27 +379,6 @@ public class Publisher implements Runnable {
             messageModel.clientDisconnected(publisherId);
         }
         catch(Exception e){}
-    }
-
-    private void configureRateLimit(int publishRate) {
-        // if a non rate limited publisher has a warm up, then for the warm up
-        // we set the top rate to be 10000
-        if(publishRate == 0)
-            publishRate = 10000;
-
-        int rate = Math.max(1, (int)(publishRate * this.warmUpModifier));
-        int measurementPeriodMs = 1000 / rate;
-
-        if (measurementPeriodMs >= 10) {
-            this.limitInPeriod = 1;
-        } else {
-            measurementPeriodMs = 10;
-            int periodsPerSecond = 1000 / measurementPeriodMs;
-            this.limitInPeriod = rate / periodsPerSecond;
-        }
-
-        this.periodNs = measurementPeriodMs * 1000000;
-        this.checkHostInterval = rate*30;
     }
 
     private void waitFor(int milliseconds) {
@@ -513,11 +465,11 @@ public class Publisher implements Runnable {
             else if (connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.Local)
                     && publisherSettings.getSendToMode() == SendToMode.QueueGroup
                     && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
-                host = queueHosts.getHost(connectionSettings.getVhost(), getQueueCounterpart());
+                host = queueHosts.getHost(getQueueCounterpart());
             else if (connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.NonLocal)
                     && publisherSettings.getSendToMode() == SendToMode.QueueGroup
                     && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart)
-                host = queueHosts.getRandomOtherHost(connectionSettings.getVhost(), getQueueCounterpart());
+                host = queueHosts.getRandomOtherHost(getQueueCounterpart());
             else
                 host = queueHosts.getRandomHost();
 
@@ -546,7 +498,7 @@ public class Publisher implements Runnable {
         else if (connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.NonLocal)
                 && publisherSettings.getSendToMode() == SendToMode.QueueGroup
                 && publisherSettings.getSendToQueueGroup().getQueueGroupMode() == QueueGroupMode.Counterpart) {
-            if(queueHosts.isQueueHost(connectionSettings.getVhost(), getQueueCounterpart(), currentHost)) {
+            if(queueHosts.isQueueHost(getQueueCounterpart(), currentHost)) {
                 logger.info("Detected change of queue host. Now connected to the queue host in non-local mode! " + currentHost.getNodeName() +   " hosts the queue");
                 return true;
             }

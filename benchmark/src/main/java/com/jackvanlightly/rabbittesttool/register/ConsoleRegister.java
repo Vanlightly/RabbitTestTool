@@ -27,13 +27,25 @@ public class ConsoleRegister implements BenchmarkRegister {
     private String consumeIntervalsFile;
     private String disconnectedIntervalsFile;
 
-    public ConsoleRegister(PrintStream out, boolean printLiveStats) {
+    public ConsoleRegister(PrintStream out,
+                           boolean printLiveStats) {
         this.out = out;
         this.printLiveStats = printLiveStats;
         long ts = System.currentTimeMillis();
         violationsFile = "/tmp/model-results-violations-" + ts + ".txt";
         consumeIntervalsFile = "/tmp/model-results-no-consume-periods-" + ts + ".txt";
         disconnectedIntervalsFile = "/tmp/model-results-no-connection-periods-" + ts + ".txt";
+    }
+
+    public ConsoleRegister(PrintStream out,
+                           boolean printLiveStats,
+                           String modelResultsPathBase) {
+        this.out = out;
+        this.printLiveStats = printLiveStats;
+        long ts = System.currentTimeMillis();
+        violationsFile = modelResultsPathBase + "/model-results-violations-" + ts + ".txt";
+        consumeIntervalsFile = modelResultsPathBase + "/model-results-no-consume-periods-" + ts + ".txt";
+        disconnectedIntervalsFile = modelResultsPathBase + "/tmp/model-results-no-connection-periods-" + ts + ".txt";
     }
 
     public String getViolationsFile() {

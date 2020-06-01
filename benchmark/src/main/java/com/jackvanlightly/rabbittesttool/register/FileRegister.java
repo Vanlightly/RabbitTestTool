@@ -22,11 +22,18 @@ public class FileRegister implements BenchmarkRegister {
     private FileWriter fileWriter;
     private PrintWriter printWriter;
     private LocalDateTime startTime;
+    private String violationsFile;
+    private String consumeIntervalsFile;
+    private String disconnectedIntervalsFile;
 
     public FileRegister(String path) throws IOException {
         startTime = LocalDateTime.now();
         fileWriter = new FileWriter(path + "/" + startTime.toString() + ".log");
         printWriter = new PrintWriter(fileWriter);
+        long ts = System.currentTimeMillis();
+        violationsFile = path + "/model-results-violations-" + ts + ".txt";
+        consumeIntervalsFile = path + "/tmp/model-results-no-consume-periods-" + ts + ".txt";
+        disconnectedIntervalsFile = path + "/tmp/model-results-no-connection-periods-" + ts + ".txt";
     }
 
     @Override

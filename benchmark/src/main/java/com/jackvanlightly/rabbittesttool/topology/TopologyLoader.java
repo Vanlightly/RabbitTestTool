@@ -6,6 +6,7 @@ import com.jackvanlightly.rabbittesttool.topology.model.consumers.AckMode;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.*;
+import com.rabbitmq.stream.ByteCapacity;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -13,6 +14,8 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -50,7 +53,10 @@ public class TopologyLoader {
         topology.setDeclareArtefacts(declareArtefacts);
         topology.setTopologyJson(topologyJson.toString());
 
-        topology.setTopologyName(getMandatoryStrValue(topologyJson, "topologyName"));
+        Path path = Paths.get(topologyPath);
+        Path fileName = path.getFileName();
+        topology.setTopologyName(fileName.toString());
+
         topology.setBenchmarkType(getBenchmarkType(getMandatoryStrValue(topologyJson, "benchmarkType")));
         topology.setTopologyType(getTopologyType(getMandatoryStrValue(topologyJson, "topologyType")));
         topology.setDescription(getDescription(suppliedDescription, suppliedTopologyVariables, topologyVariableDefaults, suppliedPolicyVariables, suppliedPolicyVariables));
@@ -345,7 +351,7 @@ public class TopologyLoader {
                 pgConfig.setVhostName(vhostName);
                 pgConfig.setDownstream(isDownstream);
                 pgConfig.setScale(scale);
-                pgConfig.setDeliveryMode(getDeliveryMode(getMandatoryStrValue(pgJson, "deliveryMode")));
+                pgConfig.setDeliveryMode(getDeliveryMode(getOptionalStrValue(pgJson, "deliveryMode", "persistent")));
                 pgConfig.setHeadersPerMessage(getOptionalIntValue(pgJson, "headersPerMessage", 0));
                 pgConfig.setFrameMax(getOptionalIntValue(pgJson, "frameMax", 0));
                 pgConfig.setMessageLimit(stepOverride.getMessageLimit());
@@ -417,6 +423,10 @@ public class TopologyLoader {
                 if (pgJson.has("publishMode")) {
                     JSONObject pmJson = pgJson.getJSONObject("publishMode");
                     pm.setUseConfirms(getMandatoryBoolValue(pmJson, "useConfirms"));
+                    pm.setProtocol(getProtocol(getOptionalStrValue(pmJson, "protocol", "amqp091")));
+                    pm.setMaxBatchSize(getOptionalIntValue(pmJson, "maxBatchSize", 1));
+                    pm.setMaxBatchSizeBytes(getOptionalIntValue(pmJson, "maxBatchSizeBytes", 1000));
+                    pm.setMaxBatchWaitMs(getOptionalIntValue(pmJson, "maxBatchWaitMs", 1000));
 
                     if (pm.isUseConfirms())
                         pm.setInFlightLimit(getMandatoryIntValue(pmJson, "inFlightLimit"));
@@ -465,6 +475,7 @@ public class TopologyLoader {
                 cgConfig.setVhostName(vhostName);
                 cgConfig.setQueueGroup(getMandatoryStrValue(cgJson, "queuePrefix"), queueConfigs);
                 cgConfig.setScale(scale);
+                cgConfig.setProtocol(getProtocol(getOptionalStrValue(cgJson,"protocol", "amqp091")));
                 cgConfig.setFrameMax(getOptionalIntValue(cgJson, "frameMax", 0));
                 cgConfig.setProcessingMs(getOptionalIntValue(cgJson, "processingMs", 0));
                 cgConfig.setDownstream(isDownstream);
@@ -504,6 +515,9 @@ public class TopologyLoader {
                 qConfig.setVhostName(vhostName);
                 qConfig.setDownstream(isDownstream);
                 qConfig.setScale(scale);
+                qConfig.setQueueType(getQueueType(qJson));
+                qConfig.setRetentionSize(ByteCapacity.MB(getOptionalLongValue(qJson, "retentionSizeMb", 20000)));
+                qConfig.setSegmentSize(ByteCapacity.MB(getOptionalLongValue(qJson, "segmentSizeMb", 500)));
 
                 if (qJson.has("properties"))
                     qConfig.setProperties(getProperties(qJson.getJSONArray("properties")));
@@ -615,6 +629,15 @@ public class TopologyLoader {
         }
     }
 
+    private QueueType getQueueType(JSONObject configJson) {
+        String value = getOptionalStrValue(configJson, "queueType", "standard");
+        switch (value) {
+            case "standard": return QueueType.Standard;
+            case "stream": return QueueType.Stream;
+            default: throw new TopologyException("Invalid value for 'queueType' field. Allowed values: standard, stream");
+        }
+    }
+
     public List<ExchangeConfig> loadExchanges(String vhostName, JSONArray exJsonArr, boolean isDownstream) {
         List<ExchangeConfig> exchangeConfigs = new ArrayList<>();
 
@@ -707,6 +730,7 @@ public class TopologyLoader {
         }
 
         variableConfig.setMultiValues(multiValues);
+        variableConfig.setRepeatWholeSeriesCount(getOptionalIntValue(varJson, "repeatSeries", 1));
         variableConfig.setStepDurationSeconds(getMandatoryIntValue(varJson, "stepDurationSeconds"));
         variableConfig.setStepRampUpSeconds(getMandatoryIntValue(varJson, "rampUpSeconds"));
 
@@ -744,6 +768,14 @@ public class TopologyLoader {
     }
 
     private int getOptionalIntValue(JSONObject json, String jsonPath, int defaultValue) {
+        if(json.has(jsonPath)) {
+            return json.getInt(jsonPath);
+        }
+        else
+            return defaultValue;
+    }
+
+    private long getOptionalLongValue(JSONObject json, String jsonPath, int defaultValue) {
         if(json.has(jsonPath)) {
             return json.getInt(jsonPath);
         }
@@ -867,6 +899,15 @@ public class TopologyLoader {
         }
 
         return properties;
+    }
+
+    private Protocol getProtocol(String value) {
+        switch(value.toLowerCase()) {
+            case "amqp091": return Protocol.AMQP091;
+            case "stream": return Protocol.STREAM;
+            default:
+                throw new TopologyException("Only 'amqp091' and 'stream' are valid values for 'protocol'");
+        }
     }
 
     private BenchmarkType getBenchmarkType(String value) {

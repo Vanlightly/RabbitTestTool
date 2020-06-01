@@ -9,11 +9,13 @@ import java.nio.ByteBuffer;
 
 public class MessageGenerator {
     private ByteBuffer messageBuf;
+    private int messageSize;
 
     public synchronized void setBaseMessageSize(int bytes) {
         if(bytes <= MessagePayload.MinimumMessageSize)
             bytes = MessagePayload.MinimumMessageSize;
 
+        messageSize = bytes;
         messageBuf = ByteBuffer.allocate(bytes);
     }
 
@@ -23,7 +25,9 @@ public class MessageGenerator {
         messageBuf.putLong(mp.getSequenceNumber());
         messageBuf.putLong(mp.getTimestamp());
 
-        return messageBuf.array();
+        byte[] msgBytes = new byte[messageSize];
+        System.arraycopy(messageBuf.array(), 0, msgBytes, 0, messageSize);
+        return msgBytes;
     }
 
     public static MessagePayload toMessagePayload(byte[] body) throws IOException {

@@ -179,7 +179,7 @@ public class QueuePublisher implements ConfirmListener, ReturnListener, BlockedL
 
     private Broker getBrokerToConnectTo(String queueName) {
         while(!isCancelled.get()) {
-            Broker host = queueHosts.getHost(connectionSettings.getVhost(), queueName);
+            Broker host = queueHosts.getHost(queueName);
 
             if(host != null) {
                 return host;

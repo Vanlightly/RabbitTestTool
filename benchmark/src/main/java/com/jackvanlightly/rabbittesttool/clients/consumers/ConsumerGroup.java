@@ -6,6 +6,7 @@ import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
+import com.jackvanlightly.rabbittesttool.topology.model.Protocol;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import com.jackvanlightly.rabbittesttool.topology.model.consumers.ConsumerConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
@@ -20,16 +21,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class ConsumerGroup {
-    private BenchmarkLogger logger;
-    private List<Consumer> consumers;
-    private ConnectionSettings connectionSettings;
-    private ConsumerConfig consumerConfig;
-    private MessageModel messageModel;
-    private QueueHosts queueHosts;
-    private ExecutorService executorService;
-    private Map<String, Integer> currentQueues;
-    private int consumerCounter;
-    private Stats stats;
+    BenchmarkLogger logger;
+    List<Consumer> consumers;
+    List<StreamConsumer> streamConsumers;
+    ConnectionSettings connectionSettings;
+    ConsumerConfig consumerConfig;
+    MessageModel messageModel;
+    QueueHosts queueHosts;
+    ExecutorService executorService;
+    Map<String, Integer> currentQueues;
+    int consumerCounter;
+    Stats stats;
 
     public ConsumerGroup(ConnectionSettings connectionSettings,
                          ConsumerConfig consumerConfig,
@@ -45,6 +47,7 @@ public class ConsumerGroup {
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
         this.consumers = new ArrayList<>();
+        this.streamConsumers = new ArrayList<>();
 
         this.currentQueues = new HashMap<>();
         for(QueueConfig queueConfig : vhost.getQueues()) {
@@ -55,7 +58,6 @@ public class ConsumerGroup {
         }
 
         this.consumerCounter = 0;
-        //this.executorService = Executors.newFixedThreadPool(maxScale, new NamedThreadFactory(getExecutorId()));
         this.executorService = Executors.newCachedThreadPool(new NamedThreadFactory(getExecutorId()));
         this.consumers = new ArrayList<>();
     }
@@ -65,7 +67,10 @@ public class ConsumerGroup {
     }
 
     public int getConsumerCount() {
-        return this.consumers.size();
+        if(!consumers.isEmpty())
+            return this.consumers.size();
+        else
+            return this.streamConsumers.size();
     }
 
     public void createInitialConsumers() {
@@ -75,61 +80,113 @@ public class ConsumerGroup {
     }
 
     public void startInitialConsumers() {
-        for(Consumer consumer : this.consumers) {
-            ClientUtils.waitFor(100);
-            this.executorService.execute(consumer);
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers) {
+                ClientUtils.waitFor(100);
+                this.executorService.execute(consumer);
+            }
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers) {
+                ClientUtils.waitFor(100);
+                this.executorService.execute(consumer);
+            }
         }
     }
 
     public void setAckInterval(int ackInterval) {
-        for(Consumer consumer : this.consumers) {
-            consumer.setAckInterval(ackInterval);
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers) {
+                consumer.setAckInterval(ackInterval);
+            }
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers) {
+                consumer.setAckInterval(ackInterval);
+            }
         }
     }
 
     public void setAckIntervalMs(int ackIntervalMs) {
-        for(Consumer consumer : this.consumers) {
-            consumer.setAckIntervalMs(ackIntervalMs);
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers) {
+                consumer.setAckIntervalMs(ackIntervalMs);
+            }
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers) {
+                consumer.setAckIntervalMs(ackIntervalMs);
+            }
         }
     }
 
     public void setProcessingMs(int processingMs) {
         consumerConfig.setProcessingMs(processingMs);
-        for(Consumer consumer : this.consumers) {
-            consumer.setProcessingMs(processingMs);
+
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers) {
+                consumer.setProcessingMs(processingMs);
+            }
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers) {
+                consumer.setProcessingMs(processingMs);
+            }
         }
     }
 
     public List<Long> getRecordedReceiveCounts() {
         List<Long> receiveCounts = new ArrayList<>();
-        for(Consumer consumer : this.consumers)
-            receiveCounts.add(consumer.getRecordedReceiveCount());
+
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers)
+                receiveCounts.add(consumer.getRecordedReceiveCount());
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers)
+                receiveCounts.add(consumer.getRecordedReceiveCount());
+        }
 
         return receiveCounts;
     }
 
     public List<Long> getRealReceiveCounts() {
         List<Long> receiveCounts = new ArrayList<>();
-        for(Consumer consumer : this.consumers)
-            receiveCounts.add(consumer.getRealReceiveCount());
+
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers)
+                receiveCounts.add(consumer.getRealReceiveCount());
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers)
+                receiveCounts.add(consumer.getRealReceiveCount());
+        }
 
         return receiveCounts;
     }
 
     public void setConsumerPrefetch(short prefetch) {
-        for(Consumer consumer : this.consumers) {
-            consumer.setPrefetch(prefetch);
-            consumer.triggerNewChannel();
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers) {
+                consumer.setPrefetch(prefetch);
+                consumer.triggerNewChannel();
+            }
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers) {
+                consumer.setPrefetch(prefetch);
+                consumer.triggerNewChannel();
+            }
         }
     }
 
     public void addAndStartConsumer() {
-        Consumer consumer = addConsumer();
+        Runnable consumer = addConsumer();
         ClientUtils.waitFor(100);
         this.executorService.execute(consumer);
     }
 
-    public Consumer addConsumer() {
+    public Runnable addConsumer() {
         this.consumerCounter++;
 
         String queue = getLowestConsumedQueue();
@@ -140,18 +197,33 @@ public class ConsumerGroup {
                 this.consumerConfig.getProcessingMs(),
                 this.consumerConfig.isDownstream());
 
-        Consumer consumer = new Consumer(
-                getConsumerId(consumerCounter),
-                this.connectionSettings,
-                queueHosts,
-                settings,
-                this.stats,
-                messageModel,
-                this.executorService);
-
-        this.consumers.add(consumer);
         this.currentQueues.put(queue, this.currentQueues.get(queue) + 1);
-        return consumer;
+
+        if(this.consumerConfig.getProtocol() == Protocol.AMQP091) {
+            Consumer consumer = new Consumer(
+                    getConsumerId(consumerCounter),
+                    this.connectionSettings,
+                    queueHosts,
+                    settings,
+                    this.stats,
+                    messageModel,
+                    this.executorService);
+
+            this.consumers.add(consumer);
+            return consumer;
+        }
+        else {
+            StreamConsumer consumer = new StreamConsumer(
+                    getConsumerId(consumerCounter),
+                    this.connectionSettings,
+                    this.queueHosts,
+                    settings,
+                    this.stats,
+                    messageModel);
+
+            this.streamConsumers.add(consumer);
+            return consumer;
+        }
     }
 
     public void addQueue(String queueGroup, String queue) {
@@ -165,8 +237,14 @@ public class ConsumerGroup {
     }
 
     public void stopAllConsumers() {
-        for(Consumer consumer : this.consumers)
-            consumer.signalStop();
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers)
+                consumer.signalStop();
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers)
+                consumer.signalStop();
+        }
     }
 
     public void shutdown() {

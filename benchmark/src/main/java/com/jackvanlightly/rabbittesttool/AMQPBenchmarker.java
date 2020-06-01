@@ -157,7 +157,8 @@ public class AMQPBenchmarker {
             }
             else {
                 boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);
-                benchmarkRegister = new ConsoleRegister(System.out, printLiveStats);
+                String outputDir = arguments.getStr("--output-dir", "/tmp/rtt/model");
+                benchmarkRegister = new ConsoleRegister(System.out, printLiveStats, outputDir);
             }
 
             Duration gracePeriod = Duration.ofSeconds(arguments.getInt("--grace-period-sec"));
@@ -453,10 +454,22 @@ public class AMQPBenchmarker {
                     stats = new Stats(sampleIntervalMs, brokerConfig);
                 }
 
-                QueueHosts queueHosts = new QueueHosts(topologyGenerator);
+                Broker b = brokerConfig.getHosts().get(0);
+                QueueHosts queueHosts = new QueueHosts(topologyGenerator, connectionSettings, b.getIp(), b.getStreamPort());
                 queueHosts.addHosts(brokerConfig);
 
-                QueueHosts downstreamHosts = new QueueHosts(topologyGenerator);
+
+                String dsIp = "";
+                int dsPort = 0;
+                if(!brokerConfig.getDownstreamHosts().isEmpty()) {
+                    Broker downstreamBroker = brokerConfig.getDownstreamHosts().get(0);
+                    dsIp = downstreamBroker.getIp();
+                    dsPort = downstreamBroker.getStreamPort();
+                }
+                QueueHosts downstreamHosts = new QueueHosts(topologyGenerator,
+                        downstreamConnectionSettings,
+                        dsIp,
+                        dsPort);
                 downstreamHosts.addDownstreamHosts(brokerConfig);
 
                 ActionSupervisor actionSupervisor = new ActionSupervisor(connectionSettings,
@@ -502,6 +515,9 @@ public class AMQPBenchmarker {
                 waitFor(10000);
 
                 if (topology.shouldDeclareArtefacts()) {
+                    List<VirtualHost> vhosts = topology.getVirtualHosts();
+//                    vhosts.add(VirtualHost.getDefaultVHost());
+
                     for (VirtualHost vhost : topology.getVirtualHosts()) {
                         logger.info("Deleting vhost: " + vhost.getName());
                         try {
@@ -579,18 +595,27 @@ public class AMQPBenchmarker {
     }
 
     private static List<Broker> getBrokers(CmdArguments arguments) {
-        return getBrokers(arguments, "--broker-hosts");
+        return getBrokers(arguments, "--broker-hosts", "--stream-ports");
     }
 
     private static List<Broker> getDownstreamBrokers(CmdArguments arguments) {
         if(arguments.hasKey("--downstream-broker-hosts"))
-            return getBrokers(arguments, "--downstream-broker-hosts");
+            return getBrokers(arguments, "--downstream-broker-hosts", "--downstream-stream-ports");
         else
             return new ArrayList<>();
     }
 
-    private static List<Broker> getBrokers(CmdArguments arguments, String brokerHostsArgName) {
+    private static List<Broker> getBrokers(CmdArguments arguments, String brokerHostsArgName, String streamPortsArgName) {
         List<String> ipAndPorts = arguments.getListStr(brokerHostsArgName);
+
+        String defaultStreamPorts = "";
+        for(int i=0; i<ipAndPorts.size(); i++) {
+            defaultStreamPorts += "5555";
+
+            if(i==0)
+                defaultStreamPorts += ",";
+        }
+        List<String> streamPorts = arguments.getListStr(streamPortsArgName, defaultStreamPorts);
 
         String ip = ipAndPorts.get(0).split(":")[0];
         NamesGetter ng = new NamesGetter(ip, arguments.getStr("--broker-mgmt-port"), arguments.getStr("--broker-user"), arguments.getStr("--broker-password"));
@@ -602,7 +627,8 @@ public class AMQPBenchmarker {
         for(int i=0; i<ipAndPorts.size(); i++) {
             Broker b = new Broker(ipAndPorts.get(i).split(":")[0],
                     ipAndPorts.get(i).split(":")[1],
-                    nodeNames.get(i));
+                    nodeNames.get(i),
+                    streamPorts.size() == ipAndPorts.size() ? streamPorts.get(i) : "5555");
 
             hosts.add(b);
         }
