@@ -28,6 +28,11 @@ public class PartitionedModel implements MessageModel {
     boolean checkDuplicates;
     boolean checkConnectivity;
     boolean checkConsumeGaps;
+
+    boolean logLastMsg;
+    boolean logCompaction;
+    boolean logJumps;
+
     private final ReadWriteLock modelLock;
     final ReadWriteLock intervalsLock;
     ExecutorService executorService;
@@ -67,7 +72,10 @@ public class PartitionedModel implements MessageModel {
             boolean checkDataLoss,
             boolean checkDuplicates,
             boolean checkConnectivity,
-            boolean checkConsumeGaps) {
+            boolean checkConsumeGaps,
+            boolean logLastMsg,
+            boolean logCompaction,
+            boolean logJumps) {
         this.register = register;
         this.enabled = true;
         this.logger = new BenchmarkLogger("PARTITIONED_MODEL");
@@ -94,6 +102,10 @@ public class PartitionedModel implements MessageModel {
         this.unloggedDisconnectedIntervals = new ArrayList<>();
         this.intervalsLock = new ReentrantReadWriteLock();
         this.consumeAvailability = 100.0d;
+
+        this.logLastMsg = logLastMsg;
+        this.logCompaction = logCompaction;
+        this.logJumps = logJumps;
     }
 
     public void setBenchmarkId(String benchmarkId) {
@@ -255,7 +267,10 @@ public class PartitionedModel implements MessageModel {
                             checkDuplicates,
                             messageLossThresholdDuration,
                             messageLossThresholdMsgs,
-                            houseKeepingInterval);
+                            houseKeepingInterval,
+                            logLastMsg,
+                            logCompaction,
+                            logJumps);
                     model.monitorProperties(this.executorService);
                     models.put(stream, model);
                 }

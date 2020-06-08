@@ -11,6 +11,8 @@ import org.postgresql.util.PGobject;
 import org.postgresql.util.PSQLException;
 
 import java.sql.*;
+import java.text.MessageFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -19,13 +21,17 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.groupingBy;
 
 public class PostgresRegister implements BenchmarkRegister {
-    private String jdbcUrl;
-    private String user;
-    private String password;
-    private String node;
-    private String runId;
-    private String runTag;
-    private String configTag;
+    String jdbcUrl;
+    String user;
+    String password;
+    String node;
+    String runId;
+    String runTag;
+    String configTag;
+
+    boolean printLiveStats;
+    Duration printLiveStatsInterval;
+    Instant lastPrintedLiveStats;
 
     public PostgresRegister(String url,
                             String user,
@@ -33,7 +39,9 @@ public class PostgresRegister implements BenchmarkRegister {
                             String node,
                             String runId,
                             String runTag,
-                            String configTag) {
+                            String configTag,
+                            boolean printLiveStats,
+                            Duration printLiveStatsInterval) {
         this.jdbcUrl = url;
         this.user = user;
         this.password = password;
@@ -41,6 +49,9 @@ public class PostgresRegister implements BenchmarkRegister {
         this.runId = runId;
         this.runTag = runTag;
         this.configTag = configTag;
+        this.printLiveStats = printLiveStats;
+        this.printLiveStatsInterval = printLiveStatsInterval;
+        this.lastPrintedLiveStats = Instant.now();
     }
 
     public PostgresRegister(String url,
@@ -147,7 +158,22 @@ public class PostgresRegister implements BenchmarkRegister {
     }
 
     @Override
-    public void logLiveStatistics(String benchmarkId, int step, StepStatistics stepStatistics) {}
+    public void logLiveStatistics(String benchmarkId, int step, StepStatistics stepStatistics) {
+        if(printLiveStats) {
+            Instant now = Instant.now();
+            if(Duration.between(lastPrintedLiveStats, now).toMillis() > printLiveStatsInterval.toMillis()) {
+                System.out.println(MessageFormat.format("At seconds: {0,number,#}/{1,number,#}: Msgs Sent={2,number,#}, Bytes Sent={3,number,#},Msgs Received={3,number,#}, Bytes Received={4,number,#}",
+                        stepStatistics.getRecordingSeconds(),
+                        stepStatistics.getDurationSeconds(),
+                        stepStatistics.getSentCount(),
+                        stepStatistics.getSentBytesCount(),
+                        stepStatistics.getReceivedCount(),
+                        stepStatistics.getReceivedBytesCount()));
+
+                lastPrintedLiveStats = now;
+            }
+        }
+    }
 
     @Override
     public void logBenchmarkEnd(String benchmarkId) {

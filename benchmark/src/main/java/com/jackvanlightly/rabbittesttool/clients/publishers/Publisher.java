@@ -119,6 +119,9 @@ public class Publisher implements Runnable {
 
     public int getPendingConfirmCount() {
         if(useConfirms) {
+            if(listener == null)
+                return 0;
+
             return listener.getPendingConfirmCount();
         }
         else

@@ -82,7 +82,7 @@ public class QueueHosts {
 
                         lock.writeLock().lock();
                         try {
-                            if(queueHosts.containsKey(queue)) {
+                            if(queueHosts.containsKey(queueName)) {
                                 String current = queueHosts.get(queueName).getNodeName();
                                 if(!current.equals(nodeName))
                                     logger.info("Detected host change for " + queueName + ", was on: " + current + " now on: " + broker.getNodeName());

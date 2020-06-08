@@ -815,6 +815,9 @@ public class PartitionedModelTest {
                 checkDataLoss,
                 checkDuplicates,
                 false,
+                false,
+                false,
+                false,
                 false);
     }
 }

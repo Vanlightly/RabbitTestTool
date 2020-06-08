@@ -14,6 +14,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.stream.Client;
+import com.rabbitmq.stream.OffsetSpecification;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
@@ -221,10 +222,12 @@ public class StreamConsumer implements Runnable  {
                 .chunkListener(listener)
                 .messageListener(listener));
 
+        OffsetSpecification offsetSpecification = OffsetSpecification.offset(this.lastOffset.get());
+
         Client.Response response = consumer.subscribe(
                 this.consumerId.hashCode(),
                 consumerSettings.getQueue(),
-                this.lastOffset.get(),
+                offsetSpecification,
                 Math.max(10, consumerSettings.getAckMode().getConsumerPrefetch())
         );
 

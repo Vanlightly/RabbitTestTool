@@ -26,10 +26,10 @@ import org.apache.commons.io.IOUtils;
 public class TopologyLoader {
 
     private BenchmarkLogger logger;
-    private Set<String> intFields = new HashSet<>(Arrays.asList("scale", "inFlightLimit", "consumerPrefetch", "ackInterval",
-            "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize",
-            "messageCount", "thresholdSeconds", "initialPublish"));
-    private Set<String> boolFields = new HashSet<>(Arrays.asList("useConfirms", "manualAcks"));
+//    private Set<String> intFields = new HashSet<>(Arrays.asList("scale", "inFlightLimit", "consumerPrefetch", "ackInterval",
+//            "priority", "stepDurationSeconds", "durationSeconds", "rampUpSeconds", "msgsPerSecondPerPublisher", "messageSize",
+//            "headersPerMessage", "messageCount", "thresholdSeconds", "initialPublish"));
+//    private Set<String> boolFields = new HashSet<>(Arrays.asList("useConfirms", "manualAcks"));
     private Pattern variablePattern;
 
     public TopologyLoader() {
@@ -700,6 +700,7 @@ public class TopologyLoader {
         variableConfig.setStepDurationSeconds(getMandatoryIntValue(varJson, "stepDurationSeconds"));
         variableConfig.setStepRampUpSeconds(getMandatoryIntValue(varJson, "rampUpSeconds"));
         variableConfig.setValueType(getValueType(getOptionalStrValue(varJson, "valueType", "Value")));
+        variableConfig.setRepeatWholeSeriesCount(getOptionalIntValue(varJson, "repeatSeries", 1));
 
         if(varJson.has("applyToPrefix"))
             variableConfig.setGroup(getMandatoryStrValue(varJson, "applyToPrefix"));
@@ -1154,11 +1155,11 @@ public class TopologyLoader {
     }
 
     public void replaceValue(JSONObject json, String key, Map<String, String> variables, Map<String,String> variableDefaults) {
-        if(intFields.contains(key)) {
+        if(json.get(key).getClass().equals(Integer.class)) {
             int value = getIntValue(json, key, variables, variableDefaults);
             json.put(key, value);
         }
-        else if(boolFields.contains(key)) {
+        else if(json.get(key).getClass().equals(Boolean.class)) {
             boolean value = getBoolValue(json, key, variables, variableDefaults);
             json.put(key, value);
         }

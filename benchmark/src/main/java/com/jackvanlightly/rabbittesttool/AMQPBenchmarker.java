@@ -153,7 +153,9 @@ public class AMQPBenchmarker {
                         brokerConfig.getNodeNames().get(0),
                         runId,
                         arguments.getStr("--run-tag", "?"),
-                        arguments.getStr("--config-tag", "?"));
+                        arguments.getStr("--config-tag", "?"),
+                        arguments.getBoolean("--print-live-stats", true),
+                        Duration.ofSeconds(arguments.getInt("--print-live-stats-interval-seconds", 60)));
             }
             else {
                 boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);
@@ -176,6 +178,11 @@ public class AMQPBenchmarker {
             int messageLossThresholdMsgs = arguments.getInt("--message-loss-threshold-msgs", 10000);
             boolean zeroExitCode = arguments.getBoolean("--zero-exit-code", false);
 
+            boolean logLastMsg = arguments.getBoolean("--print-last-msg", false);
+            boolean logCompaction = arguments.getBoolean("--print-compaction", false);
+            boolean logGaps = arguments.getBoolean("--print-gaps", false);
+
+
             MessageModel messageModel = new PartitionedModel(benchmarkRegister,
                     unavailabilitySeconds,
                     messageLossThresholdDuration,
@@ -185,7 +192,10 @@ public class AMQPBenchmarker {
                     checkDataLoss,
                     checkDuplicates,
                     checkConnectivity,
-                    checkConsumeGaps);
+                    checkConsumeGaps,
+                    logLastMsg,
+                    logCompaction,
+                    logGaps);
 
             ExecutorService modelExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("MessageModel"));
             messageModel.monitorProperties(modelExecutor);
@@ -361,7 +371,9 @@ public class AMQPBenchmarker {
                         brokerConfig.getNodeNames().get(0),
                         arguments.getStr("--run-id"),
                         arguments.getStr("--run-tag"),
-                        arguments.getStr("--config-tag"));
+                        arguments.getStr("--config-tag"),
+                        arguments.getBoolean("--print-live-stats", true),
+                        Duration.ofSeconds(arguments.getInt("--print-live-stats-interval-seconds", 60)));
             }
             else {
                 boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);

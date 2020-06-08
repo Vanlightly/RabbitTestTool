@@ -72,6 +72,10 @@ public class SpanningMessageModel {
     boolean checkDataLoss;
     boolean checkDuplicates;
 
+    boolean logLastMsg;
+    boolean logCompaction;
+    boolean logJumps;
+
     public SpanningMessageModel(String benchmarkId,
                                 int stream,
                                 boolean checkOrdering,
@@ -79,7 +83,10 @@ public class SpanningMessageModel {
                                 boolean checkDuplicates,
                                 Duration messageLossThreshold,
                                 int messageLossThresholdMsgs,
-                                Duration housekeepingInterval) {
+                                Duration housekeepingInterval,
+                                boolean logLastMsg,
+                                boolean logCompaction,
+                                boolean logJumps) {
         this.logger = new BenchmarkLogger("MESSAGE_MODEL_"+stream);
         this.benchmarkId = benchmarkId;
         this.stream = stream;
@@ -112,6 +119,10 @@ public class SpanningMessageModel {
         this.publishedCounter = new AtomicLong();
         this.redeliveredCounter = new AtomicLong();
         this.consumedCounter = new AtomicLong();
+
+        this.logLastMsg = logLastMsg;
+        this.logCompaction = logCompaction;
+        this.logJumps = logJumps;
     }
 
     public void setBenchmarkId(String benchmarkId) {
@@ -200,6 +211,16 @@ public class SpanningMessageModel {
                                         && !msg.isRedelivered()) {
                                     addViolation(new Violation(ViolationType.Ordering, payload, lastMsg.getMessagePayload()));
                                 }
+                                if(logJumps && lastMsg != null) {
+                                    long gap = lastMsg.getMessagePayload().getSequenceNumber() - seqNo;
+                                    if(gap > 1) {
+                                        logger.info("GAP DETECTED: Stream=" + stream + ", Gap Size=" + gap
+                                                + ", Gap Start=" + (lastMsg.getMessagePayload().getSequenceNumber() + 1)
+                                                + ", Gap End="+ (seqNo - 1)
+                                                + ", Time="+now);
+                                    }
+                                }
+
                                 lastMsg = msg;
 
                                 // check duplicate property
@@ -267,17 +288,30 @@ public class SpanningMessageModel {
         return null;
     }
 
+    private void printLastMsg(Instant now,
+                              int messagesEmptied,
+                              int spansClosed,
+                              int compactedSize) {
+        if(logLastMsg) {
+            long lastSeqNo = lastMsg.getMessagePayload().getSequenceNumber();
+            logger.info("Last consumed in model: Stream=" + this.stream + ", SeqNo=" + lastSeqNo + ", Time=" + now);
+        }
+
+        if(logCompaction) {
+            logger.info(MessageFormat.format("Compaction: Stream={0,number,#}. {1,number,#} new messages added to spans. {2,number,#} open spans closed. Compacted open spans from {3,number,#} to {4,number,#}",
+                    this.stream,
+                    messagesEmptied,
+                    spansClosed,
+                    actualReceivedOpen.size(),
+                    compactedSize));
+        }
+    }
+
     private void houseKeep(Instant now) {
         int messagesEmptied = emptyReceiveSet(now);
         int spansClosed = closeOpenSpans(now);
         List<Span> compacted = compactSpans(actualReceivedOpen, now);
-
-//        logger.info(MessageFormat.format("{0,number,#} new messages added to spans. {1,number,#} open spans closed. Compacted open spans from {2,number,#} to {3,number,#}",
-//                messagesEmptied,
-//                spansClosed,
-//                actualReceivedOpen.size(),
-//                compacted.size()));
-
+        printLastMsg(now, messagesEmptied, spansClosed, compacted.size());
         actualReceivedOpen = compacted;
         lastHouseKeepingTime = now;
     }
