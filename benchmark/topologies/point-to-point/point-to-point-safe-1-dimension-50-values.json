@@ -1,0 +1,216 @@
+  {
+  "topologyType": "SingleDimension",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queuePrefix", "default": "q1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "hasDlx", "default": "false" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "1" },
+    { "name": "ackIntervalMs", "default": "1000" },
+    { "name": "processingMs", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "initialPublish", "default": "0" },
+    { "name": "dimension", "default": "PublishRate" },
+    { "name": "stepLimit", "default": "50" },
+    { "name": "value1", "default": "1" },
+    { "name": "value2", "default": "2" },
+    { "name": "value3", "default": "3" },
+    { "name": "value4", "default": "4" },
+    { "name": "value5", "default": "5" },
+    { "name": "value6", "default": "6" },
+    { "name": "value7", "default": "7" },
+    { "name": "value8", "default": "8" },
+    { "name": "value9", "default": "9" },
+    { "name": "value10", "default": "10" },
+    { "name": "value11", "default": "11" },
+    { "name": "value12", "default": "12" },
+    { "name": "value13", "default": "13" },
+    { "name": "value14", "default": "14" },
+    { "name": "value15", "default": "15" },
+    { "name": "value16", "default": "16" },
+    { "name": "value17", "default": "17" },
+    { "name": "value18", "default": "18" },
+    { "name": "value19", "default": "19" },
+    { "name": "value20", "default": "20" },
+    { "name": "value21", "default": "21" },
+    { "name": "value22", "default": "22" },
+    { "name": "value23", "default": "23" },
+    { "name": "value24", "default": "24" },
+    { "name": "value25", "default": "25" },
+    { "name": "value26", "default": "26" },
+    { "name": "value27", "default": "27" },
+    { "name": "value28", "default": "28" },
+    { "name": "value29", "default": "29" },
+    { "name": "value30", "default": "30" },
+    { "name": "value31", "default": "31" },
+    { "name": "value32", "default": "32" },
+    { "name": "value33", "default": "33" },
+    { "name": "value34", "default": "34" },
+    { "name": "value35", "default": "35" },
+    { "name": "value36", "default": "36" },
+    { "name": "value37", "default": "37" },
+    { "name": "value38", "default": "38" },
+    { "name": "value39", "default": "39" },
+    { "name": "value40", "default": "40" },
+    { "name": "value41", "default": "41" },
+    { "name": "value42", "default": "42" },
+    { "name": "value43", "default": "43" },
+    { "name": "value44", "default": "44" },
+    { "name": "value45", "default": "45" },
+    { "name": "value46", "default": "46" },
+    { "name": "value47", "default": "47" },
+    { "name": "value48", "default": "48" },
+    { "name": "value49", "default": "49" },
+    { "name": "value50", "default": "50" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "exchanges": [
+        { "include": "{{ var.hasDlx }}", "name": "{{ var.queuePrefix }}-deadletter", "type": "fanout" }
+      ],
+      "queues": [ 
+        { 
+          "prefix": "{{ var.queuePrefix }}", 
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ],
+          "dlx": {
+            "hasDlx": "{{ var.hasDlx }}",
+            "name": "{{ var.queuePrefix }}-deadletter"
+          }
+        },
+        { 
+          "include": "{{ var.hasDlx }}",
+          "prefix": "{{ var.queuePrefix }}-deadletter", 
+          "scale": 1,
+          "bindings": [{ "from": "{{ var.queuePrefix }}-deadletter" }],
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        } 
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToQueuePrefix": {
+            "queuePrefix": "{{ var.queuePrefix }}",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
+        }
+      ],
+      "consumers": [ 
+        { 
+          "prefix": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "ackIntervalMs": "{{ var.ackIntervalMs }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        },
+        { 
+          "include": "{{ var.hasDlx }}",
+          "prefix": "c1-overflow", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}-deadletter",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "ackIntervalMs": "{{ var.ackIntervalMs }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "singleDimension": {
+        "dimension": "{{ var.dimension }}",
+        "values": [
+          "{{ var.value1 }}", 
+          "{{ var.value2 }}", 
+          "{{ var.value3 }}",
+          "{{ var.value4 }}",
+          "{{ var.value5 }}",
+          "{{ var.value6 }}",
+          "{{ var.value7 }}",
+          "{{ var.value8 }}",
+          "{{ var.value9 }}",
+          "{{ var.value10 }}",
+          "{{ var.value11 }}", 
+          "{{ var.value12 }}", 
+          "{{ var.value13 }}",
+          "{{ var.value14 }}",
+          "{{ var.value15 }}",
+          "{{ var.value16 }}",
+          "{{ var.value17 }}",
+          "{{ var.value18 }}",
+          "{{ var.value19 }}",
+          "{{ var.value20 }}",
+          "{{ var.value21 }}", 
+          "{{ var.value22 }}", 
+          "{{ var.value23 }}",
+          "{{ var.value24 }}",
+          "{{ var.value25 }}",
+          "{{ var.value26 }}",
+          "{{ var.value27 }}",
+          "{{ var.value28 }}",
+          "{{ var.value29 }}",
+          "{{ var.value30 }}",
+          "{{ var.value31 }}", 
+          "{{ var.value32 }}", 
+          "{{ var.value33 }}",
+          "{{ var.value34 }}",
+          "{{ var.value35 }}",
+          "{{ var.value36 }}",
+          "{{ var.value37 }}",
+          "{{ var.value38 }}",
+          "{{ var.value39 }}",
+          "{{ var.value40 }}",
+          "{{ var.value41 }}", 
+          "{{ var.value42 }}", 
+          "{{ var.value43 }}",
+          "{{ var.value44 }}",
+          "{{ var.value45 }}",
+          "{{ var.value46 }}",
+          "{{ var.value47 }}",
+          "{{ var.value48 }}",
+          "{{ var.value49 }}",
+          "{{ var.value50 }}"
+        ],
+        "stepLimit": "{{ var.stepLimit }}",
+        "stepDurationSeconds": "{{ var.durationSeconds }}",
+        "rampUpSeconds": 1
+    }
+  }
+}

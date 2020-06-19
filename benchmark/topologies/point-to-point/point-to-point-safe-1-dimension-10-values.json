@@ -1,5 +1,5 @@
 {
-  "topologyType": "fixed",
+  "topologyType": "SingleDimension",
   "benchmarkType": "{{ var.benchmarkType }}",
   "variables": [
     { "name": "benchmarkType", "default": "throughput" },
@@ -22,7 +22,18 @@
     { "name": "processingMs", "default": "0" },
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" },
-    { "name": "initialPublish", "default": "0" }
+    { "name": "initialPublish", "default": "0" },
+    { "name": "dimension", "default": "PublishRate" },
+    { "name": "value1", "default": "10" },
+    { "name": "value2", "default": "100" },
+    { "name": "value3", "default": "500" },
+    { "name": "value4", "default": "1000" },
+    { "name": "value5", "default": "5000" },
+    { "name": "value6", "default": "10000" },
+    { "name": "value7", "default": "50000" },
+    { "name": "value8", "default": "100000" },
+    { "name": "value9", "default": "500000" },
+    { "name": "value10", "default": "1000000" }
   ],
   "topologyGroups": [
     {
@@ -37,7 +48,7 @@
           "prefix": "{{ var.queuePrefix }}", 
           "scale": "{{ var.queueCount }}",
           "properties": [
-            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" },
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
           ],
           "dlx": {
             "hasDlx": "{{ var.hasDlx }}",
@@ -97,14 +108,27 @@
             "ackIntervalMs": "{{ var.ackIntervalMs }}"
           },
           "processingMs": "{{ var.processingMs }}"
-        }
+        } 
       ]
     }
   ],
   "dimensions" : {
-    "fixedDimensions": {
-      "durationSeconds": "{{ var.durationSeconds }}",
-      "rampUpSeconds": 10
+    "singleDimension": {
+        "dimension": "{{ var.dimension }}",
+        "values": [
+          "{{ var.value1 }}", 
+          "{{ var.value2 }}", 
+          "{{ var.value3 }}",
+          "{{ var.value4 }}",
+          "{{ var.value5 }}",
+          "{{ var.value6 }}",
+          "{{ var.value7 }}",
+          "{{ var.value8 }}",
+          "{{ var.value9 }}",
+          "{{ var.value10 }}"
+        ],
+        "stepDurationSeconds": "{{ var.durationSeconds }}",
+        "rampUpSeconds": 10
     }
   }
 }
