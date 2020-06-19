@@ -8,17 +8,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class QueueConfig {
-    private String group;
-    private String vhostName;
-    private QueueType queueType;
-    private boolean isDownstream;
-    private int scale;
-    private List<Property> properties;
-    private List<BindingConfig> bindings;
-    private ShovelConfig shovelConfig;
-    private ActionListConfig actionList;
-    private ByteCapacity retentionSize;
-    private ByteCapacity segmentSize;
+    String group;
+    String vhostName;
+    QueueType queueType;
+    boolean isDownstream;
+    int scale;
+    List<Property> properties;
+    List<BindingConfig> bindings;
+    String deadletterExchange;
+    ShovelConfig shovelConfig;
+    ActionListConfig actionList;
+    ByteCapacity retentionSize;
+    ByteCapacity segmentSize;
 
     public QueueConfig() {
         properties = new ArrayList<>();
@@ -32,10 +33,11 @@ public class QueueConfig {
                        int scale,
                        List<Property> properties,
                        List<BindingConfig> bindings,
+                       String deadletterExchange,
                        ShovelConfig shovelConfig,
                        ActionListConfig actionList) {
         this(group, vhostName, queueType, isDownstream, scale,
-                properties, bindings, shovelConfig, actionList,
+                properties, bindings, deadletterExchange, shovelConfig, actionList,
                 ByteCapacity.B(0), ByteCapacity.B(0));
     }
 
@@ -45,6 +47,7 @@ public class QueueConfig {
                        boolean isDownstream,
                        int scale, List<Property> properties,
                        List<BindingConfig> bindings,
+                       String deadletterExchange,
                        ShovelConfig shovelConfig,
                        ActionListConfig actionList,
                        ByteCapacity retentionBytes,
@@ -56,6 +59,7 @@ public class QueueConfig {
         this.scale = scale;
         this.properties = properties;
         this.bindings = bindings;
+        this.deadletterExchange = deadletterExchange;
         this.shovelConfig = shovelConfig;
         this.actionList = actionList;
         this.retentionSize = retentionBytes;
@@ -72,6 +76,10 @@ public class QueueConfig {
         if(this.shovelConfig != null)
             sc = this.shovelConfig.clone(scaleNumber);
 
+        String dlx = null;
+        if(this.deadletterExchange != null)
+            dlx = this.deadletterExchange + VirtualHost.getScaleSuffix(scaleNumber);
+
         return new QueueConfig(
                 this.group + VirtualHost.getScaleSuffix(scaleNumber),
                 this.vhostName,
@@ -80,6 +88,7 @@ public class QueueConfig {
                 this.scale,
                 this.properties,
                 newBindings,
+                dlx,
                 sc,
                 this.actionList,
                 this.retentionSize,
@@ -140,6 +149,14 @@ public class QueueConfig {
 
     public void setBindings(List<BindingConfig> bindings) {
         this.bindings = bindings;
+    }
+
+    public String getDeadletterExchange() {
+        return deadletterExchange;
+    }
+
+    public void setDeadletterExchange(String deadletterExchange) {
+        this.deadletterExchange = deadletterExchange;
     }
 
     public List<String> getInitialQueues() {

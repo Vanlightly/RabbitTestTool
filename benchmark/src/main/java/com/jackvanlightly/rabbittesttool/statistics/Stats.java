@@ -43,7 +43,7 @@ public class Stats {
     private final Consumer<Long> updateConfirmMultipleFlag;
     private final DoubleAccumulator published, returned, confirmed, nacked, consumed;
     private final DoubleAccumulator publishedMsgBytes, consumedMsgBytes, publishedMsgSize, consumedMsgSize, publishedMsgHeaders, consumedMsgHeaders;
-    private final DoubleAccumulator deliveryMode, consumerPrefetch, consumerAck, consumerAckMs, consumerAckCount, consumerAcksMsgPerAck, publisherInFlightLimit;
+    private final DoubleAccumulator deliveryMode, consumerPrefetch, consumerAck, consumerAckMs, consumerAckCount, consumerAcksMsgPerAck, consumerProcessingMs, publisherInFlightLimit;
     private final DoubleAccumulator consumedStreamBatches, messagesPerStreamBatch, maxBatchSize, maxBatchSizeBytes, maxBatchWaitMs;
     private final DoubleAccumulator consumerCount, publisherCount, queueCount, targetPublishRate, consumerConnectionError;
     private final DoubleAccumulator blockedPublisherConnectionRate, unblockedPublisherConnectionRate, routingKeyLength;
@@ -161,6 +161,7 @@ public class Stats {
         consumerAckMs = registry.gauge(metricsPrefix + "consumer-ack-interval-ms", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerAckCount = registry.gauge(metricsPrefix + "consumer-acks", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumerAcksMsgPerAck = registry.gauge(metricsPrefix + "consumer-acks-avg-msgs-per-ack", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
+        consumerProcessingMs = registry.gauge(metricsPrefix + "consumer-processing-ms", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         consumedStreamBatches = registry.gauge(metricsPrefix + "stream-consumed-batches", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         messagesPerStreamBatch = registry.gauge(metricsPrefix + "stream-messages-per-batch", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
         maxBatchSize = registry.gauge(metricsPrefix + "stream-max-batch-size", tags, new DoubleAccumulator(accumulatorFunction, 0.0));
@@ -681,6 +682,10 @@ public class Stats {
 
     protected void recordConsumerAckMsgsPerAck(double msgsPerAck) {
         this.consumerAcksMsgPerAck.accumulate(msgsPerAck);
+    }
+
+    protected void recordConsumerProcessingMs(double processingMs) {
+        this.consumerProcessingMs.accumulate(processingMs);
     }
 
     protected void recordConsumedStreamBatchCount(double batchCount) {

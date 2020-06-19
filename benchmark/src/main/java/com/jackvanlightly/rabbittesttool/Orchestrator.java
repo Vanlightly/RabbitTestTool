@@ -499,6 +499,56 @@ public class Orchestrator {
         }
     }
 
+    private void executeSingleVariablePointSteps(String runId,
+                                            VariableConfig variableConfig,
+                                            Topology topology) throws IOException {
+        int step = 1;
+
+        // execute series of steps, potentially on repeat
+        for(int r=0; r<variableConfig.getRepeatWholeSeriesCount(); r++) {
+
+            // execute each step
+            for (int i = 0; i < variableConfig.getStepCount(); i++) {
+                // configure step dimension
+                Double currentPoint = variableConfig.getValues().get(i);
+                Double nextPoint = variableConfig.getValues().get(i);
+
+
+                setSingleDimensionStepValue(variableConfig,
+                        variableConfig.getDimension(),
+                        variableConfig.getValues().get(i));
+                resetMessageSentCounts();
+                setCountStats();
+
+                // wait for the ramp up time before recording and timing the step
+                waitFor(variableConfig.getStepRampUpSeconds() * 1000);
+                benchmarkRegister.logStepStart(runId, step, topology.getVariableConfig().getStepDurationSeconds(), variableConfig.getValues().get(i).toString());
+                stats.startRecordingStep();
+
+                StopWatch sw = new StopWatch();
+                sw.start();
+
+                // wait for step duration seconds to pass
+                while (sw.getTime(TimeUnit.SECONDS) < variableConfig.getStepDurationSeconds() && !jumpToCleanup.get()) {
+                    if (reachedStopCondition())
+                        break;
+
+                    waitFor(1000);
+                    StepStatistics liveStepStats = stats.readCurrentStepStatistics(variableConfig.getStepDurationSeconds());
+                    benchmarkRegister.logLiveStatistics(runId, step, liveStepStats);
+                }
+
+                stats.stopRecordingStep();
+                benchmarkRegister.logStepEnd(runId, step, stats.getStepStatistics(variableConfig.getStepDurationSeconds()));
+
+                step++;
+
+                if (reachedStopCondition())
+                    return;
+            }
+        }
+    }
+
     private void performMultiVariableBenchmark(String runId,
                                                Topology topology,
                                                Duration gracePeriod,

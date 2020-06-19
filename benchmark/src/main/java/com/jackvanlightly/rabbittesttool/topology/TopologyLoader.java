@@ -33,7 +33,7 @@ public class TopologyLoader {
     private Pattern variablePattern;
 
     public TopologyLoader() {
-        variablePattern = Pattern.compile("\\s*(\\{\\{\\s*var.(\\w+)\\s*\\}\\})\\w*");
+        variablePattern = Pattern.compile("\\s*(\\{\\{\\s*var.(\\w+)\\s*\\}\\}).*");
     }
 
     public Topology loadTopology(String topologyPath,
@@ -108,20 +108,27 @@ public class TopologyLoader {
 
         List<Policy> policies = getPolicies(policiesJson);
         List<Policy> finalPolicies = new ArrayList<>();
-        for(Policy policy : policies) {
+
+        Set<String> groupsWithPoliciesApplied = new HashSet<>();
+        List<Policy> orderedByPriority = policies.stream()
+                .sorted(Comparator.comparing(Policy::getPriority, Comparator.reverseOrder()))
+                .collect(Collectors.toList());
+
+        for(Policy policy : orderedByPriority) {
             List<Property> finalProps = new ArrayList<>();
             List<Property> props = removeIncompatibleProps(policy.getProperties());
-            for(Property prop : props) {
-                if(isQuorumQueueProperty(prop)) {
-                    addPropertyToQueue(topology, prop, policy.getPattern(), policy.isDownstream());
-                }
-                else if(isStreamQueueProperty(prop)) {
-                    addPropertyToQueue(topology, prop, policy.getPattern(), policy.isDownstream());
-                }
-                else {
-                    finalProps.add(prop);
-                }
+
+            if(hasQuorumProperties(props)) {
+                addPropertiesToQueue(topology, props, policy.getPattern(), policy.isDownstream(), groupsWithPoliciesApplied);
             }
+            else if(hasStreamQueueProperties(props)) {
+                addPropertiesToQueue(topology, props, policy.getPattern(), policy.isDownstream(), groupsWithPoliciesApplied);
+            }
+            else {
+                for(Property prop : props)
+                    finalProps.add(prop);
+            }
+
             if(!finalProps.isEmpty()) {
                 policy.setProperties(finalProps);
                 finalPolicies.add(policy);
@@ -129,6 +136,24 @@ public class TopologyLoader {
         }
 
         topology.setPolicies(finalPolicies);
+    }
+
+    private boolean hasQuorumProperties(List<Property> props) {
+        for(Property prop : props) {
+            if (isQuorumQueueProperty(prop))
+                return true;
+        }
+
+        return false;
+    }
+
+    private boolean hasStreamQueueProperties(List<Property> props) {
+        for(Property prop : props) {
+            if (isStreamQueueProperty(prop))
+                return true;
+        }
+
+        return false;
     }
 
     private List<Property> removeIncompatibleProps(List<Property> properties) {
@@ -161,12 +186,21 @@ public class TopologyLoader {
         return false;
     }
 
-    private void addPropertyToQueue(Topology topology, Property prop, String pattern, boolean isDownstream) {
+    private void addPropertiesToQueue(Topology topology,
+                                    List<Property> props,
+                                    String pattern,
+                                    boolean isDownstream,
+                                    Set<String> groupsWithPoliciesApplied) {
         for(VirtualHost vhost : topology.getVirtualHosts()) {
             for(QueueConfig qc : vhost.getQueues()) {
                 if(qc.isDownstream() == isDownstream) {
-                    if (pattern.equals("") || qc.getGroup().matches(pattern))
-                        qc.getProperties().add(prop);
+                    if (pattern.equals("") || qc.getGroup().matches(pattern)) {
+                        if(!groupsWithPoliciesApplied.contains(qc.getGroup())) {
+                            for(Property prop : props)
+                                qc.getProperties().add(prop);
+                            groupsWithPoliciesApplied.add(qc.getGroup());
+                        }
+                    }
                 }
             }
         }
@@ -342,6 +376,9 @@ public class TopologyLoader {
 
         for (int i = 0; i < pgJsonArr.length(); i++) {
             JSONObject pgJson = pgJsonArr.getJSONObject(i);
+            if(!getOptionalBoolValue(pgJson, "include", true))
+                continue;
+
             int scale = getMandatoryIntValue(pgJson, "scale");
 
             if(scale > 0) {
@@ -468,35 +505,37 @@ public class TopologyLoader {
 
         for (int i = 0; i < cgJsonArr.length(); i++) {
             JSONObject cgJson = cgJsonArr.getJSONObject(i);
-            int scale = getMandatoryIntValue(cgJson, "scale");
-            if(scale > 0) {
-                ConsumerConfig cgConfig = new ConsumerConfig();
-                cgConfig.setGroup(getMandatoryStrValue(cgJson, "prefix"));
-                cgConfig.setVhostName(vhostName);
-                cgConfig.setQueueGroup(getMandatoryStrValue(cgJson, "queuePrefix"), queueConfigs);
-                cgConfig.setScale(scale);
-                cgConfig.setProtocol(getProtocol(getOptionalStrValue(cgJson,"protocol", "amqp091")));
-                cgConfig.setFrameMax(getOptionalIntValue(cgJson, "frameMax", 0));
-                cgConfig.setProcessingMs(getOptionalIntValue(cgJson, "processingMs", 0));
-                cgConfig.setDownstream(isDownstream);
+            if(getOptionalBoolValue(cgJson, "include", true)) {
+                int scale = getMandatoryIntValue(cgJson, "scale");
+                if (scale > 0) {
+                    ConsumerConfig cgConfig = new ConsumerConfig();
+                    cgConfig.setGroup(getMandatoryStrValue(cgJson, "prefix"));
+                    cgConfig.setVhostName(vhostName);
+                    cgConfig.setQueueGroup(getMandatoryStrValue(cgJson, "queuePrefix"), queueConfigs);
+                    cgConfig.setScale(scale);
+                    cgConfig.setProtocol(getProtocol(getOptionalStrValue(cgJson, "protocol", "amqp091")));
+                    cgConfig.setFrameMax(getOptionalIntValue(cgJson, "frameMax", 0));
+                    cgConfig.setProcessingMs(getOptionalIntValue(cgJson, "processingMs", 0));
+                    cgConfig.setDownstream(isDownstream);
 
-                if (cgJson.has("ackMode")) {
-                    JSONObject ackModeJson = cgJson.getJSONObject("ackMode");
-                    boolean manualAcks = getMandatoryBoolValue(ackModeJson, "manualAcks");
-                    if (manualAcks) {
-                        cgConfig.setAckMode(AckMode.withManualAcks(
-                                (short)getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
-                                getMandatoryIntValue(ackModeJson, "ackInterval"),
-                                getOptionalIntValue(ackModeJson, "ackIntervalMs", 1000)
-                        ));
+                    if (cgJson.has("ackMode")) {
+                        JSONObject ackModeJson = cgJson.getJSONObject("ackMode");
+                        boolean manualAcks = getMandatoryBoolValue(ackModeJson, "manualAcks");
+                        if (manualAcks) {
+                            cgConfig.setAckMode(AckMode.withManualAcks(
+                                    (short) getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
+                                    getMandatoryIntValue(ackModeJson, "ackInterval"),
+                                    getOptionalIntValue(ackModeJson, "ackIntervalMs", 1000)
+                            ));
+                        } else {
+                            cgConfig.setAckMode(AckMode.withNoAck());
+                        }
                     } else {
                         cgConfig.setAckMode(AckMode.withNoAck());
                     }
-                } else {
-                    cgConfig.setAckMode(AckMode.withNoAck());
-                }
 
-                cgConfigs.add(cgConfig);
+                    cgConfigs.add(cgConfig);
+                }
             }
         }
 
@@ -508,30 +547,42 @@ public class TopologyLoader {
 
         for (int i = 0; i < qgJsonArr.length(); i++) {
             JSONObject qJson = qgJsonArr.getJSONObject(i);
-            int scale = getMandatoryIntValue(qJson, "scale");
-            if(scale > 0) {
-                QueueConfig qConfig = new QueueConfig();
-                qConfig.setGroup(getMandatoryStrValue(qJson, "prefix"));
-                qConfig.setVhostName(vhostName);
-                qConfig.setDownstream(isDownstream);
-                qConfig.setScale(scale);
-                qConfig.setQueueType(getQueueType(qJson));
-                qConfig.setRetentionSize(ByteCapacity.MB(getOptionalLongValue(qJson, "retentionSizeMb", 20000)));
-                qConfig.setSegmentSize(ByteCapacity.MB(getOptionalLongValue(qJson, "segmentSizeMb", 500)));
+            if(getOptionalBoolValue(qJson, "include", true)) {
+                int scale = getMandatoryIntValue(qJson, "scale");
+                if (scale > 0) {
+                    QueueConfig qConfig = new QueueConfig();
+                    qConfig.setGroup(getMandatoryStrValue(qJson, "prefix"));
+                    qConfig.setVhostName(vhostName);
+                    qConfig.setDownstream(isDownstream);
+                    qConfig.setScale(scale);
+                    qConfig.setQueueType(getQueueType(qJson));
+                    qConfig.setRetentionSize(ByteCapacity.MB(getOptionalLongValue(qJson, "retentionSizeMb", 20000)));
+                    qConfig.setSegmentSize(ByteCapacity.MB(getOptionalLongValue(qJson, "segmentSizeMb", 500)));
 
-                if (qJson.has("properties"))
-                    qConfig.setProperties(getProperties(qJson.getJSONArray("properties")));
+                    if (qJson.has("properties"))
+                        qConfig.setProperties(getProperties(qJson.getJSONArray("properties")));
 
-                if (qJson.has("bindings"))
-                    qConfig.setBindings(getBindings(qJson.getJSONArray("bindings"), qConfig.getGroup()));
+                    if (qJson.has("bindings"))
+                        qConfig.setBindings(getBindings(qJson.getJSONArray("bindings"), qConfig.getGroup()));
 
-                if(qJson.has("shovel")) {
-                    qConfig.setShovelConfig(loadShovelConfig(qJson));
+                    if (qJson.has("shovel")) {
+                        qConfig.setShovelConfig(loadShovelConfig(qJson));
+                    }
+
+                    if(qJson.has("dlx")) {
+                        JSONObject dlxJson = qJson.getJSONObject("dlx");
+                        if(getMandatoryBoolValue(dlxJson, "hasDlx")) {
+                            if(qConfig.getScale() > 1)
+                                throw new TopologyException("Can only enable DLX with a scale of 1 per queue per topology group. If you need to scale out, scale the topology group.");
+
+                            qConfig.setDeadletterExchange(getMandatoryStrValue(dlxJson, "name"));
+                        }
+                    }
+
+                    qConfig.setActionList(getQueueActionList(qJson, qConfig.getInitialQueues()));
+
+                    queueConfigs.add(qConfig);
                 }
-
-                qConfig.setActionList(getQueueActionList(qJson, qConfig.getInitialQueues()));
-
-                queueConfigs.add(qConfig);
             }
         }
 
@@ -645,19 +696,21 @@ public class TopologyLoader {
             ExchangeConfig exConfig = new ExchangeConfig();
             JSONObject exJson = exJsonArr.getJSONObject(i);
 
-            exConfig.setName(getMandatoryStrValue(exJson, "name"));
-            exConfig.setVhostName(vhostName);
-            exConfig.setDownstream(isDownstream);
-            exConfig.setExchangeType(getExchangeType(getMandatoryStrValue(exJson, "type")));
+            if(getOptionalBoolValue(exJson, "include", true)) {
+                exConfig.setName(getMandatoryStrValue(exJson, "name"));
+                exConfig.setVhostName(vhostName);
+                exConfig.setDownstream(isDownstream);
+                exConfig.setExchangeType(getExchangeType(getMandatoryStrValue(exJson, "type")));
 
-            if(exJson.has("bindings"))
-                exConfig.setBindings(getBindings(exJson.getJSONArray("bindings"), exConfig.getName()));
+                if (exJson.has("bindings"))
+                    exConfig.setBindings(getBindings(exJson.getJSONArray("bindings"), exConfig.getName()));
 
-            if(exJson.has("shovel")) {
-                exConfig.setShovelConfig(loadShovelConfig(exJson));
+                if (exJson.has("shovel")) {
+                    exConfig.setShovelConfig(loadShovelConfig(exJson));
+                }
+
+                exchangeConfigs.add(exConfig);
             }
-
-            exchangeConfigs.add(exConfig);
         }
 
         return exchangeConfigs;
@@ -699,6 +752,7 @@ public class TopologyLoader {
         variableConfig.setValues(getMandatoryDoubleArray(varJson, "values"));
         variableConfig.setStepDurationSeconds(getMandatoryIntValue(varJson, "stepDurationSeconds"));
         variableConfig.setStepRampUpSeconds(getMandatoryIntValue(varJson, "rampUpSeconds"));
+        variableConfig.setStepLimit(getOptionalIntValue(varJson, "stepLimit", 0));
         variableConfig.setValueType(getValueType(getOptionalStrValue(varJson, "valueType", "Value")));
         variableConfig.setRepeatWholeSeriesCount(getOptionalIntValue(varJson, "repeatSeries", 1));
 
@@ -734,6 +788,7 @@ public class TopologyLoader {
         variableConfig.setRepeatWholeSeriesCount(getOptionalIntValue(varJson, "repeatSeries", 1));
         variableConfig.setStepDurationSeconds(getMandatoryIntValue(varJson, "stepDurationSeconds"));
         variableConfig.setStepRampUpSeconds(getMandatoryIntValue(varJson, "rampUpSeconds"));
+        variableConfig.setStepLimit(getOptionalIntValue(varJson, "stepLimit", 0));
 
         if(varJson.has("applyToPrefix"))
             logger.warn("applyToPrefix ignored in multi-dimensional topologies");
@@ -881,19 +936,22 @@ public class TopologyLoader {
 
             Property prop = null;
             String type = getOptionalStrValue(propJson, "type", "string").toLowerCase();
-            switch (type) {
-                case "string":
-                    prop = new Property(
-                            getMandatoryStrValue(propJson, "key"),
-                            getMandatoryStrValue(propJson, "value"));
-                    break;
-                case "int":
-                    prop = new Property(
-                            getMandatoryStrValue(propJson, "key"),
-                            getMandatoryIntValue(propJson, "value"));
-                    break;
-                default:
-                    throw new TopologyException("Only string and int values are currently supported for properties");
+            boolean include = getOptionalBoolValue(propJson, "include", true);
+            if(include) {
+                switch (type) {
+                    case "string":
+                        prop = new Property(
+                                getMandatoryStrValue(propJson, "key"),
+                                getMandatoryStrValue(propJson, "value"));
+                        break;
+                    case "int":
+                        prop = new Property(
+                                getMandatoryStrValue(propJson, "key"),
+                                getMandatoryIntValue(propJson, "value"));
+                        break;
+                    default:
+                        throw new TopologyException("Only string and int values are currently supported for properties");
+                }
             }
 
             properties.add(prop);

@@ -19,6 +19,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -69,7 +70,7 @@ public class TopologyGenerator {
 
     public boolean deleteVHost(VirtualHost vhost) {
         String vhostUrl = getVHostUrl(vhost.getName(), vhost.isDownstream());
-        boolean deleted = delete(vhostUrl, true);
+        boolean deleted = delete(vhostUrl, true, 120000, 3, Duration.ofSeconds(10));
 
         if(deleted)
             logger.info("Deleted vhost " + vhost.getName() + " on " + (vhost.isDownstream() ? "downstream" : "upstream"));
@@ -161,6 +162,11 @@ public class TopologyGenerator {
     private void declareStandardQueue(QueueConfig queueConfig, String queueName, int ordinal, int nodeIndex) {
 
         JSONObject arguments = new JSONObject();
+
+        // add the dlx to the properties. We do this via a custom field in the topology file
+        // because exchange names are generated based on scaling and so are not included in properties array
+        if(queueConfig.getDeadletterExchange() != null)
+            arguments.put("x-dead-letter-exchange", queueConfig.getDeadletterExchange());
 
         boolean isQuorum = queueConfig.getProperties().stream().anyMatch(x -> x.getKey().equals("x-queue-type") && x.getValue().equals("quorum"));
 
@@ -263,7 +269,7 @@ public class TopologyGenerator {
     }
 
     private boolean deleteQueue(String vhost, String queueName, boolean isDownstream) {
-        return delete(getQueueUrl(vhost, queueName, isDownstream), true);
+        return delete(getQueueUrl(vhost, queueName, isDownstream), true, 30000, 3, Duration.ofSeconds(2));
     }
 
     public void declareQueueBindings(QueueConfig queueConfig, int ordinal) {
@@ -445,7 +451,7 @@ public class TopologyGenerator {
     }
 
     public void purgeQueue(String vhost, String queueName, boolean isDownstream) {
-        delete(getPurgeQueueUrl(vhost, queueName, isDownstream), false);
+        delete(getPurgeQueueUrl(vhost, queueName, isDownstream), false, 30000, 3, Duration.ofSeconds(10));
     }
 
     private void addShovel(String vhost,
@@ -585,47 +591,54 @@ public class TopologyGenerator {
         }
     }
 
-    private boolean delete(String url, boolean allow404) {
+    private boolean delete(String url, boolean allow404, int timeoutMs, int attemptLimit, Duration retryPause) {
         boolean deleted = false;
         boolean success = false;
         int attempts = 0;
         int lastResponseCode = 0;
         CloseableHttpResponse lastResponse = null;
 
-        try {
-            while(!success && attempts <= 3 && retryBudget > 0) {
-                attempts++;
+        while(!success && attempts <= attemptLimit && retryBudget > 0) {
+            try {
+            attempts++;
 
-                if (attempts > 1) {
-                    retryBudget--;
-                    ClientUtils.waitFor(2000);
-                }
+            if (attempts > 1) {
+                retryBudget--;
+                ClientUtils.waitFor((int)retryPause.toMillis());
+            }
 
-                CloseableHttpClient client = HttpClients.createDefault();
-                HttpDelete httpDelete = new HttpDelete(url);
+            CloseableHttpClient client = HttpClients.createDefault();
+            HttpDelete httpDelete = new HttpDelete(url);
 
-                UsernamePasswordCredentials creds
-                        = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
-                httpDelete.addHeader(new BasicScheme().authenticate(creds, httpDelete, null));
+            RequestConfig.Builder requestConfig = RequestConfig.custom();
+            requestConfig.setConnectTimeout(timeoutMs);
+            requestConfig.setConnectionRequestTimeout(timeoutMs);
+            requestConfig.setSocketTimeout(timeoutMs);
+            httpDelete.setConfig(requestConfig.build());
 
-                lastResponse = client.execute(httpDelete);
-                lastResponseCode = lastResponse.getStatusLine().getStatusCode();
-                client.close();
+            UsernamePasswordCredentials creds
+                    = new UsernamePasswordCredentials(connectionSettings.getUser(), connectionSettings.getPassword());
+            httpDelete.addHeader(new BasicScheme().authenticate(creds, httpDelete, null));
 
-                if (lastResponseCode != 200 && lastResponseCode != 204) {
-                    if (lastResponseCode == 404 && allow404) {
-                        success = true;
-                        deleted = false;
-                    }
-                }
-                else {
+            lastResponse = client.execute(httpDelete);
+            lastResponseCode = lastResponse.getStatusLine().getStatusCode();
+            client.close();
+
+            if (lastResponseCode != 200 && lastResponseCode != 204) {
+                if (lastResponseCode == 404 && allow404) {
                     success = true;
-                    deleted = true;
+                    deleted = false;
                 }
             }
-        }
-        catch(Exception e) {
-            throw new TopologyException("An exception occurred executing DELETE " + url, e);
+            else {
+                success = true;
+                deleted = true;
+            }
+
+            }
+            catch(Exception e) {
+                throw new TopologyException("An exception occurred executing DELETE " + url, e);
+            }
         }
 
         if(!success) {

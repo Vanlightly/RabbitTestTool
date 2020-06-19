@@ -155,7 +155,7 @@ public class AMQPBenchmarker {
                         arguments.getStr("--run-tag", "?"),
                         arguments.getStr("--config-tag", "?"),
                         arguments.getBoolean("--print-live-stats", true),
-                        Duration.ofSeconds(arguments.getInt("--print-live-stats-interval-seconds", 60)));
+                        Duration.ofSeconds(arguments.getInt("--print-live-stats-interval-seconds", 45)));
             }
             else {
                 boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);
@@ -257,7 +257,7 @@ public class AMQPBenchmarker {
                 mainLogger.info("Connection availability: " + messageModel.getConnectionAvailability());
                 mainLogger.info("Disconnection periods: " + disconnectedIntervals.size());
 
-                if(!consumeIntervals.isEmpty()) {
+                if(!disconnectedIntervals.isEmpty()) {
                     mainLogger.info("Max disconnection ms: " + disconnectedIntervals.stream()
                             .map(x -> x.getDuration().toMillis())
                             .max(Long::compareTo)
@@ -373,7 +373,7 @@ public class AMQPBenchmarker {
                         arguments.getStr("--run-tag"),
                         arguments.getStr("--config-tag"),
                         arguments.getBoolean("--print-live-stats", true),
-                        Duration.ofSeconds(arguments.getInt("--print-live-stats-interval-seconds", 60)));
+                        Duration.ofSeconds(arguments.getInt("--print-live-stats-interval-seconds", 45)));
             }
             else {
                 boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);

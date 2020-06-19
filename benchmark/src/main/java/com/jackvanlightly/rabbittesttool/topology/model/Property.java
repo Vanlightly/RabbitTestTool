@@ -1,8 +1,8 @@
 package com.jackvanlightly.rabbittesttool.topology.model;
 
 public class Property {
-    private String key;
-    private Object value;
+    String key;
+    Object value;
 
     public Property(String key, Object value) {
         this.key = key;

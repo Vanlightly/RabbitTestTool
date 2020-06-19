@@ -11,6 +11,7 @@ public class VariableConfig {
     int stepDurationSeconds;
     int stepRampUpSeconds;
     int repeatWholeSeriesCount;
+    int stepLimit;
     String group;
     StepOverride stepOverride;
 
@@ -120,6 +121,10 @@ public class VariableConfig {
         this.stepRampUpSeconds = stepRampUpSeconds;
     }
 
+    public void setStepLimit(int stepLimit) {
+        this.stepLimit = stepLimit;
+    }
+
     public String getGroup() {
         return group;
     }
@@ -129,6 +134,9 @@ public class VariableConfig {
     }
 
     public int getStepCount() {
+        if(this.stepLimit > 0)
+            return this.stepLimit;
+
         return Math.max(this.values.size(), this.multiValues.size());
     }
 
