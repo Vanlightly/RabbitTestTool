@@ -1,0 +1,61 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "consumerCount": "2", "processingMs": "15",
+            "value1": "50", "value2": "50", "value3": "50", "value4": "50", "value5": "50", "value6": "52", "value7": "54", "value8": "56", "value9": "58", 
+            "value10": "60", "value11": "62", "value12": "64", "value13": "66", "value14": "68", "value15": "70", "value16": "72", "value17": "74", "value18": "76", "value19": "78", 
+            "value20": "80", "value21": "82", "value22": "84", "value23": "86", "value24": "88", "value25": "90", "value26": "92", "value27": "94", "value28": "96", "value29": "98", 
+            "value30": "100", "value31": "98", "value32": "96", "value33": "94", "value34": "92", "value35": "90", "value36": "88", "value37": "86", "value38": "84", "value39": "82", 
+            "value40": "80", "value41": "78", "value42": "76", "value43": "74", "value44": "72", "value45": "70", "value46": "68", "value47": "66", "value48": "64", "value49": "62", 
+            "value50": "60", "value51": "58", "value52": "56", "value53": "54", "value54": "52", "value55": "50", "value56": "50", "value57": "50", "value58": "50", "value59": "50", 
+            "value60": "50", "value61": "50", "value62": "50", "value63": "50", "value64": "50", "value65": "50", "value66": "50", "value67": "50", "value68": "50", "value69": "50", 
+            "value70": "50", "value71": "50", "value72": "50", "value73": "50", "value74": "50", "value75": "50", "value76": "50", "value77": "50", "value78": "50", "value79": "50", 
+            "value80": "50", "value81": "50", "value82": "50", "value83": "50", "value84": "50", "value85": "50", "value86": "50", "value87": "50", "value88": "50", "value89": "50", 
+            "value90": "50", "value91": "50", "value92": "50", "value93": "50", "value94": "50", "value95": "50", "value96": "50", "value97": "50", "value98": "50", "value99": "50", 
+            "value100": "50" } },
+        { "topologyVariables": { "consumerCount": "3", "processingMs": "13",
+            "value1": "100", "value2": "100", "value3": "100", "value4": "100", "value5": "100", "value6": "102", "value7": "104", "value8": "106", "value9": "108", 
+            "value10": "110", "value11": "112", "value12": "114", "value13": "116", "value14": "118", "value15": "120", "value16": "122", "value17": "124", "value18": "126", "value19": "128", 
+            "value20": "130", "value21": "132", "value22": "134", "value23": "136", "value24": "138", "value25": "140", "value26": "142", "value27": "144", "value28": "146", "value29": "148", 
+            "value30": "150", "value31": "148", "value32": "146", "value33": "14    4", "value34": "142", "value35": "140", "value36": "138", "value37": "136", "value38": "134", "value39": "132", 
+            "value40": "130", "value41": "128", "value42": "126", "value43": "124", "value44": "122", "value45": "120", "value46": "118", "value47": "116", "value48": "114", "value49": "112", 
+            "value50": "110", "value51": "108", "value52": "106", "value53": "104", "value54": "102", "value55": "100", "value56": "100", "value57": "100", "value58": "100", "value59": "100", 
+            "value60": "100", "value61": "100", "value62": "100", "value63": "100", "value64": "100", "value65": "100", "value66": "100", "value67": "100", "value68": "100", "value69": "100", 
+            "value70": "100", "value71": "100", "value72": "100", "value73": "100", "value74": "100", "value75": "100", "value76": "100", "value77": "100", "value78": "100", "value79": "100", 
+            "value80": "100", "value81": "100", "value82": "100", "value83": "100", "value84": "100", "value85": "100", "value86": "100", "value87": "100", "value88": "100", "value89": "100", 
+            "value90": "100", "value91": "100", "value92": "100", "value93": "100", "value94": "100", "value95": "100", "value96": "100", "value97": "100", "value98": "100", "value99": "100", 
+            "value100": "100" } },
+        { "topologyVariables": { "consumerCount": "4", "processingMs": "12",
+            "value1": "150", "value2": "150", "value3": "150", "value4": "150", "value5": "150", "value6": "152", "value7": "154", "value8": "156", "value9": "158", 
+            "value10": "160", "value11": "162", "value12": "164", "value13": "166", "value14": "168", "value15": "170", "value16": "172", "value17": "174", "value18": "176", "value19": "178", 
+            "value20": "180", "value21": "182", "value22": "184", "value23": "186", "value24": "188", "value25": "190", "value26": "192", "value27": "194", "value28": "196", "value29": "198", 
+            "value30": "200", "value31": "198", "value32": "196", "value33": "194", "value34": "192", "value35": "190", "value36": "188", "value37": "186", "value38": "184", "value39": "182", 
+            "value40": "180", "value41": "178", "value42": "176", "value43": "174", "value44": "172", "value45": "170", "value46": "168", "value47": "166", "value48": "164", "value49": "162", 
+            "value50": "160", "value51": "158", "value52": "156", "value53": "154", "value54": "152", "value55": "150", "value56": "150", "value57": "150", "value58": "150", "value59": "150", 
+            "value60": "150", "value61": "150", "value62": "150", "value63": "150", "value64": "150", "value65": "150", "value66": "150", "value67": "150", "value68": "150", "value69": "150", 
+            "value70": "150", "value71": "150", "value72": "150", "value73": "150", "value74": "150", "value75": "150", "value76": "150", "value77": "150", "value78": "150", "value79": "150", 
+            "value80": "150", "value81": "150", "value82": "150", "value83": "150", "value84": "150", "value85": "150", "value86": "150", "value87": "150", "value88": "150", "value89": "150", 
+            "value90": "150", "value91": "150", "value92": "150", "value93": "150", "value94": "150", "value95": "150", "value96": "150", "value97": "150", "value98": "150", "value99": "150", 
+            "value100": "150" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe-1-dimension-100-values.json",
+        "topologyVariables": { 
+            "dimension": "publishRate",
+            "manualAcks": "true", 
+            "messageSize": "1000",
+            "groupScale": "100",
+            "publisherCount": "2", 
+            "queueCount": "1", 
+            "inflightLimit": "40", 
+            "consumerPrefetch": "50",
+            "ackInterval": "1",
+            "durationSeconds": "60"
+        },
+        "policy": "mirrored-queue.json",
+        "policyVariables": { 
+            "haMode": "exactly",
+            "haParams": "2",
+            "ha-sync-mode": "manual"
+        }
+    }
+}

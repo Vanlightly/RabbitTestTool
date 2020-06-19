@@ -1,0 +1,37 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publishRate": "50", "consumerCount": "2" } },
+        { "topologyVariables": { "publishRate": "100", "consumerCount": "3" } },
+        { "topologyVariables": { "publishRate": "150", "consumerCount": "4" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe-1-dimension-100-values.json",
+        "topologyVariables": { 
+            "dimension": "processingMs",
+            "manualAcks": "true", 
+            "messageSize": "1000",
+            "groupScale": "100",
+            "publisherCount": "2", 
+            "queueCount": "1", 
+            "inflightLimit": "40", 
+            "consumerPrefetch": "50",
+            "ackInterval": "1",
+            "durationSeconds": "60",
+            "value1": "10", "value2": "10", "value3": "10", "value4": "10", "value5": "10", "value6": "11", "value7": "12", "value8": "13", "value9": "14", 
+            "value10": "15", "value11": "16", "value12": "17", "value13": "18", "value14": "19", "value15": "20", "value16": "21", "value17": "22", "value18": "23", "value19": "24", 
+            "value20": "25", "value21": "26", "value22": "27", "value23": "28", "value24": "29", "value25": "30", "value26": "30", "value27": "30", "value28": "30", "value29": "30", 
+            "value30": "30", "value31": "29", "value32": "28", "value33": "27", "value34": "26", "value35": "25", "value36": "24", "value37": "23", "value38": "22", "value39": "21", 
+            "value40": "20", "value41": "19", "value42": "18", "value43": "17", "value44": "16", "value45": "15", "value46": "14", "value47": "13", "value48": "12", "value49": "11", 
+            "value50": "10", "value51": "10", "value52": "10", "value53": "10", "value54": "10", "value55": "10", "value56": "10", "value57": "10", "value58": "10", "value59": "10", 
+            "value60": "10", "value61": "10", "value62": "10", "value63": "10", "value64": "10", "value65": "10", "value66": "10", "value67": "10", "value68": "10", "value69": "10", 
+            "value70": "10", "value71": "10", "value72": "10", "value73": "10", "value74": "10", "value75": "10", "value76": "10", "value77": "10", "value78": "10", "value79": "10", 
+            "value80": "10", "value81": "10", "value82": "10", "value83": "10", "value84": "10", "value85": "10", "value86": "10", "value87": "10", "value88": "10", "value89": "10", 
+            "value90": "10", "value91": "10", "value92": "10", "value93": "10", "value94": "10", "value95": "10", "value96": "10", "value97": "10", "value98": "10", "value99": "10", 
+            "value100": "10"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

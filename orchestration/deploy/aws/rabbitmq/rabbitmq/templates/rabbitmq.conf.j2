@@ -4,3 +4,18 @@ log.file.level = {{ log_level }}
 {% if wal_max_batch_size > 0 %}
 raft.wal_max_batch_size = {{ wal_max_batch_size }}
 {% endif %}
+{% if mirroring_sync_batch_size > 0 %}
+mirroring_sync_batch_size = {{ mirroring_sync_batch_size }}
+{% endif %}
+{% if tcp_listen_options_backlog > 0 %}
+tcp_listen_options.backlog = {{ tcp_listen_options_backlog }}
+{% endif %}
+{% if tcp_listen_options_buffer > 0 %}
+tcp_listen_options.buffer = {{ tcp_listen_options_buffer }}
+{% endif %}
+{% if tcp_listen_options_sndbuf > 0 %}
+tcp_listen_options.sndbuf = {{ tcp_listen_options_sndbuf }}
+{% endif %}
+{% if tcp_listen_options_recbuf > 0 %}
+tcp_listen_options.recbuf = {{ tcp_listen_options_recbuf }}
+{% endif %}

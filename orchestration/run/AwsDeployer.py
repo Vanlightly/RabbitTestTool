@@ -135,6 +135,7 @@ class AwsDeployer(Deployer):
 
         exit_code = subprocess.call(["bash", "deploy-rmq-cluster-instances.sh", 
                                 common_conf.ami, 
+                                common_conf.arm_ami, 
                                 str(unique_conf.cluster_size), 
                                 unique_conf.core_count, 
                                 unique_conf.instance, 
@@ -193,7 +194,6 @@ class AwsDeployer(Deployer):
     
     def deploy_master(self, status_id, unique_conf, common_conf, node, node_range_start, node_range_end):
         exit_code = subprocess.call(["bash", "deploy-rmq-cluster-broker.sh", 
-                                common_conf.ami, 
                                 unique_conf.broker_version, 
                                 unique_conf.core_count, 
                                 unique_conf.filesystem, 
@@ -227,7 +227,6 @@ class AwsDeployer(Deployer):
     
     def deploy_joinee(self, status_id, unique_conf, common_conf, node, node_range_start, node_range_end):
         exit_code = subprocess.call(["bash", "deploy-rmq-cluster-broker.sh", 
-                                common_conf.ami, 
                                 unique_conf.broker_version, 
                                 unique_conf.core_count, 
                                 unique_conf.filesystem, 

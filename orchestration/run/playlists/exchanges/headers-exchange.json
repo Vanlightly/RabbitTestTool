@@ -1,0 +1,35 @@
+{
+    "benchmarks": [
+        { "topology": "exchanges/headers1.json", "topologyVariables": { "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers2.json", "topologyVariables": { "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers3.json", "topologyVariables": { "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers4.json", "topologyVariables": { "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers1.json", "topologyVariables": { "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers2.json", "topologyVariables": { "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers3.json", "topologyVariables": { "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers4.json", "topologyVariables": { "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+
+        { "topology": "exchanges/headers1.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers2.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers3.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers4.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers1.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers2.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers3.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers4.json", "topologyVariables": { "groupScale": "50", "publishRate": "6000", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+
+        { "topology": "exchanges/headers1.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers2.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers3.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers4.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "any", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers1.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers2.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers3.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }},
+        { "topology": "exchanges/headers4.json", "topologyVariables": { "benchmarkType": "latency", "groupScale": "50", "publishRate": "200", "match": "all", "publisherCount": "1", "queueCount": "1", "consumerCount": "1" }}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "durationSeconds": "300"
+        }
+    }
+}

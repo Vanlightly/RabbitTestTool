@@ -1,0 +1,39 @@
+{
+    "benchmarks": [
+        { "topology": "exchanges/headers1.json"},
+        { "topology": "exchanges/headers1-20-unique-bindings.json"},
+        { "topology": "exchanges/headers1-40-unique-bindings.json"},
+        { "topology": "exchanges/headers1-60-unique-bindings.json"},
+        { "topology": "exchanges/headers1-80-unique-bindings.json"},
+        { "topology": "exchanges/headers1-100-unique-bindings.json"},
+        
+        { "topology": "exchanges/topic-exact-match.json"},
+        { "topology": "exchanges/topic-exact-match-20-unique-bindings.json"},
+        { "topology": "exchanges/topic-exact-match-40-unique-bindings.json"},
+        { "topology": "exchanges/topic-exact-match-60-unique-bindings.json"},
+        { "topology": "exchanges/topic-exact-match-80-unique-bindings.json"},
+        { "topology": "exchanges/topic-exact-match-100-unique-bindings.json"},
+
+        { "topology": "exchanges/topic-star-match.json"},
+        { "topology": "exchanges/topic-star-match-20-unique-bindings.json"},
+        { "topology": "exchanges/topic-star-match-40-unique-bindings.json"},
+        { "topology": "exchanges/topic-star-match-60-unique-bindings.json"},
+        { "topology": "exchanges/topic-star-match-80-unique-bindings.json"},
+        { "topology": "exchanges/topic-star-match-100-unique-bindings.json"},
+
+        { "topology": "exchanges/topic-hash-match.json"},
+        { "topology": "exchanges/topic-hash-match-20-unique-bindings.json"},
+        { "topology": "exchanges/topic-hash-match-40-unique-bindings.json"},
+        { "topology": "exchanges/topic-hash-match-60-unique-bindings.json"},
+        { "topology": "exchanges/topic-hash-match-80-unique-bindings.json"},
+        { "topology": "exchanges/topic-hash-match-100-unique-bindings.json"}
+    ],
+    "commonAttributes": {
+        "topologyVariables": {
+            "publisherCount": "1",
+            "useConfirms": "false",
+            "manualAcks": "false",
+            "durationSeconds": "300"
+        }
+    }
+}

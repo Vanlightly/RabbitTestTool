@@ -35,6 +35,40 @@ class BrokerActions:
                     time.sleep(10)
                 console_out(self.actor, f"Reached msg trigger on node {unique_conf.node_number}")
 
+    def deploy_scripts_to_all_brokers(self, configurations, common_conf):
+        r_threads = list()
+        for config_tag in configurations:
+            console_out(self.actor, f"Deploy scripts for configuration {config_tag}")
+            unique_conf_list = configurations[config_tag]
+            # iterate over configurations
+            for p in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[p]
+                # iterate over nodes of this configuration
+                for n in range(unique_conf.cluster_size):
+                    node = int(unique_conf.node_number) + n
+                    restart = threading.Thread(target=self.deploy_scripts, args=(unique_conf.technology, str(node), common_conf))
+                    r_threads.append(restart)
+
+        for rt in r_threads:
+            rt.start()
+        
+        for rt in r_threads:
+            rt.join()
+        
+        for config_tag in configurations:
+            unique_conf_list = configurations[config_tag]
+            
+            for p in range(len(unique_conf_list)):
+                unique_conf = unique_conf_list[p]
+                for n in range(unique_conf.cluster_size):
+                    node = int(unique_conf.node_number) + n
+                    status_id = f"{unique_conf.technology}{node}"
+                
+                    if self._action_status[status_id] != "success":
+                        console_out(self.actor, f"Broker script deployment failed for node {unique_conf.technology}{node}")
+                        if not common_conf.no_deploy:
+                            self._deployer.teardown_all(configurations, common_conf, False)
+
     def restart_all_brokers(self, configurations, common_conf):
         r_threads = list()
         for config_tag in configurations:

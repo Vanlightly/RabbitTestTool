@@ -1,6 +1,6 @@
 ---
 
-- name: create rabbitmq directory
+- name: Ensure rabbitmq directory exists
   file: 
     path: /rabbitmq
     state: directory 

@@ -4,49 +4,51 @@ echo "------------------------------"
 echo "Deploying EBS backed instance with args:"
 AMI="$1"
 echo "AMI=$AMI"
-CORE_COUNT="$2"
+ARM_AMI="$2"
+echo "ARM_AMI=$ARM_AMI"
+CORE_COUNT="$3"
 echo "CORE_COUNT=$CORE_COUNT"
-INSTANCE="$3"
+INSTANCE="$4"
 echo "INSTANCE=$INSTANCE"
-KEY_PAIR="$4"
+KEY_PAIR="$5"
 echo "KEY_PAIR=$KEY_PAIR"
-LG_INCLUDED="$5"
+LG_INCLUDED="$6"
 echo "LG_INCLUDED=$LG_INCLUDED"
-LG_INSTANCE="$6"
+LG_INSTANCE="$7"
 echo "LG_INSTANCE=$LG_INSTANCE"
-LG_SG="$7"
+LG_SG="$8"
 echo "LG_SG=$LG_SG"
-NODE_NUMBER="$8"
+NODE_NUMBER="$9"
 echo "NODE_NUMBER=$NODE_NUMBER"
-RUN_TAG="$9"
+RUN_TAG="${10}"
 echo "RUN_TAG=$RUN_TAG"
-SG="${10}"
+SG="${11}"
 echo "SG=$SG"
-SN="${11}"
+SN="${12}"
 echo "SN=$SN"
-TECHNOLOGY="${12}"
+TECHNOLOGY="${13}"
 echo "TECHNOLOGY=$TECHNOLOGY"
-TENANCY="${13}"
+TENANCY="${14}"
 echo "TENANCY=$TENANCY"
-TPC="${14}"
+TPC="${15}"
 echo "TPC=$TPC"
-VOL1_IOPS_PER_GB="${15}"
+VOL1_IOPS_PER_GB="${16}"
 echo "VOL1_IOPS_PER_GB=$VOL1_IOPS_PER_GB"
-VOL2_IOPS_PER_GB="${16}"
+VOL2_IOPS_PER_GB="${17}"
 echo "VOL2_IOPS_PER_GB=$VOL2_IOPS_PER_GB"
-VOL3_IOPS_PER_GB="${17}"
+VOL3_IOPS_PER_GB="${18}"
 echo "VOL3_IOPS_PER_GB=$VOL3_IOPS_PER_GB"
-VOL1_SIZE="${18}"
+VOL1_SIZE="${19}"
 echo "VOL1_SIZE=$VOL1_SIZE"
-VOL2_SIZE="${19}"
+VOL2_SIZE="${20}"
 echo "VOL2_SIZE=$VOL2_SIZE"
-VOL3_SIZE="${20}"
+VOL3_SIZE="${21}"
 echo "VOL3_SIZE=$VOL3_SIZE"
-VOL1_TYPE="${21}"
+VOL1_TYPE="${22}"
 echo "VOL1_TYPE=$VOL1_TYPE"
-VOL2_TYPE="${22}"
+VOL2_TYPE="${23}"
 echo "VOL2_TYPE=$VOL2_TYPE"
-VOL3_TYPE="${23}"
+VOL3_TYPE="${24}"
 echo "VOL3_TYPE=$VOL3_TYPE"
 echo "------------------------------"
 
@@ -85,7 +87,19 @@ if (( $VOL3_SIZE > 0 ));then
     fi
 fi
 
-aws ec2 run-instances \
+if [[ $INSTANCE == a1* ]] || [[ $INSTANCE == m6g* ]]; then
+    aws ec2 run-instances \
+    --image-id "$ARM_AMI" \
+    --count 1 \
+    --instance-type "$INSTANCE" \
+    --key-name "$KEY_PAIR" \
+    --security-group-ids "$SG" \
+    --subnet-id "$SN" \
+    --placement "Tenancy=$TENANCY" \
+    --block-device-mappings $BLOCK_DEVICE1 $BLOCK_DEVICE2 $BLOCK_DEVICE3 \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]"
+else
+    aws ec2 run-instances \
     --image-id "$AMI" \
     --count 1 \
     --instance-type "$INSTANCE" \
@@ -96,33 +110,7 @@ aws ec2 run-instances \
     --block-device-mappings $BLOCK_DEVICE1 $BLOCK_DEVICE2 $BLOCK_DEVICE3 \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" \
     --cpu-options "CoreCount=${CORE_COUNT},ThreadsPerCore=${TPC}"
-# else
-
-#     BLOCK_DEVICE1=""
-#     BLOCK_DEVICE2=""
-#     BLOCK_DEVICE3=""
-#     if (( $VOL3_SIZE > 0 ));then
-#         BLOCK_DEVICE3="DeviceName=/dev/sdd,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL3_SIZE,DeleteOnTermination=true}"
-#     fi
-
-#     if (( $VOL2_SIZE > 0 ));then
-#         BLOCK_DEVICE2="DeviceName=/dev/sdc,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL2_SIZE,DeleteOnTermination=true}"
-#     fi
-
-#     BLOCK_DEVICE1="DeviceName=/dev/sdb,Ebs={VolumeType=${VOL_TYPE},VolumeSize=$VOL1_SIZE,DeleteOnTermination=true}"
-
-#     aws ec2 run-instances \
-#     --image-id "$AMI" \
-#     --count 1 \
-#     --instance-type "$INSTANCE" \
-#     --key-name "$KEY_PAIR" \
-#     --security-group-ids "$SG" \
-#     --subnet-id "$SN" \
-#     --placement "Tenancy=$TENANCY" \
-#     --block-device-mappings $BLOCK_DEVICE1 $BLOCK_DEVICE2 $BLOCK_DEVICE3 \
-#     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" "ResourceType=volume,Tags=[{Key=Name,Value=$TAG},{Key=inventorygroup,Value=$TAG}]" \
-#     --cpu-options "CoreCount=${CORE_COUNT},ThreadsPerCore=${TPC}"
-# fi
+fi
 
 if [[ ${LG_INCLUDED} == "false" ]];then
     echo "Node $NODE_NUMBER: Not deploying loadgen"

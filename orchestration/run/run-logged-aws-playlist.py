@@ -151,6 +151,7 @@ if len(playlist_entries) == 0:
 # deploy unless deployment configured to redeploy on each repeat run
 if not common_conf.new_instance_per_run:
     deployer.deploy(runner, configurations, common_conf)
+    broker_actions.deploy_scripts_to_all_brokers(configurations, common_conf)
 
 # repeat ([deploy], run benchmark, [teardown]) according to configuration
 for i in range(common_conf.repeat_count):
@@ -158,6 +159,7 @@ for i in range(common_conf.repeat_count):
 
     if common_conf.new_instance_per_run:
         deployer.deploy(runner, configurations, common_conf)
+        broker_actions.deploy_scripts_to_all_brokers(configurations, common_conf)
     
     # run each topology benchmark
     run_ordinal = 1

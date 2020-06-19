@@ -74,7 +74,7 @@ def get_playlist_entries(playlist_file):
             entry.trigger_type = get_entry_mandatory_field(playlist_entry, common_attr, "triggerType")
             entry.trigger_at = get_entry_mandatory_field(playlist_entry, common_attr, "triggerAt")
 
-        entry.grace_period_sec = get_entry_optional_field(playlist_entry, common_attr, "gracePeriodSec", 0)
+        entry.grace_period_sec = get_entry_optional_field(playlist_entry, common_attr, "gracePeriodSec", 60)
         
         if not os.path.exists("../benchmark/topologies/" + entry.topology):
             console_out("RUNNER", f"The topology file {entry.topology} does not exist")

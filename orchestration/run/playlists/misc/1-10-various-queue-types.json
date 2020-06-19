@@ -1,0 +1,32 @@
+{
+    "benchmarks": [
+        { "topologyVariables": {"publisherCount": "1", "queueCount": "1", "consumerCount": "1", "manualAcks": "false", "useConfirms": "false" } },
+        { "topologyVariables": {"publisherCount": "10", "queueCount": "10", "consumerCount": "10", "manualAcks": "false", "useConfirms": "false" } },
+        { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50", "manualAcks": "false", "useConfirms": "false" } },
+        { "topologyVariables": {"publisherCount": "1", "queueCount": "1", "consumerCount": "1" } },
+        { "topologyVariables": {"publisherCount": "10", "queueCount": "10", "consumerCount": "10" } },
+        { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50" } },
+        { "topologyVariables": {"publisherCount": "1", "queueCount": "1", "consumerCount": "1" },
+            "policy": "mirrored-queue.json",
+            "policyVariables": { "haMode": "exactly", "haParams": "2"} },
+        { "topologyVariables": {"publisherCount": "10", "queueCount": "10", "consumerCount": "10" },
+            "policy": "mirrored-queue.json",
+            "policyVariables": { "haMode": "exactly", "haParams": "2"} },
+        { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50" },
+            "policy": "mirrored-queue.json",
+            "policyVariables": { "haMode": "exactly", "haParams": "2"} },
+        { "topologyVariables": {"publisherCount": "1", "queueCount": "1", "consumerCount": "1" }, "policy": "quorum-queue.json"},
+        { "topologyVariables": {"publisherCount": "10", "queueCount": "10", "consumerCount": "10" }, "policy": "quorum-queue.json"},
+        { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50" }, "policy": "quorum-queue.json"}
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "inflightLimit": "1000",
+            "consumerPrefetch": "1000",
+            "messageSize": "20",
+            "ackInterval": "1",
+            "durationSeconds": "600"
+        }
+    }
+}

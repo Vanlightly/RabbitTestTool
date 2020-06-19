@@ -8,6 +8,7 @@ class AwsCommonConfiguration(CommonConfiguration):
         super().__init__(args)
 
         self.ami = get_mandatory_arg(args, "--ami", "")
+        self.arm_ami = get_mandatory_arg(args, "--arm-ami", "")
         self.broker_sg = get_mandatory_arg(args, "--broker-sg", "")
         self.loadgen_sg = get_mandatory_arg(args, "--loadgen-sg", "")
         self.loadgen_instance = get_mandatory_arg(args, "--loadgen-instance", "")

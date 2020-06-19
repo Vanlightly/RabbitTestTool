@@ -87,7 +87,7 @@
             "topicQueueMode": "default",
             "topicUseConfirms": "true", 
             
-            "durationSeconds": "600"
+            "durationSeconds": "300"
         }
     }
 }

@@ -20,25 +20,35 @@
     url: https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
     state: present
   tags: [installation]
+  when: erlang_from == 'deb'
 
 - name: copy Erlang DEB file to /tmp
   copy: 
     src: "{{ local_deb_file_dir }}/{{ erlang_deb_file }}"
     dest: /tmp
   tags: [installation]
+  when: erlang_from == 'deb'
 
 - name: Install Erlang from DEB file
   apt:
     deb: "/tmp/{{ erlang_deb_file }}"
   tags: [installation]
+  when: erlang_from == 'deb'
+
+- name: Install Erlang from Apt
+  apt: 
+    name: erlang
+    state: present
+  tags: [installation]
+  when: erlang_from == 'apt'
+
+- include_tasks: configuration.yml
+  tags: [configuration]
 
 - include_tasks: install_from_generic.yml
   tags: [installation]
   when: install_from == 'generic'
 
-- include_tasks: configuration.yml
-  tags: [configuration]
-  
 - include_tasks: join_cluster_generic.yml
   tags: [installation]
   when: node_role == "joinee" and install_from == 'generic'

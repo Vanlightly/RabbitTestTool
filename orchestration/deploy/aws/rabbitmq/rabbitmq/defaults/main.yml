@@ -1,5 +1,6 @@
 rabbitmq_version: 3.7.17
 rabbitmq_erlang_cookie: 12345
+erlang_from: deb
 node_role: "master"
 is_cluster: false
 prometheus_enabled: true
@@ -15,3 +16,9 @@ raft_segment_max_entries: 0
 quorum_commands_soft_limit: 0
 wal_max_batch_size: 0
 enable_stream_plugin: false
+additional_erl_args: none
+mirroring_sync_batch_size: 0
+tcp_listen_options_backlog: 0
+tcp_listen_options_buffer: 0
+tcp_listen_options_sndbuf: 0
+tcp_listen_options_recbuf: 0
