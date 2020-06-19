@@ -34,7 +34,22 @@
             { "from": "ex1",
               "properties": [
                 { "key": "x-match", "value": "{{ var.match }}", "type": "string" },
-                { "key": "h01", "value": "abc", "type": "string"  }
+                { "key": "h01", "value": "abc", "type": "string"  },
+                { "key": "h02", "value": 400000002, "type": "int" },
+                { "key": "h03", "value": "bcd", "type": "string" },
+                { "key": "h04", "value": 400000004, "type": "int" },
+                { "key": "h05", "value": "cde", "type": "string"  },
+                { "key": "h06", "value": 400000006, "type": "int" },
+                { "key": "h07", "value": "def", "type": "string"  },
+                { "key": "h08", "value": 400000008, "type": "int" },
+                { "key": "h09", "value": "efg", "type": "string"  },
+                { "key": "h10", "value": 400000010, "type": "int" },
+                { "key": "h11", "value": "fgh", "type": "string" },
+                { "key": "h12", "value": 400000012, "type": "int" },
+                { "key": "h13", "value": "ghi", "type": "string"  },
+                { "key": "h14", "value": 400000014, "type": "int" },
+                { "key": "h15", "value": "hij", "type": "string"  },
+                { "key": "h16", "value": 400000016, "type": "int" }
               ] 
             }
           ],
@@ -59,9 +74,24 @@
           "messageSize": "{{ var.messageSize }}",
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
           "availableHeaders": [
-              { "key": "h01", "value": "abc", "type": "string" }
+            { "key": "h01", "value": "abc", "type": "string"  },
+            { "key": "h02", "value": 400000002, "type": "int" },
+            { "key": "h03", "value": "bcd", "type": "string" },
+            { "key": "h04", "value": 400000004, "type": "int" },
+            { "key": "h05", "value": "cde", "type": "string"  },
+            { "key": "h06", "value": 400000006, "type": "int" },
+            { "key": "h07", "value": "def", "type": "string"  },
+            { "key": "h08", "value": 400000008, "type": "int" },
+            { "key": "h09", "value": "efg", "type": "string"  },
+            { "key": "h10", "value": 400000010, "type": "int" },
+            { "key": "h11", "value": "fgh", "type": "string" },
+            { "key": "h12", "value": 400000012, "type": "int" },
+            { "key": "h13", "value": "ghi", "type": "string"  },
+            { "key": "h14", "value": 400000014, "type": "int" },
+            { "key": "h15", "value": "hij", "type": "string"  },
+            { "key": "h16", "value": 400000016, "type": "int" }
           ],
-          "headersPerMessage": 1
+          "headersPerMessage": 16
         }
       ],
       "consumers": [ 

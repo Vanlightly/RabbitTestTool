@@ -1,0 +1,123 @@
+{
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "false" },
+    { "name": "inflightLimit", "default": "0" },
+    { "name": "manualAcks", "default": "false" },
+    { "name": "consumerPrefetch", "default": "0" },
+    { "name": "ackInterval", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "match", "default": "any" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "exchanges": [ { "name": "ex1", "type": "headers" }],
+      "queues": [ 
+        { "prefix": "q000", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v000", "type": "string"  }] }]},
+        { "prefix": "q001", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v001", "type": "string"  }] }]},
+        { "prefix": "q002", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v002", "type": "string"  }] }]},
+        { "prefix": "q003", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v003", "type": "string"  }] }]},
+        { "prefix": "q004", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v004", "type": "string"  }] }]},
+        { "prefix": "q005", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v005", "type": "string"  }] }]},
+        { "prefix": "q006", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v006", "type": "string"  }] }]},
+        { "prefix": "q007", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v007", "type": "string"  }] }]},
+        { "prefix": "q008", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v008", "type": "string"  }] }]},
+        { "prefix": "q009", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v009", "type": "string"  }] }]},
+        
+        { "prefix": "q010", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v010", "type": "string"  }] }]},
+        { "prefix": "q011", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v011", "type": "string"  }] }]},
+        { "prefix": "q012", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v012", "type": "string"  }] }]},
+        { "prefix": "q013", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v013", "type": "string"  }] }]},
+        { "prefix": "q014", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v014", "type": "string"  }] }]},
+        { "prefix": "q015", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v015", "type": "string"  }] }]},
+        { "prefix": "q016", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v016", "type": "string"  }] }]},
+        { "prefix": "q017", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v017", "type": "string"  }] }]},
+        { "prefix": "q018", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v018", "type": "string"  }] }]},
+        { "prefix": "q019", "scale": "{{ var.queueCount }}", "bindings": [{ "from": "ex1", "properties": [{ "key": "x-match", "value": "{{ var.match }}", "type": "string" }, { "key": "h01", "value": "v019", "type": "string"  }] }]}
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToExchange": {
+            "exchange": "ex1",
+            "routingKeyMode": "none"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "availableHeaders": [
+            { "key": "h01", "value": "v000", "type": "string"  },
+            { "key": "h01", "value": "v001", "type": "string"  },
+            { "key": "h01", "value": "v002", "type": "string"  },
+            { "key": "h01", "value": "v003", "type": "string"  },
+            { "key": "h01", "value": "v004", "type": "string"  },
+            { "key": "h01", "value": "v005", "type": "string"  },
+            { "key": "h01", "value": "v006", "type": "string"  },
+            { "key": "h01", "value": "v007", "type": "string"  },
+            { "key": "h01", "value": "v008", "type": "string"  },
+            { "key": "h01", "value": "v009", "type": "string"  },
+            { "key": "h01", "value": "v010", "type": "string"  },
+            { "key": "h01", "value": "v011", "type": "string"  },
+            { "key": "h01", "value": "v012", "type": "string"  },
+            { "key": "h01", "value": "v013", "type": "string"  },
+            { "key": "h01", "value": "v014", "type": "string"  },
+            { "key": "h01", "value": "v015", "type": "string"  },
+            { "key": "h01", "value": "v016", "type": "string"  },
+            { "key": "h01", "value": "v017", "type": "string"  },
+            { "key": "h01", "value": "v018", "type": "string"  },
+            { "key": "h01", "value": "v019", "type": "string"  }
+          ],
+          "headersPerMessage": 1
+        }
+      ],
+      "consumers": [ 
+        { "prefix": "c000", "scale": 1, "queuePrefix": "q000", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c001", "scale": 1, "queuePrefix": "q001", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c002", "scale": 1, "queuePrefix": "q002", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c003", "scale": 1, "queuePrefix": "q003", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c004", "scale": 1, "queuePrefix": "q004", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c005", "scale": 1, "queuePrefix": "q005", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c006", "scale": 1, "queuePrefix": "q006", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c007", "scale": 1, "queuePrefix": "q007", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c008", "scale": 1, "queuePrefix": "q008", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c009", "scale": 1, "queuePrefix": "q009", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+
+        { "prefix": "c010", "scale": 1, "queuePrefix": "q010", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c011", "scale": 1, "queuePrefix": "q011", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c012", "scale": 1, "queuePrefix": "q012", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c013", "scale": 1, "queuePrefix": "q013", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c014", "scale": 1, "queuePrefix": "q014", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c015", "scale": 1, "queuePrefix": "q015", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c016", "scale": 1, "queuePrefix": "q016", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c017", "scale": 1, "queuePrefix": "q017", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c018", "scale": 1, "queuePrefix": "q018", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c019", "scale": 1, "queuePrefix": "q019", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}}
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

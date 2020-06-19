@@ -33,11 +33,11 @@
           "bindings": [
             { "from": "ex1",
               "properties": [
-                { "key": "x-match", "value": "{{ var.match }}" },
-                { "key": "custom01", "value": "abcdefg", "type": "string"  },
-                { "key": "custom02", "value": 400000002, "type": "int" },
-                { "key": "custom03", "value": "bcdefga", "type": "string" },
-                { "key": "custom04", "value": 400000004, "type": "int" }
+                { "key": "x-match", "value": "{{ var.match }}", "type": "string" },
+                { "key": "h01", "value": "abc", "type": "string"  },
+                { "key": "h02", "value": 400000002, "type": "int" },
+                { "key": "h03", "value": "bcd", "type": "string" },
+                { "key": "h04", "value": 400000004, "type": "int" }
               ] 
             }
           ],
@@ -62,10 +62,10 @@
           "messageSize": "{{ var.messageSize }}",
           "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
           "availableHeaders": [
-            { "key": "custom01", "value": "abcdefg", "type": "string"  },
-            { "key": "custom02", "value": 400000002, "type": "int" },
-            { "key": "custom03", "value": "bcdefga", "type": "string" },
-            { "key": "custom04", "value": 400000004, "type": "int" }
+            { "key": "h01", "value": "abc", "type": "string"  },
+            { "key": "h02", "value": 400000002, "type": "int" },
+            { "key": "h03", "value": "bcd", "type": "string" },
+            { "key": "h04", "value": 400000004, "type": "int" }
           ],
           "headersPerMessage": 4
         }
