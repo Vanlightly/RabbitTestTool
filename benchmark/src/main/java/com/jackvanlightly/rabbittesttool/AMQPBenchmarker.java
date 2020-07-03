@@ -159,7 +159,7 @@ public class AMQPBenchmarker {
             }
             else {
                 boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);
-                String outputDir = arguments.getStr("--output-dir", "/tmp/rtt/model");
+                String outputDir = arguments.getStr("--output-dir", "tmp");
                 benchmarkRegister = new ConsoleRegister(System.out, printLiveStats, outputDir);
             }
 
@@ -172,6 +172,7 @@ public class AMQPBenchmarker {
             boolean checkDuplicates = checkArgs.contains("duplicates") || checkArgs.contains("all");
             boolean checkConnectivity = checkArgs.contains("connectivity") || checkArgs.contains("all");
             boolean checkConsumeGaps = checkArgs.contains("consumption") || checkArgs.contains("all");
+            boolean includeRedelivered = arguments.getBoolean("--include-redelivered", false);
 
             Duration houseKeepingInterval = Duration.ofSeconds(arguments.getInt("--house-keeping-sec", 30));
             Duration messageLossThresholdDuration = Duration.ofSeconds(arguments.getInt("--message-loss-threshold-sec", 900));
@@ -193,6 +194,7 @@ public class AMQPBenchmarker {
                     checkDuplicates,
                     checkConnectivity,
                     checkConsumeGaps,
+                    includeRedelivered,
                     logLastMsg,
                     logCompaction,
                     logGaps);
@@ -218,6 +220,10 @@ public class AMQPBenchmarker {
                     .filter(x -> x.getViolationType() == ViolationType.Ordering)
                     .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
                     .reduce(0L, Long::sum);
+            long redeliveredOrderingViolations = violations.stream()
+                    .filter(x -> x.getViolationType() == ViolationType.RedeliveredOrdering)
+                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                    .reduce(0L, Long::sum);
             long dataLossViolations = violations.stream()
                     .filter(x -> x.getViolationType() == ViolationType.Missing)
                     .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
@@ -226,6 +232,11 @@ public class AMQPBenchmarker {
                     .filter(x -> x.getViolationType() == ViolationType.NonRedeliveredDuplicate)
                     .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
                     .reduce(0L, Long::sum);
+            long redeliveredDuplicationViolations = violations.stream()
+                    .filter(x -> x.getViolationType() == ViolationType.RedeliveredDuplicate)
+                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                    .reduce(0L, Long::sum);
+
 
             List<ConsumeInterval> consumeIntervals = messageModel.getConsumeIntervals();
             List<DisconnectedInterval> disconnectedIntervals = messageModel.getDisconnectedIntervals();
@@ -299,6 +310,15 @@ public class AMQPBenchmarker {
                         + "There can be gaps in the sequence at this unavailability cut off point that will be interpretted as message loss.");
                 mainLogger.info("!!!!!!!!!");
             }
+
+            if(includeRedelivered) {
+                mainLogger.info("-------------------------------------------------------");
+                mainLogger.info("---------- REDELIVERED MESSAGES INCLUDED IN CHECKS ----");
+                mainLogger.info("Note that RabbitMQ provides no ordering or duplication guarantees with redelivered messages");
+                mainLogger.info("Redelivered duplicates: " + redeliveredDuplicationViolations);
+                mainLogger.info("Redelivered ordering issues: " + redeliveredOrderingViolations);
+            }
+
 
             mainLogger.info("-------------------------------------------------------");
             mainLogger.info("---------- STREAM SUMMARY -----------------------------");

@@ -71,6 +71,7 @@ public class SpanningMessageModel {
     boolean checkOrdering;
     boolean checkDataLoss;
     boolean checkDuplicates;
+    boolean includeRedelivered;
 
     boolean logLastMsg;
     boolean logCompaction;
@@ -81,6 +82,7 @@ public class SpanningMessageModel {
                                 boolean checkOrdering,
                                 boolean checkDataLoss,
                                 boolean checkDuplicates,
+                                boolean includeRedelivered,
                                 Duration messageLossThreshold,
                                 int messageLossThresholdMsgs,
                                 Duration housekeepingInterval,
@@ -114,6 +116,7 @@ public class SpanningMessageModel {
         this.checkOrdering = checkOrdering;
         this.checkDataLoss = checkDataLoss;
         this.checkDuplicates = checkDuplicates;
+        this.includeRedelivered = includeRedelivered;
         this.missingLowWatermark = 0;
 
         this.publishedCounter = new AtomicLong();
@@ -207,10 +210,13 @@ public class SpanningMessageModel {
                                 // check ordering property
                                 if (checkOrdering
                                         && lastMsg != null
-                                        && lastMsg.getMessagePayload().getSequenceNumber() > seqNo
-                                        && !msg.isRedelivered()) {
-                                    addViolation(new Violation(ViolationType.Ordering, payload, lastMsg.getMessagePayload()));
+                                        && lastMsg.getMessagePayload().getSequenceNumber() > seqNo) {
+                                    if(msg.isRedelivered() && includeRedelivered)
+                                        addViolation(new Violation(ViolationType.RedeliveredOrdering, payload, lastMsg.getMessagePayload()));
+                                    else if (!msg.isRedelivered())
+                                        addViolation(new Violation(ViolationType.Ordering, payload, lastMsg.getMessagePayload()));
                                 }
+
                                 if(logJumps && lastMsg != null) {
                                     long gap = lastMsg.getMessagePayload().getSequenceNumber() - seqNo;
                                     if(gap > 1) {
@@ -224,10 +230,14 @@ public class SpanningMessageModel {
                                 lastMsg = msg;
 
                                 // check duplicate property
-                                if (checkDuplicates && !msg.isRedelivered()) {
+                                if (checkDuplicates) {
                                     Span existingSpan = seekSpan(seqNo, actualReceivedOpen);
-                                    if (actualReceivedSet.contains(payload) || existingSpan != null)
-                                        addViolation(new Violation(ViolationType.NonRedeliveredDuplicate, payload));
+                                    if (actualReceivedSet.contains(payload) || existingSpan != null) {
+                                        if(includeRedelivered && msg.isRedelivered())
+                                            addViolation(new Violation(ViolationType.RedeliveredDuplicate, payload));
+                                        else if(!msg.isRedelivered())
+                                            addViolation(new Violation(ViolationType.NonRedeliveredDuplicate, payload));
+                                    }
                                 }
 
                                 if(msg.isRedelivered())

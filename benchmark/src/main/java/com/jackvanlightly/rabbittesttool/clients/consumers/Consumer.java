@@ -159,7 +159,8 @@ public class Consumer implements Runnable  {
             boolean autoAck = !consumerSettings.getAckMode().isManualAcks();
 
             if (consumerSettings.getAckMode().getConsumerPrefetch() > 0) {
-                channel.basicQos(consumerSettings.getAckMode().getConsumerPrefetch());
+                channel.basicQos(consumerSettings.getAckMode().getConsumerPrefetch(),
+                        consumerSettings.getAckMode().isGlobalPrefetch());
             }
 
             eventingConsumer = new EventingConsumer(consumerId,
@@ -172,7 +173,8 @@ public class Consumer implements Runnable  {
                     consumerSettings.getAckMode().getConsumerPrefetch(),
                     consumerSettings.getAckMode().getAckInterval(),
                     consumerSettings.getAckMode().getAckIntervalMs(),
-                    consumerSettings.getProcessingMs());
+                    consumerSettings.getProcessingMs(),
+                    consumerSettings.getAckMode().getRequeueEveryNth());
 
             String consumerTag = channel.basicConsume(consumerSettings.getQueue(), autoAck, eventingConsumer);
             logger.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());

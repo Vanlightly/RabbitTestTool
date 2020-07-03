@@ -1,27 +1,45 @@
 package com.jackvanlightly.rabbittesttool.topology.model.consumers;
 
+import com.jackvanlightly.rabbittesttool.topology.TopologyException;
+
 public class AckMode {
-    private boolean manualAcks;
-    private short consumerPrefetch;
-    private int ackInterval;
-    private int ackIntervalMs;
+    boolean manualAcks;
+    short consumerPrefetch;
+    boolean globalPrefetch;
+    int ackInterval;
+    int ackIntervalMs;
+    int requeueEveryNth;
 
     public AckMode() {
     }
 
-    public AckMode(boolean manualAcks, short consumerPrefetch, int ackInterval, int ackIntervalMs) {
+    public AckMode(boolean manualAcks,
+                   short consumerPrefetch,
+                   boolean globalPrefetch,
+                   int ackInterval,
+                   int ackIntervalMs,
+                   int requeueEveryNth) {
         this.manualAcks = manualAcks;
         this.consumerPrefetch = consumerPrefetch;
+        this.globalPrefetch = globalPrefetch;
         this.ackInterval = ackInterval;
         this.ackIntervalMs = ackIntervalMs;
+        this.requeueEveryNth = requeueEveryNth;
+
+        if(requeueEveryNth > 0 && ackInterval > 1)
+            throw new TopologyException("Invalid AckMode: cannot use requeuing with an ack interval > 1");
     }
 
     public static AckMode withNoAck() {
         return new AckMode();
     }
 
-    public static AckMode withManualAcks(short consumerPrefetch, int ackInterval, int ackIntervalMs) {
-        return new AckMode(true, consumerPrefetch, ackInterval, ackIntervalMs);
+    public static AckMode withManualAcks(short consumerPrefetch,
+                                         boolean globalPrefetch,
+                                         int ackInterval,
+                                         int ackIntervalMs,
+                                         int requeueEveryNth) {
+        return new AckMode(true, consumerPrefetch, globalPrefetch, ackInterval, ackIntervalMs, requeueEveryNth);
     }
 
     public boolean isManualAcks() {
@@ -32,7 +50,7 @@ public class AckMode {
         this.manualAcks = manualAcks;
     }
 
-    public int getConsumerPrefetch() {
+    public short getConsumerPrefetch() {
         return consumerPrefetch;
     }
 
@@ -54,5 +72,21 @@ public class AckMode {
 
     public void setAckIntervalMs(int ackIntervalMs) {
         this.ackIntervalMs = ackIntervalMs;
+    }
+
+    public boolean isGlobalPrefetch() {
+        return globalPrefetch;
+    }
+
+    public void setGlobalPrefetch(boolean globalPrefetch) {
+        this.globalPrefetch = globalPrefetch;
+    }
+
+    public int getRequeueEveryNth() {
+        return requeueEveryNth;
+    }
+
+    public void setRequeueEveryNth(int requeueEveryNth) {
+        this.requeueEveryNth = requeueEveryNth;
     }
 }

@@ -28,6 +28,7 @@ public class PartitionedModel implements MessageModel {
     boolean checkDuplicates;
     boolean checkConnectivity;
     boolean checkConsumeGaps;
+    boolean includeRedelivered;
 
     boolean logLastMsg;
     boolean logCompaction;
@@ -73,6 +74,7 @@ public class PartitionedModel implements MessageModel {
             boolean checkDuplicates,
             boolean checkConnectivity,
             boolean checkConsumeGaps,
+            boolean includeRedelivered,
             boolean logLastMsg,
             boolean logCompaction,
             boolean logJumps) {
@@ -88,6 +90,7 @@ public class PartitionedModel implements MessageModel {
         this.checkDuplicates = checkDuplicates;
         this.checkConnectivity = checkConnectivity;
         this.checkConsumeGaps = checkConsumeGaps;
+        this.includeRedelivered = includeRedelivered;
         this.houseKeepingInterval = houseKeepingInterval;
         this.messageLossThresholdDuration = messageLossThresholdDuration;
         this.messageLossThresholdMsgs = messageLossThresholdMsgs;
@@ -265,6 +268,7 @@ public class PartitionedModel implements MessageModel {
                             checkOrdering,
                             checkDataLoss,
                             checkDuplicates,
+                            includeRedelivered,
                             messageLossThresholdDuration,
                             messageLossThresholdMsgs,
                             houseKeepingInterval,

@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -28,8 +27,11 @@ public class EventingConsumer extends DefaultConsumer {
     private MessageModel messageModel;
     private volatile int ackInterval;
     private volatile int ackIntervalMs;
-    private volatile int prefetch;
+    private volatile short prefetch;
     private volatile int processingMs;
+    private int requeueEveryN;
+    private long receiveCount;
+    private long nextRequeue;
     private volatile long delTagLastAcked;
     private volatile long delTagLastReceived;
     private volatile Instant lastAckedTime;
@@ -44,10 +46,11 @@ public class EventingConsumer extends DefaultConsumer {
                             Stats stats,
                             MessageModel messageModel,
                             ConsumerStats consumerStats,
-                            int prefetch,
+                            short prefetch,
                             int ackInterval,
                             int ackIntervalMs,
-                            int processingMs) {
+                            int processingMs,
+                            int requeueEveryN) {
         super(channel);
         this.logger = new BenchmarkLogger("CONSUMER");
         this.consumerId = consumerId;
@@ -59,6 +62,9 @@ public class EventingConsumer extends DefaultConsumer {
         this.ackIntervalMs = ackIntervalMs;
         this.prefetch = prefetch;
         this.processingMs = processingMs;
+        this.requeueEveryN = requeueEveryN;
+        this.receiveCount = 0;
+        this.nextRequeue = requeueEveryN;
         this.consumerStats = consumerStats;
 
         consumerCancelled = new AtomicBoolean();
@@ -155,12 +161,22 @@ public class EventingConsumer extends DefaultConsumer {
         try {
             long deliveryTag = envelope.getDeliveryTag();
             if (ackInterval == 1) {
-                getChannel().basicAck(deliveryTag, false);
+                receiveCount++;
+                if(receiveCount == nextRequeue) {
+                    getChannel().basicReject(deliveryTag, true);
+                    nextRequeue = receiveCount + requeueEveryN;
+                }
+                else {
+                    getChannel().basicAck(deliveryTag, false);
+                }
+
                 delTagLastAcked = deliveryTag;
                 stats.handleAck(1);
             } else if (ackInterval > 1) {
                 long msgsToAck = deliveryTag - delTagLastAcked;
-                if (msgsToAck > ackInterval || msgsToAck >= Short.MAX_VALUE-1) {
+                receiveCount += msgsToAck;
+
+                if (msgsToAck > ackInterval || msgsToAck >= Short.MAX_VALUE - 1) {
                     getChannel().basicAck(deliveryTag, true);
                     delTagLastAcked = deliveryTag;
                     stats.handleAck((int) msgsToAck);

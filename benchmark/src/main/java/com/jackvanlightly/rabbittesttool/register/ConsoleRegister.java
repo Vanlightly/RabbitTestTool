@@ -225,7 +225,7 @@ public class ConsoleRegister implements BenchmarkRegister {
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 
             for (Violation violation : violations) {
-                if(violation.getViolationType() == ViolationType.Ordering) {
+                if(violation.getViolationType() == ViolationType.Ordering || violation.getViolationType() == ViolationType.RedeliveredOrdering) {
                     bw.write(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}, Prior Seq No {4,number,#}, Prior Timestamp {5,number,#}",
                             violation.getViolationType(),
                             violation.getMessagePayload().getStream(),

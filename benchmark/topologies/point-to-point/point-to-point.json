@@ -7,6 +7,7 @@
     { "name": "scaleType", "default": "single-vhost" },
     { "name": "queuePrefix", "default": "q1" },
     { "name": "queueCount", "default": "1" },
+    { "name": "sac", "default": "false" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
     { "name": "deliveryMode", "default": "persistent" },
@@ -16,8 +17,10 @@
     { "name": "inflightLimit", "default": "0" },
     { "name": "manualAcks", "default": "false" },
     { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "globalPrefetch", "default": "false" },
     { "name": "ackInterval", "default": "1" },
     { "name": "processingMs", "default": "0" },
+    { "name": "requeueEveryNth", "default": "0" },
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" }
   ],
@@ -31,7 +34,8 @@
           "prefix": "{{ var.queuePrefix }}", 
           "scale": "{{ var.queueCount }}",
           "properties": [
-            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" },
+            { "key": "x-single-active-consumer", "value": "{{ var.sac }}", "type": "boolean"}
           ]
         } 
       ],
@@ -60,7 +64,9 @@
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",
-            "ackInterval": "{{ var.ackInterval }}"
+            "globalPrefetch": "{{ var.globalPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "requeueEveryNth": "{{ var.requeueEveryNth }}"
           },
           "processingMs": "{{ var.processingMs }}"
         } 

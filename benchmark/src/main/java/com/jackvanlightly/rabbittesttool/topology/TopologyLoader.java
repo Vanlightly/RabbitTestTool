@@ -524,8 +524,10 @@ public class TopologyLoader {
                         if (manualAcks) {
                             cgConfig.setAckMode(AckMode.withManualAcks(
                                     (short) getMandatoryIntValue(ackModeJson, "consumerPrefetch"),
+                                    getOptionalBoolValue(ackModeJson, "globalPrefetch", false),
                                     getMandatoryIntValue(ackModeJson, "ackInterval"),
-                                    getOptionalIntValue(ackModeJson, "ackIntervalMs", 1000)
+                                    getOptionalIntValue(ackModeJson, "ackIntervalMs", 1000),
+                                    getOptionalIntValue(ackModeJson, "requeueEveryNth", 0)
                             ));
                         } else {
                             cgConfig.setAckMode(AckMode.withNoAck());
@@ -948,6 +950,11 @@ public class TopologyLoader {
                         prop = new Property(
                                 getMandatoryStrValue(propJson, "key"),
                                 getMandatoryIntValue(propJson, "value"));
+                        break;
+                    case "boolean":
+                        prop = new Property(
+                                getMandatoryStrValue(propJson, "key"),
+                                getMandatoryBoolValue(propJson, "value"));
                         break;
                     default:
                         throw new TopologyException("Only string and int values are currently supported for properties");

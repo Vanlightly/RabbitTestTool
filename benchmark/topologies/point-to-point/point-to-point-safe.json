@@ -7,6 +7,7 @@
     { "name": "scaleType", "default": "single-vhost" },
     { "name": "queuePrefix", "default": "q1" },
     { "name": "queueCount", "default": "1" },
+    { "name": "sac", "default": "false" },
     { "name": "hasDlx", "default": "false" },
     { "name": "publisherCount", "default": "1" },
     { "name": "consumerCount", "default": "1" },
@@ -17,9 +18,11 @@
     { "name": "inflightLimit", "default": "1000" },
     { "name": "manualAcks", "default": "true" },
     { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "globalPrefetch", "default": "false" },
     { "name": "ackInterval", "default": "1" },
     { "name": "ackIntervalMs", "default": "1000" },
     { "name": "processingMs", "default": "0" },
+    { "name": "requeueEveryNth", "default": "0" },
     { "name": "queueMode", "default": "default" },
     { "name": "durationSeconds", "default": "120" },
     { "name": "initialPublish", "default": "0" }
@@ -38,6 +41,7 @@
           "scale": "{{ var.queueCount }}",
           "properties": [
             { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" },
+            { "key": "x-single-active-consumer", "value": "{{ var.sac }}", "type": "boolean"}
           ],
           "dlx": {
             "hasDlx": "{{ var.hasDlx }}",
@@ -50,7 +54,8 @@
           "scale": 1,
           "bindings": [{ "from": "{{ var.queuePrefix }}-deadletter" }],
           "properties": [
-            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" },
+            { "key": "x-single-active-consumer", "value": "{{ var.sac }}", "type": "boolean"}
           ]
         } 
       ],
@@ -80,8 +85,10 @@
           "ackMode": {
             "manualAcks": "{{ var.manualAcks }}",
             "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "globalPrefetch": "{{ var.globalPrefetch }}",
             "ackInterval": "{{ var.ackInterval }}",
-            "ackIntervalMs": "{{ var.ackIntervalMs }}"
+            "ackIntervalMs": "{{ var.ackIntervalMs }}",
+            "requeueEveryNth": "{{ var.requeueEveryNth }}"
           },
           "processingMs": "{{ var.processingMs }}"
         },
