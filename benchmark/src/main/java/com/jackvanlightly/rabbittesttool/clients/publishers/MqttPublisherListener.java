@@ -1,6 +1,5 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
-import com.hivemq.client.internal.mqtt.message.publish.MqttPublish;
 import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedContext;
 import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedListener;
 import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedContext;
@@ -10,20 +9,20 @@ import com.jackvanlightly.rabbittesttool.clients.FlowController;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 
 public class MqttPublisherListener implements MqttClientConnectedListener, MqttClientDisconnectedListener {
     BenchmarkLogger logger;
     String publisherId;
     MessageModel messageModel;
-    PublisherGroupStats publisherGroupStats;
+    MetricGroup metricGroup;
     ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms;
     FlowController flowController;
     Lock timeoutLock;
@@ -31,13 +30,13 @@ public class MqttPublisherListener implements MqttClientConnectedListener, MqttC
 
     public MqttPublisherListener(String publisherId,
                                  MessageModel messageModel,
-                                   PublisherGroupStats publisherGroupStats,
-                                   ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms,
-                                   FlowController flowController) {
+                                 MetricGroup metricGroup,
+                                 ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms,
+                                 FlowController flowController) {
         this.logger = new BenchmarkLogger("MQTT PUBLISHER");
         this.publisherId = publisherId;
         this.messageModel = messageModel;
-        this.publisherGroupStats = publisherGroupStats;
+        this.metricGroup = metricGroup;
         this.pendingConfirms = pendingConfirms;
         this.flowController = flowController;
         this.timeoutLock = new ReentrantLock();
@@ -94,7 +93,8 @@ public class MqttPublisherListener implements MqttClientConnectedListener, MqttC
 
             if (numConfirms > 0) {
                 flowController.returnSendPermits(numConfirms);
-                publisherGroupStats.handleConfirm(numConfirms, latencies);
+                metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
+                metricGroup.add(MetricType.PublisherConfirmLatencies, latencies);
             }
         }
         finally {
@@ -114,7 +114,7 @@ public class MqttPublisherListener implements MqttClientConnectedListener, MqttC
             numConfirms = 1;
         }
         flowController.returnSendPermits(numConfirms);
-        publisherGroupStats.handleNack(numConfirms);
+        metricGroup.increment(MetricType.PublisherNacked, numConfirms);
     }
 
     @Override

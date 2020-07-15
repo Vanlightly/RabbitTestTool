@@ -1,0 +1,31 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "initialCredit": "10", "creditInterval": "1" }},
+        { "topologyVariables": { "initialCredit": "100", "creditInterval": "1" }},
+        { "topologyVariables": { "initialCredit": "1000", "creditInterval": "1" }},
+        { "topologyVariables": { "initialCredit": "10000", "creditInterval": "1" }},
+        { "topologyVariables": { "initialCredit": "1000", "creditInterval": "2" }},
+        { "topologyVariables": { "initialCredit": "1000", "creditInterval": "10" }},
+        { "topologyVariables": { "initialCredit": "1000", "creditInterval": "100" }},
+        { "topologyVariables": { "initialCredit": "10000", "creditInterval": "2" }},
+        { "topologyVariables": { "initialCredit": "10000", "creditInterval": "10" }},
+        { "topologyVariables": { "initialCredit": "10000", "creditInterval": "100" }}
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/streams-binary-protocol.json",
+        "topologyVariables": { 
+            "publisherCount": "1", 
+            "publishRate": "1",
+            "queueCount": "1", 
+            "consumerCount": "1", 
+            "messageSize": "20",
+            "maxBatchSize": "500", 
+            "maxBatchWaitMs": "100",
+            "maxBatchSizeBytes": "100000",
+            "creditIntervalMs": "100",
+            "durationSeconds": "240",
+            "inflightLimit": "1000000",
+            "initialPublish": "100000000"
+        }
+    }
+}

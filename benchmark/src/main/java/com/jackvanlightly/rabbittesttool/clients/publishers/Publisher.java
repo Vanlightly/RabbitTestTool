@@ -3,7 +3,8 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
@@ -24,7 +25,6 @@ public class Publisher implements Runnable {
 
     String publisherId;
     MessageModel messageModel;
-    PublisherGroupStats publisherGroupStats;
     ConnectionSettings connectionSettings;
     ConnectionFactory factory;
     QueueHosts queueHosts;
@@ -32,10 +32,10 @@ public class Publisher implements Runnable {
     PublisherSettings publisherSettings;
     AtomicBoolean isCancelled;
     int routingKeyIndex;
-    PublisherStats publisherStats;
     PublisherListener listener;
     Broker currentHost;
     int checkHostInterval = 100000;
+    MetricGroup metricGroup;
 
     // for stream round robin
     int maxStream;
@@ -52,6 +52,7 @@ public class Publisher implements Runnable {
     String fixedRoutingKey;
     int routingKeyCount;
     int inFlightLimit;
+    boolean instrumentMessagePayloads;
 
     // for message publishing and confirms
     MessageGenerator messageGenerator;
@@ -67,7 +68,7 @@ public class Publisher implements Runnable {
 
     public Publisher(String publisherId,
                      MessageModel messageModel,
-                     PublisherGroupStats publisherGroupStats,
+                     MetricGroup metricGroup,
                      ConnectionSettings connectionSettings,
                      QueueHosts queueHosts,
                      PublisherSettings publisherSettings,
@@ -77,13 +78,12 @@ public class Publisher implements Runnable {
         this.isCancelled = new AtomicBoolean();
         this.publisherId = publisherId;
         this.messageModel = messageModel;
-        this.publisherGroupStats = publisherGroupStats;
+        this.metricGroup = metricGroup;
         this.publisherSettings = publisherSettings;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
         this.executorService = executorService;
         this.useConfirms = publisherSettings.getPublisherMode().isUseConfirms();
-        this.publisherStats = new PublisherStats();
 
         this.maxStream = publisherSettings.getStreams().size()-1;
 
@@ -101,6 +101,7 @@ public class Publisher implements Runnable {
         this.availableMessageHeaderCombinations = initializeHeaders(publisherSettings.getMessageHeadersPerMessage());
         this.availableHeaderCount = this.availableMessageHeaderCombinations.size();
         this.inFlightLimit = this.publisherSettings.getPublisherMode().getInFlightLimit();
+        this.instrumentMessagePayloads = this.publisherSettings.shouldInstrumentMessagePayloads();
 
         this.sendLimit = this.publisherSettings.getMessageLimit();
         this.rateLimit = this.publisherSettings.getPublishRatePerSecond() > 0;
@@ -190,15 +191,19 @@ public class Publisher implements Runnable {
     }
 
     public long getRecordedSendCount() {
-        return publisherStats.getAndResetRecordedSent();
+        return metricGroup.getRecordedDeltaScalarValueForStepStats(MetricType.PublisherSentMessage);
     }
 
     public long getRealSendCount() {
-        return publisherStats.getAndResetRealSent();
+        return metricGroup.getRealDeltaScalarValueForStepStats(MetricType.PublisherSentMessage);
     }
 
     public void resetSendCount() {
         this.sentCount = 0;
+    }
+
+    public MetricGroup getMetricGroup() {
+        return metricGroup;
     }
 
     public void performInitialSend() {
@@ -212,8 +217,8 @@ public class Publisher implements Runnable {
                 connection = getConnection();
                 channel = connection.createChannel();
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
-                FlowController flowController = new FlowController(1000);
-                PublisherListener initSendListener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, flowController);
+                FlowController flowController = new FlowController(1000, 1);
+                PublisherListener initSendListener = new PublisherListener(messageModel, metricGroup, pendingConfirms, flowController);
 
                 logger.info("Publisher " + publisherId + " opened channel for initial publish");
 
@@ -267,8 +272,8 @@ public class Publisher implements Runnable {
             try {
                 ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
 
-                FlowController flowController = new FlowController(publisherSettings.getPublisherMode().getInFlightLimit());
-                listener = new PublisherListener(messageModel, publisherGroupStats, pendingConfirms, flowController);
+                FlowController flowController = new FlowController(publisherSettings.getPublisherMode().getInFlightLimit(), 1);
+                listener = new PublisherListener(messageModel, metricGroup, pendingConfirms, flowController);
 
                 connection = getConnection();
                 channel = connection.createChannel();
@@ -411,7 +416,7 @@ public class Publisher implements Runnable {
         else
             messageModel.sent(mp);
 
-        byte[] body = messageGenerator.getMessageBytes(mp);
+        byte[] body = getMessage(mp);
         String routingKey = getRoutingKey(currentStream);
 
         channel.basicPublish(fixedExchange,
@@ -423,11 +428,18 @@ public class Publisher implements Runnable {
         int headerCount = messageProperties.getHeaders() != null ? messageProperties.getHeaders().size() : 0;
         int deliveryMode = publisherSettings.getDeliveryMode() == DeliveryMode.Persistent ? 2 : 1;
 
-        publisherGroupStats.handleSend(body.length,
-                headerCount,
-                deliveryMode,
-                routingKey.length());
-        publisherStats.incrementSendCount();
+        metricGroup.increment(MetricType.PublisherSentMessage);
+        metricGroup.increment(MetricType.PublisherSentBytes, body.length);
+        metricGroup.increment(MetricType.PublisherSentHeaderCount, headerCount);
+        metricGroup.increment(MetricType.PublisherDeliveryMode, deliveryMode);
+        metricGroup.increment(MetricType.PublisherRoutingKeyLength, routingKey.length());
+    }
+
+    private byte[] getMessage(MessagePayload mp) throws IOException {
+        if(instrumentMessagePayloads)
+            return messageGenerator.getMessageBytes(mp);
+        else
+            return messageGenerator.getUninstrumentedMessageBytes();
     }
 
     private Connection getConnection() throws IOException, TimeoutException {

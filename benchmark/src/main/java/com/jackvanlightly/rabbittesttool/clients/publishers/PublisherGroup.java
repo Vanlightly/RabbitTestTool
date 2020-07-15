@@ -3,8 +3,7 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.model.Protocol;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.PublisherConfig;
@@ -25,7 +24,6 @@ public class PublisherGroup {
     private BenchmarkLogger logger;
     private List<Publisher> publishers;
     private List<StreamPublisher> streamPublishers;
-    private PublisherGroupStats publisherGroupStats;
     private List<String> currentQueuesInGroup;
     private ConnectionSettings connectionSettings;
     private PublisherConfig publisherConfig;
@@ -33,20 +31,20 @@ public class PublisherGroup {
     private QueueHosts queueHosts;
     private ExecutorService executorService;
     private int publisherCounter;
+    private boolean instrumentMessagePayloads;
 
     public PublisherGroup(ConnectionSettings connectionSettings,
                           PublisherConfig publisherConfig,
                           VirtualHost vhost,
-                          Stats globalStats,
                           MessageModel messageModel,
-                          QueueHosts queueHosts) {
+                          QueueHosts queueHosts,
+                          boolean instrumentMessagePayloads) {
         this.logger = new BenchmarkLogger("PUBLISHER_GROUP");
         this.connectionSettings = connectionSettings;
         this.publisherConfig = publisherConfig;
-        this.publisherGroupStats = new PublisherGroupStats(globalStats, publisherConfig.getGroupPrefix());
-        globalStats.addGroup(this.publisherGroupStats);
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
         this.publishers = new ArrayList<>();
         this.streamPublishers = new ArrayList<>();
 
@@ -170,7 +168,8 @@ public class PublisherGroup {
                     publisherConfig.getDeliveryMode(),
                     publisherConfig.getFrameMax(),
                     publisherConfig.getMessageLimit(),
-                    publisherConfig.getInitialPublish());
+                    publisherConfig.getInitialPublish(),
+                    instrumentMessagePayloads);
         }
         else {
             settings = new PublisherSettings(publisherConfig.getSendToQueueGroup(),
@@ -180,7 +179,8 @@ public class PublisherGroup {
                     publisherConfig.getDeliveryMode(),
                     publisherConfig.getFrameMax(),
                     publisherConfig.getMessageLimit(),
-                    publisherConfig.getInitialPublish());
+                    publisherConfig.getInitialPublish(),
+                    instrumentMessagePayloads);
         }
 
         settings.setPublishRatePerSecond(publisherConfig.getPublishRatePerSecond());
@@ -191,7 +191,7 @@ public class PublisherGroup {
             Publisher publisher = new Publisher(
                     getPublisherId(publisherCounter),
                     messageModel,
-                    publisherGroupStats,
+                    MetricGroup.createAmqpPublisherMetricGroup(),
                     connectionSettings,
                     queueHosts,
                     settings,
@@ -206,7 +206,7 @@ public class PublisherGroup {
             StreamPublisher publisher = new StreamPublisher(
                     getPublisherId(publisherCounter),
                     messageModel,
-                    publisherGroupStats,
+                    MetricGroup.createStreamPublisherMetricGroup(),
                     connectionSettings,
                     this.queueHosts,
                     settings,
@@ -371,6 +371,21 @@ public class PublisherGroup {
         }
 
         return sendCounts;
+    }
+
+    public List<MetricGroup> getPublisherMetrics() {
+        List<MetricGroup> metrics = new ArrayList<>();
+
+        if(!publishers.isEmpty()) {
+            for (Publisher publisher : this.publishers)
+                metrics.add(publisher.getMetricGroup());
+        }
+        else {
+            for (StreamPublisher publisher : this.streamPublishers)
+                metrics.add(publisher.getMetricGroup());
+        }
+
+        return metrics;
     }
 
     public void stopAllPublishers() {

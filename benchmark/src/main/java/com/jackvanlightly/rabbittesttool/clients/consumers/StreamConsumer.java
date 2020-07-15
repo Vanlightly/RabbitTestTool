@@ -4,21 +4,19 @@ import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
-import com.jackvanlightly.rabbittesttool.clients.WithNagleSocketConfigurator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.stream.ChunkChecksum;
 import com.rabbitmq.stream.Client;
 import com.rabbitmq.stream.OffsetSpecification;
-import io.micrometer.core.instrument.util.NamedThreadFactory;
+import com.rabbitmq.stream.codec.SimpleCodec;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
+import java.time.Duration;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -30,11 +28,10 @@ public class StreamConsumer implements Runnable  {
     QueueHosts queueHosts;
     AtomicBoolean isCancelled;
     Integer step;
-    Stats stats;
+    MetricGroup metricGroup;
     StreamConsumerListener consumerListener;
     MessageModel messageModel;
     ConsumerSettings consumerSettings;
-    ConsumerStats consumerStats;
     Broker currentHost;
     AtomicLong lastOffset;
 
@@ -42,18 +39,17 @@ public class StreamConsumer implements Runnable  {
                           ConnectionSettings connectionSettings,
                           QueueHosts queueHosts,
                           ConsumerSettings consumerSettings,
-                          Stats stats,
+                          MetricGroup metricGroup,
                           MessageModel messageModel) {
         this.logger = new BenchmarkLogger("STREAM CONSUMER");
         this.isCancelled = new AtomicBoolean();
         this.consumerId = consumerId;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
-        this.stats = stats;
         this.messageModel = messageModel;
         this.consumerSettings = consumerSettings;
+        this.metricGroup = metricGroup;
         this.step = 0;
-        this.consumerStats = new ConsumerStats();
         this.lastOffset = new AtomicLong();
     }
 
@@ -89,11 +85,15 @@ public class StreamConsumer implements Runnable  {
     }
 
     public long getRecordedReceiveCount() {
-        return consumerStats.getAndResetRecordedReceived();
+        return metricGroup.getRecordedDeltaScalarValueForStepStats(MetricType.ConsumerReceivedMessage);
     }
 
     public long getRealReceiveCount() {
-        return consumerStats.getAndResetRealReceived();
+        return metricGroup.getRealDeltaScalarValueForStepStats(MetricType.ConsumerReceivedMessage);
+    }
+
+    public MetricGroup getMetricGroup() {
+        return metricGroup;
     }
 
     @Override
@@ -105,14 +105,14 @@ public class StreamConsumer implements Runnable  {
                     consumerListener = new StreamConsumerListener(consumerId,
                             connectionSettings.getVhost(),
                             consumerSettings.getQueue(),
-                            stats,
+                            metricGroup,
                             messageModel,
-                            consumerStats,
                             lastOffset,
                             consumerSettings.getAckMode().getConsumerPrefetch(),
                             consumerSettings.getAckMode().getAckInterval(),
                             consumerSettings.getAckMode().getAckIntervalMs(),
-                            consumerSettings.getProcessingMs());
+                            consumerSettings.getProcessingMs(),
+                            consumerSettings.shouldInstrumentMessagePayloads());
 
                     client = getClient(consumerListener);
                     messageModel.clientConnected(consumerId);
@@ -127,12 +127,12 @@ public class StreamConsumer implements Runnable  {
                 }
             } catch (TimeoutException | IOException e) {
                 if(!isCancelled.get())
-                    stats.handleConnectionError();
+                    metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " connection failed in step " + step);
                 messageModel.clientDisconnected(consumerId);
             } catch (Exception e) {
                 if(!isCancelled.get())
-                    stats.handleConnectionError();
+                    metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " has failed unexpectedly in step " + step, e);
                 messageModel.clientDisconnected(consumerId);
             }
@@ -163,17 +163,27 @@ public class StreamConsumer implements Runnable  {
             consumerListener = new StreamConsumerListener(consumerId,
                     connectionSettings.getVhost(),
                     consumerSettings.getQueue(),
-                    stats,
+                    metricGroup,
                     messageModel,
-                    consumerStats,
                     this.lastOffset,
                     consumerSettings.getAckMode().getConsumerPrefetch(),
                     consumerSettings.getAckMode().getAckInterval(),
                     consumerSettings.getAckMode().getAckIntervalMs(),
-                    consumerSettings.getProcessingMs());
+                    consumerSettings.getProcessingMs(),
+                    consumerSettings.shouldInstrumentMessagePayloads());
 
             while (!isCancelled.get() && currentStep.equals(step)) {
                 ClientUtils.waitFor(1000, this.isCancelled);
+
+                if(!client.isOpen()) {
+                    ClientUtils.waitFor(5000, this.isCancelled);
+                    if(!client.isOpen()) {
+                        logger.error("Client not connected, recreating...");
+                        exitReason = ConsumerExitReason.ConnectionFailed;
+                        break;
+                    }
+                }
+
 //                if(consumerSettings.getAckMode().isManualAcks())
 //                    consumerListener.ensureAckTimeLimitEnforced();
             }
@@ -219,6 +229,9 @@ public class StreamConsumer implements Runnable  {
                 .username(connectionSettings.getUser())
                 .password(connectionSettings.getPassword())
                 .virtualHost(connectionSettings.getVhost())
+                .codec(new SimpleCodec())
+                .chunkChecksum(ChunkChecksum.NO_OP)
+                .requestedHeartbeat(Duration.ofSeconds(3600))
                 .chunkListener(listener)
                 .messageListener(listener));
 
@@ -233,7 +246,7 @@ public class StreamConsumer implements Runnable  {
 
         if (!response.isOk()) {
             logger.error("Stream consumer failed to subscribe" + response.getResponseCode());
-            throw new RuntimeException("TODO");
+            throw new RuntimeException("Consumer unable to subscribe");
         }
         else {
             logger.info("Consumer " + consumerId + " opened connection to " + currentHost.getNodeName());

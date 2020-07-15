@@ -3,7 +3,10 @@ package com.jackvanlightly.rabbittesttool.clients.consumers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
+import com.jackvanlightly.rabbittesttool.clients.publishers.Publisher;
+import com.jackvanlightly.rabbittesttool.clients.publishers.StreamPublisher;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.model.Protocol;
@@ -32,6 +35,7 @@ public class ConsumerGroup {
     Map<String, Integer> currentQueues;
     int consumerCounter;
     Stats stats;
+    boolean instrumentMessagePayloads;
 
     public ConsumerGroup(ConnectionSettings connectionSettings,
                          ConsumerConfig consumerConfig,
@@ -39,13 +43,14 @@ public class ConsumerGroup {
                          Stats stats,
                          MessageModel messageModel,
                          QueueHosts queueHosts,
-                         int maxScale) {
+                         boolean instrumentMessagePayloads) {
         this.logger = new BenchmarkLogger("CONSUMER_GROUP");
         this.connectionSettings = connectionSettings;
         this.consumerConfig = consumerConfig;
         this.stats = stats;
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
         this.consumers = new ArrayList<>();
         this.streamConsumers = new ArrayList<>();
 
@@ -195,7 +200,8 @@ public class ConsumerGroup {
                 this.consumerConfig.getAckMode(),
                 this.consumerConfig.getFrameMax(),
                 this.consumerConfig.getProcessingMs(),
-                this.consumerConfig.isDownstream());
+                this.consumerConfig.isDownstream(),
+                instrumentMessagePayloads);
 
         this.currentQueues.put(queue, this.currentQueues.get(queue) + 1);
 
@@ -205,7 +211,7 @@ public class ConsumerGroup {
                     this.connectionSettings,
                     queueHosts,
                     settings,
-                    this.stats,
+                    MetricGroup.createAmqpConsumerMetricGroup(),
                     messageModel,
                     this.executorService);
 
@@ -218,7 +224,7 @@ public class ConsumerGroup {
                     this.connectionSettings,
                     this.queueHosts,
                     settings,
-                    this.stats,
+                    MetricGroup.createStreamConsumerMetricGroup(),
                     messageModel);
 
             this.streamConsumers.add(consumer);
@@ -230,6 +236,21 @@ public class ConsumerGroup {
         if(this.consumerConfig.getQueueGroup().equals(queueGroup)) {
             this.currentQueues.put(queue, 0);
         }
+    }
+
+    public List<MetricGroup> getConsumerMetrics() {
+        List<MetricGroup> metrics = new ArrayList<>();
+
+        if(!consumers.isEmpty()) {
+            for (Consumer consumer : this.consumers)
+                metrics.add(consumer.getMetricGroup());
+        }
+        else {
+            for (StreamConsumer consumer : this.streamConsumers)
+                metrics.add(consumer.getMetricGroup());
+        }
+
+        return metrics;
     }
 
     public void removeConsumer() {

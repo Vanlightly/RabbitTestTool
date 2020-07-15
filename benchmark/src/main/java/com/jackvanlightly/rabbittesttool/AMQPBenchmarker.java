@@ -436,6 +436,7 @@ public class AMQPBenchmarker {
         String topologyPath = arguments.getStr("--topology");
         int ordinal = arguments.getInt("--run-ordinal", 1);
         boolean declareArtefacts = arguments.getBoolean("--declare", true);
+        boolean instrumentMessagePayloads = arguments.getBoolean("--instrument-msgs", true);
         Map<String,String> topologyVariables = arguments.getTopologyVariables();
         String policyPath = arguments.getStr("--policies", "none");
         Map<String,String> policyVariables = arguments.getPolicyVariables();
@@ -519,7 +520,8 @@ public class AMQPBenchmarker {
                         queueHosts,
                         downstreamHosts,
                         actionSupervisor,
-                        mode);
+                        mode,
+                        instrumentMessagePayloads);
 
 
                 benchmarkRegister.logBenchmarkStart(benchmarkId, ordinal, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology, argumentsStr, benchmarkTags);

@@ -4,19 +4,17 @@ import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.clients.WithNagleSocketConfigurator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,11 +27,10 @@ public class Consumer implements Runnable  {
     //private ExecutorService executorService;
     private AtomicBoolean isCancelled;
     private Integer step;
-    private Stats stats;
+    private MetricGroup metricGroup;
     private MessageModel messageModel;
     private ConsumerSettings consumerSettings;
     private EventingConsumer eventingConsumer;
-    private ConsumerStats consumerStats;
     private Broker currentHost;
     ExecutorService consumerExecutorService;
 
@@ -41,7 +38,7 @@ public class Consumer implements Runnable  {
                     ConnectionSettings connectionSettings,
                     QueueHosts queueHosts,
                     ConsumerSettings consumerSettings,
-                    Stats stats,
+                    MetricGroup metricGroup,
                     MessageModel messageModel,
                     ExecutorService consumerExecutorService) {
         this.logger = new BenchmarkLogger("CONSUMER");
@@ -49,18 +46,15 @@ public class Consumer implements Runnable  {
         this.consumerId = consumerId;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
-        this.stats = stats;
+        this.metricGroup = metricGroup;
         this.messageModel = messageModel;
         this.consumerExecutorService = consumerExecutorService;
         this.consumerSettings = consumerSettings;
         this.step = 0;
-        //this.executorService = Executors.newFixedThreadPool(1, new NamedThreadFactory("Consumer-" + consumerId));
-        this.consumerStats = new ConsumerStats();
     }
 
     public void signalStop() {
         isCancelled.set(true);
-        //this.executorService.shutdown();
     }
 
     public void setAckInterval(int ackInterval) {
@@ -91,11 +85,15 @@ public class Consumer implements Runnable  {
     }
 
     public long getRecordedReceiveCount() {
-        return consumerStats.getAndResetRecordedReceived();
+        return metricGroup.getRecordedDeltaScalarValueForStepStats(MetricType.ConsumerReceivedMessage);
     }
 
     public long getRealReceiveCount() {
-        return consumerStats.getAndResetRealReceived();
+        return metricGroup.getRealDeltaScalarValueForStepStats(MetricType.ConsumerReceivedMessage);
+    }
+
+    public MetricGroup getMetricGroup() {
+        return metricGroup;
     }
 
     @Override
@@ -120,12 +118,12 @@ public class Consumer implements Runnable  {
                 }
             } catch (TimeoutException | IOException e) {
                 if(!isCancelled.get())
-                    stats.handleConnectionError();
+                    metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " connection failed in step " + step);
                 messageModel.clientDisconnected(consumerId);
             } catch (Exception e) {
                 if(!isCancelled.get())
-                    stats.handleConnectionError();
+                    metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " has failed unexpectedly in step " + step, e);
                 messageModel.clientDisconnected(consumerId);
             }
@@ -167,14 +165,14 @@ public class Consumer implements Runnable  {
                     connectionSettings.getVhost(),
                     consumerSettings.getQueue(),
                     channel,
-                    stats,
+                    MetricGroup.createAmqpConsumerMetricGroup(),
                     messageModel,
-                    consumerStats,
                     consumerSettings.getAckMode().getConsumerPrefetch(),
                     consumerSettings.getAckMode().getAckInterval(),
                     consumerSettings.getAckMode().getAckIntervalMs(),
                     consumerSettings.getProcessingMs(),
-                    consumerSettings.getAckMode().getRequeueEveryNth());
+                    consumerSettings.getAckMode().getRequeueEveryNth(),
+                    consumerSettings.shouldInstrumentMessagePayloads());
 
             String consumerTag = channel.basicConsume(consumerSettings.getQueue(), autoAck, eventingConsumer);
             logger.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());

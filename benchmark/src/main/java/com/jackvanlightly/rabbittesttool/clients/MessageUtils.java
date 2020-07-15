@@ -20,6 +20,10 @@ public class MessageUtils {
         return System.nanoTime() - timestamp;
     }
 
+    public static long getLag(long now, long timestamp) {
+        return now - timestamp;
+    }
+
     public static long getDifference(long timestamp1, long timestamp2) {
 
         return timestamp2 - timestamp1;

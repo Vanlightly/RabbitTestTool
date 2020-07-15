@@ -1,114 +1,201 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
+import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.FlowController;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
-import com.rabbitmq.client.AMQP;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.rabbitmq.stream.Client;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-public class StreamPublisherListener implements Client.ConfirmListener, Client.PublishErrorListener {
+public class StreamPublisherListener implements Client.PublishConfirmListener, Client.PublishErrorListener {
 
-    private BenchmarkLogger logger;
-    private MessageModel messageModel;
-    private PublisherGroupStats publisherGroupStats;
-    private ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
-    private FlowController flowController;
-    private Lock timeoutLock;
+    BenchmarkLogger logger;
+    MessageModel messageModel;
+    MetricGroup metricGroup;
+    FlowController flowController;
+    boolean instrumentMessagePayloads;
+    boolean isBatchListener;
+
+    long lastRecordedLatency;
+    long summedLatency = 0;
+    long latencyMeasurements = 0;
 
     public StreamPublisherListener(MessageModel messageModel,
-                             PublisherGroupStats publisherGroupStats,
-                             ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms,
-                             FlowController flowController) {
+                                   MetricGroup metricGroup,
+                                   FlowController flowController,
+                                   boolean instrumentMessagePayloads,
+                                   boolean isBatchListener) {
         this.logger = new BenchmarkLogger("PUBLISHER");
         this.messageModel = messageModel;
-        this.publisherGroupStats = publisherGroupStats;
-        this.pendingConfirms = pendingConfirms;
+        this.metricGroup = metricGroup;
         this.flowController = flowController;
-        this.timeoutLock = new ReentrantLock();
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
+        this.isBatchListener = isBatchListener;
     }
 
     public void checkForTimeouts(long confirmTimeoutThresholdNs) {
-        int removed = 0;
-        timeoutLock.lock();
-        int before = flowController.availablePermits();
-
-        try {
-            Long nanoNow = System.nanoTime();
-            for (Map.Entry<Long, MessagePayload> mp : pendingConfirms.entrySet()) {
-                if (nanoNow - mp.getValue().getTimestamp() > confirmTimeoutThresholdNs) {
-                    pendingConfirms.remove(mp.getKey());
-                    flowController.returnSendPermits(1);
-                    removed++;
-                }
+        if(isBatchListener) {
+            int removed = flowController.discardTimedOutBatches(confirmTimeoutThresholdNs);
+            if (removed > 0) {
+                logger.info("Discarded " + removed + " pending batches due to timeout.");
             }
         }
-        finally {
-            timeoutLock.unlock();
-        }
-
-        if (removed > 0) {
-            int after = flowController.availablePermits();
-            logger.info("Discarded " + removed + " pending confirms due to timeout. Permits before: " + before + " after: " + after);
+        else {
+            int removed = flowController.discardTimedOutBinaryProtocolMessages(confirmTimeoutThresholdNs);
+            if (removed > 0) {
+                logger.info("Discarded " + removed + " pending messages due to timeout.");
+            }
         }
     }
 
     public int getPendingConfirmCount() {
-        return pendingConfirms.size();
+        return flowController.getPendingCount();
     }
 
     // confirmListener
     @Override
     public void handle(long seqNo) {
-        timeoutLock.lock();
-        try {
-            int numConfirms = 0;
-            long currentTime = MessageUtils.getTimestamp();
-            long[] latencies;
-
-            MessagePayload mp = pendingConfirms.remove(seqNo);
-            if (mp != null) {
-                latencies = new long[]{MessageUtils.getDifference(mp.getTimestamp(), currentTime)};
-                numConfirms = 1;
-
-                messageModel.sent(mp);
-            } else {
-                latencies = new long[0];
-                numConfirms = 0;
-            }
-
-            if (numConfirms > 0) {
-                flowController.returnSendPermits(numConfirms);
-                publisherGroupStats.handleConfirm(numConfirms, latencies);
-            }
-        }
-        finally {
-            timeoutLock.unlock();
-        }
+        if(isBatchListener)
+            handleBatch(seqNo);
+        else
+            handleSingle(seqNo);
     }
 
     // publishErrorListener
     @Override
     public void handle(long seqNo, short i) {
-        int numConfirms;
-        boolean multiple = false;
-        if (multiple) {
-            ConcurrentNavigableMap<Long, MessagePayload> confirmed = pendingConfirms.headMap(seqNo, true);
-            numConfirms = confirmed.size();
-            confirmed.clear();
-        } else {
-            pendingConfirms.remove(seqNo);
-            numConfirms = 1;
+        if(isBatchListener)
+            handleBatch(seqNo, i);
+        else
+            handleSingle(seqNo, i);
+    }
+
+    private void handleSingle(long seqNo) {
+        int numConfirms = 0;
+        long currentTime = MessageUtils.getTimestamp();
+
+        // this loop is due to a current race condition where the
+        // confirm is faster than adding the seq no to the map
+        int attempts = 0;
+        int limit = 10;
+        while(attempts <= limit){
+            attempts++;
+            if(instrumentMessagePayloads) {
+                MessagePayload mp = flowController.confirmBinaryProtocolMessage(seqNo);
+                if (mp != null) {
+
+                    // we didn't track it due to bucket size
+                    if(mp.getSequenceNumber() == -1)
+                        return;
+
+                    // we only track one message per bucket size, so compensate the number of confirms here
+                    numConfirms = 1*flowController.getSingleMessageBucketSize();
+                    messageModel.sent(mp);
+                    long latency = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
+
+                    summedLatency+=latency;
+                    latencyMeasurements++;
+
+                    if(currentTime-lastRecordedLatency > 100000000) {
+                        long avgLag = summedLatency/latencyMeasurements;
+                        metricGroup.add(MetricType.PublisherConfirmLatencies, avgLag);
+                        summedLatency = 0;
+                        latencyMeasurements = 0;
+                        lastRecordedLatency = currentTime;
+                    }
+                } else {
+                    if (attempts <= limit) {
+                        ClientUtils.waitFor(5);
+                        continue;
+                    }
+                    numConfirms = 0;
+                }
+                break;
+            }
+            else {
+                numConfirms = flowController.confirmUninstrumentedBinaryProtocol(seqNo);
+                if (numConfirms == -1 && attempts <= limit) {
+                    ClientUtils.waitFor(5);
+                    continue;
+                }
+                break;
+            }
         }
-        flowController.returnSendPermits(numConfirms);
-        publisherGroupStats.handleNack(numConfirms);
+
+        if (numConfirms > 0) {
+            metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
+        }
+    }
+
+    private void handleSingle(long seqNo, short i) {
+        if(instrumentMessagePayloads) {
+            flowController.confirmBinaryProtocolMessage(seqNo);
+            metricGroup.increment(MetricType.PublisherNacked, 1);
+        }
+        else {
+            flowController.confirmUninstrumentedBinaryProtocol(seqNo);
+            metricGroup.increment(MetricType.PublisherNacked, 1);
+        }
+    }
+
+    private void handleBatch(long seqNo) {
+        int numConfirms = 0;
+        // this loop is due to a current race condition where the
+        // confirm is faster than adding the seq no to the map
+        int attempts = 0;
+        int limit = 10;
+        while(attempts <= limit) {
+            attempts++;
+
+            if (instrumentMessagePayloads) {
+                long currentTime = MessageUtils.getTimestamp();
+                List<MessagePayload> confirmedList = flowController.confirmBinaryProtocolBatch(seqNo);
+                if(confirmedList == null && attempts <= limit) {
+                    ClientUtils.waitFor(5);
+                    continue;
+                }
+
+                for (MessagePayload mp : confirmedList)
+                    messageModel.sent(mp);
+
+                numConfirms = confirmedList.size();
+                if (numConfirms > 0) {
+                    long latency = MessageUtils.getDifference(confirmedList.get(0).getTimestamp(), currentTime);
+                    metricGroup.add(MetricType.PublisherConfirmLatencies, latency);
+                }
+            } else {
+                numConfirms = flowController.confirmUninstrumentedBinaryProtocol(seqNo);
+                if(numConfirms == 0 && attempts <= limit) {
+                    ClientUtils.waitFor(5);
+                    continue;
+                }
+            }
+
+            if (numConfirms > 0)
+                metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
+
+            break;
+        }
+    }
+
+    private void handleBatch(long seqNo, short i) {
+        int numConfirms = 0;
+
+        if(instrumentMessagePayloads) {
+            List<MessagePayload> messagePayloads = flowController.confirmBinaryProtocolBatch(seqNo);
+            if (messagePayloads != null) {
+                numConfirms = messagePayloads.size();
+            }
+        }
+        else {
+            numConfirms = flowController.confirmUninstrumentedBinaryProtocol(seqNo);
+        }
+
+        metricGroup.increment(MetricType.PublisherNacked, numConfirms);
     }
 }

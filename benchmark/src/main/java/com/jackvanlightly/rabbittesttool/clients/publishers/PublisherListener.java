@@ -5,7 +5,8 @@ import com.jackvanlightly.rabbittesttool.clients.FlowController;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BlockedListener;
 import com.rabbitmq.client.ConfirmListener;
@@ -19,22 +20,22 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class PublisherListener implements ConfirmListener, ReturnListener, BlockedListener {
 
-    private BenchmarkLogger logger;
-    private MessageModel messageModel;
-    private PublisherGroupStats publisherGroupStats;
-    private ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
-    private FlowController flowController;
-    private Set<MessagePayload> undeliverable;
-    private AtomicInteger pendingConfirmCount;
-    private Lock timeoutLock;
+    BenchmarkLogger logger;
+    MessageModel messageModel;
+    MetricGroup metricGroup;
+    ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
+    FlowController flowController;
+    Set<MessagePayload> undeliverable;
+    AtomicInteger pendingConfirmCount;
+    Lock timeoutLock;
 
     public PublisherListener(MessageModel messageModel,
-                             PublisherGroupStats publisherGroupStats,
+                             MetricGroup metricGroup,
                              ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms,
                              FlowController flowController) {
         this.logger = new BenchmarkLogger("PUBLISHER");
         this.messageModel = messageModel;
-        this.publisherGroupStats = publisherGroupStats;
+        this.metricGroup = metricGroup;
         this.pendingConfirms = pendingConfirms;
         this.flowController = flowController;
         this.undeliverable = new HashSet<>();
@@ -43,96 +44,86 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     }
 
     public void checkForTimeouts(long confirmTimeoutThresholdNs) {
-        int removed = 0;
-        timeoutLock.lock();
-        int before = flowController.availablePermits();
-
-        try {
-            Long nanoNow = System.nanoTime();
-            for (Map.Entry<Long, MessagePayload> mp : pendingConfirms.entrySet()) {
-                if (nanoNow - mp.getValue().getTimestamp() > confirmTimeoutThresholdNs) {
-                    pendingConfirms.remove(mp.getKey());
-                    flowController.returnSendPermits(1);
-                    removed++;
-                }
-            }
-        }
-        finally {
-            timeoutLock.unlock();
-        }
-
+        int removed = flowController.discardTimedOutAmqpMessages(confirmTimeoutThresholdNs);
         if (removed > 0) {
-            int after = flowController.availablePermits();
-            logger.info("Discarded " + removed + " pending confirms due to timeout. Permits before: " + before + " after: " + after);
+            logger.info("Discarded " + removed + " pending confirms due to timeout.");
         }
     }
 
     @Override
     public void handleAck(long seqNo, boolean multiple) {
-        timeoutLock.lock();
-        try {
-            int numConfirms = 0;
-            long currentTime = MessageUtils.getTimestamp();
-            long[] latencies;
-            if (multiple) {
-                ConcurrentNavigableMap<Long, MessagePayload> confirmed = pendingConfirms.headMap(seqNo, true);
-                List<MessagePayload> confirmedList = new ArrayList<>();
-                for (Map.Entry<Long, MessagePayload> entry : confirmed.entrySet())
-                    confirmedList.add(entry.getValue());
+        long currentTime = MessageUtils.getTimestamp();
+        List<MessagePayload> confirmedList = flowController.confirmAmqpMessages(seqNo, multiple);
+        int numConfirms = confirmedList.size();
+        long[] latencies = new long[numConfirms];
+        int index = 0;
+        for (MessagePayload mp : confirmedList) {
+            latencies[index] = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
+            index++;
 
-                numConfirms = confirmedList.size();
-                latencies = new long[numConfirms];
-                int index = 0;
-                for (MessagePayload mp : confirmedList) {
-                    latencies[index] = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
-                    index++;
-
-                    if (!undeliverable.contains(mp))
-                        messageModel.sent(mp);
-                    else
-                        undeliverable.remove(mp);
-                }
-                confirmed.clear();
-            } else {
-                MessagePayload mp = pendingConfirms.remove(seqNo);
-                if (mp != null) {
-                    latencies = new long[]{MessageUtils.getDifference(mp.getTimestamp(), currentTime)};
-                    numConfirms = 1;
-
-                    if (!undeliverable.contains(mp))
-                        messageModel.sent(mp);
-                    else
-                        undeliverable.remove(mp);
-                } else {
-                    latencies = new long[0];
-                    numConfirms = 0;
-                }
-            }
-
-            if (numConfirms > 0) {
-                flowController.returnSendPermits(numConfirms);
-                publisherGroupStats.handleConfirm(numConfirms, latencies);
-                pendingConfirmCount.set(pendingConfirms.size());
-            }
+            if (!undeliverable.contains(mp))
+                messageModel.sent(mp);
+            else
+                undeliverable.remove(mp);
         }
-        finally {
-            timeoutLock.unlock();
+
+        if (numConfirms > 0) {
+            metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
+            metricGroup.add(MetricType.PublisherConfirmLatencies, latencies);
+            pendingConfirmCount.set(pendingConfirms.size());
         }
+
+//            int numConfirms = 0;
+//            long currentTime = MessageUtils.getTimestamp();
+//            long[] latencies;
+//            if (multiple) {
+//                ConcurrentNavigableMap<Long, MessagePayload> confirmed = pendingConfirms.headMap(seqNo, true);
+//                List<MessagePayload> confirmedList = new ArrayList<>();
+//                for (Map.Entry<Long, MessagePayload> entry : confirmed.entrySet())
+//                    confirmedList.add(entry.getValue());
+//
+//                numConfirms = confirmedList.size();
+//                latencies = new long[numConfirms];
+//                int index = 0;
+//                for (MessagePayload mp : confirmedList) {
+//                    latencies[index] = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
+//                    index++;
+//
+//                    if (!undeliverable.contains(mp))
+//                        messageModel.sent(mp);
+//                    else
+//                        undeliverable.remove(mp);
+//                }
+//                confirmed.clear();
+//            } else {
+//                MessagePayload mp = pendingConfirms.remove(seqNo);
+//                if (mp != null) {
+//                    latencies = new long[]{MessageUtils.getDifference(mp.getTimestamp(), currentTime)};
+//                    numConfirms = 1;
+//
+//                    if (!undeliverable.contains(mp))
+//                        messageModel.sent(mp);
+//                    else
+//                        undeliverable.remove(mp);
+//                } else {
+//                    latencies = new long[0];
+//                    numConfirms = 0;
+//                }
+//            }
+//
+//            if (numConfirms > 0) {
+//                flowController.returnSendPermits(numConfirms);
+//                metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
+//                metricGroup.add(MetricType.PublisherConfirmLatencies, latencies);
+//                pendingConfirmCount.set(pendingConfirms.size());
+//            }
     }
 
     @Override
     public void handleNack(long seqNo, boolean multiple) {
-        int numConfirms;
-        if (multiple) {
-            ConcurrentNavigableMap<Long, MessagePayload> confirmed = pendingConfirms.headMap(seqNo, true);
-            numConfirms = confirmed.size();
-            confirmed.clear();
-        } else {
-            pendingConfirms.remove(seqNo);
-            numConfirms = 1;
-        }
-        flowController.returnSendPermits(numConfirms);
-        publisherGroupStats.handleNack(numConfirms);
+        List<MessagePayload> confirmedList = flowController.confirmAmqpMessages(seqNo, multiple);
+        int numConfirms = confirmedList.size();
+        metricGroup.increment(MetricType.PublisherNacked, numConfirms);
         pendingConfirmCount.set(pendingConfirms.size());
     }
 
@@ -150,17 +141,17 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
         catch(Exception e) {
             logger.error("Failed registering basic return", e);
         }
-        publisherGroupStats.handleReturn();
+        metricGroup.increment(MetricType.PublisherReturned);
     }
 
     @Override
     public void handleBlocked(String reason) {
-        publisherGroupStats.handleBlockedConnection();
+        metricGroup.increment(MetricType.PublisherBlockedConnection);
     }
 
     @Override
     public void handleUnblocked() {
-        publisherGroupStats.handleUnblockedConnection();
+        metricGroup.increment(MetricType.PublisherUnblockedConnection);
     }
 
     public int getPendingConfirmCount() {

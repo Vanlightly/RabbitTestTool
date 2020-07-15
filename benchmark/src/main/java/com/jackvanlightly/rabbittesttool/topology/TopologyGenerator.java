@@ -6,6 +6,7 @@ import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
 import com.rabbitmq.stream.Client;
+import com.rabbitmq.stream.ClientException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
@@ -253,19 +254,48 @@ public class TopologyGenerator {
                 ? brokerConfig.getDownstreamHosts().get(nodeIndex)
                 : brokerConfig.getHosts().get(nodeIndex);
 
-        Client client = new Client(new Client.ClientParameters()
-                    .host(broker.getIp())
-                    .port(broker.getStreamPort())
-                    .virtualHost(queueConfig.getVhostName())
-                    .username(connectionSettings.getUser())
-                    .password(connectionSettings.getPassword())
-            );
+        boolean declared = false;
+        int attempts = 0;
+        ClientException exception = null;
+        Client client = null;
 
-        client.create(queueName, new Client.StreamParametersBuilder()
-                .maxLengthBytes(queueConfig.getRetentionSize())
-                .maxSegmentSizeBytes(queueConfig.getSegmentSize()).build());
-//        client.create(queueName);
-        client.close();
+        while(!declared && attempts < 3) {
+            attempts++;
+            try {
+                client = new Client(new Client.ClientParameters()
+                        .host(broker.getIp())
+                        .port(broker.getStreamPort())
+                        .virtualHost(queueConfig.getVhostName())
+                        .username(connectionSettings.getUser())
+                        .password(connectionSettings.getPassword())
+                );
+
+                client.create(queueName, new Client.StreamParametersBuilder()
+                        .maxLengthBytes(queueConfig.getRetentionSize())
+                        .maxSegmentSizeBytes(queueConfig.getSegmentSize()).build());
+                declared = true;
+                tryClose(client);
+            } catch (ClientException e) {
+                tryClose(client);
+                logger.info("Failed to declare stream");
+                exception = e;
+                ClientUtils.waitFor(60000);
+            }
+        }
+
+        if(!declared)
+            logger.error("Exhausted attempts to declare the stream", exception);
+
+
+    }
+
+    private void tryClose(Client client) {
+        try {
+            client.close();
+        }
+        catch(Exception e) {
+            logger.error("Could not close topology generator stream client", e);
+        }
     }
 
     private boolean deleteQueue(String vhost, String queueName, boolean isDownstream) {
@@ -377,25 +407,24 @@ public class TopologyGenerator {
                 String json = EntityUtils.toString(response.getEntity(), "UTF-8");
                 client.close();
 
-                try {
-                    return new JSONArray(json);
-                } catch (JSONException je) {
-                    if (je.getMessage().startsWith("Duplicate key")) {
-                        //System.out.println("Duplicate key bug!");
-                        String pattern = "\\\"(.+)\\\"";
-                        Pattern r = Pattern.compile(pattern);
-                        Matcher m = r.matcher(je.getMessage());
-                        if (m.find()) {
-                            String duplicateKey = m.group(1);
-                            while (json.contains(duplicateKey))
+                for(int fixAttempt=0; fixAttempt<10; fixAttempt++) {
+                    try {
+                        return new JSONArray(json);
+                    } catch (JSONException je) {
+                        if (je.getMessage().startsWith("Duplicate key")) {
+                            //System.out.println("Duplicate key bug!");
+                            String pattern = "\\\"(.+)\\\"";
+                            Pattern r = Pattern.compile(pattern);
+                            Matcher m = r.matcher(je.getMessage());
+                            if (m.find()) {
+                                String duplicateKey = m.group(1);
                                 json = json.replaceFirst(duplicateKey, UUID.randomUUID().toString());
-
-                            return new JSONArray(json);
+                            } else {
+                                throw je;
+                            }
                         } else {
                             throw je;
                         }
-                    } else {
-                        throw je;
                     }
                 }
             } catch (Exception e) {

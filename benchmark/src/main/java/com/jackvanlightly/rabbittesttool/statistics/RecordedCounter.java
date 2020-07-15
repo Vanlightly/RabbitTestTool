@@ -17,6 +17,13 @@ public class RecordedCounter {
         realValue++;
     }
 
+    public synchronized void increment(int count) {
+        if(Stats.RecordingActive)
+            recordedValue+=count;
+
+        realValue+=count;
+    }
+
 //    public synchronized RecordedCounter getSnapshotAndReset() {
 //        RecordedCounter snapshot = new RecordedCounter(recordedValue, allValue);
 //        recordedValue = 0;

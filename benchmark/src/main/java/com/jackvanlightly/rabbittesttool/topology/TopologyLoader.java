@@ -462,8 +462,29 @@ public class TopologyLoader {
                     pm.setUseConfirms(getMandatoryBoolValue(pmJson, "useConfirms"));
                     pm.setProtocol(getProtocol(getOptionalStrValue(pmJson, "protocol", "amqp091")));
                     pm.setMaxBatchSize(getOptionalIntValue(pmJson, "maxBatchSize", 1));
-                    pm.setMaxBatchSizeBytes(getOptionalIntValue(pmJson, "maxBatchSizeBytes", 1000));
+                    pm.setMaxBatchSizeBytes(getOptionalIntValue(pmJson, "maxBatchSizeBytes", 0));
                     pm.setMaxBatchWaitMs(getOptionalIntValue(pmJson, "maxBatchWaitMs", 1000));
+                    pm.setMaxSubEntryBytes(getOptionalIntValue(pmJson, "maxSubEntrySizeBytes", 64000));
+                    pm.setSingleMessageBucketSize(getOptionalIntValue(pmJson, "singleMessageBucketSize", 1));
+
+                    if(pmJson.has("streamPublishMode"))
+                        pm.setStreamPublishMode(getStreamPublishMode(pmJson.getString("streamPublishMode")));
+                    else
+                        pm.setStreamPublishMode(StreamPublishMode.Message);
+
+                    if(pm.getMaxBatchSize() > 1) {
+                        if(pm.getStreamPublishMode() == StreamPublishMode.Message)
+                            throw new TopologyException("'single' streamPublishMode cannot be used with batching");
+
+                        if(pm.getStreamPublishMode() == StreamPublishMode.SimpleBatch
+                            && pm.getMaxBatchSize() < pm.getSingleMessageBucketSize()) {
+                            throw new TopologyException("The singleMessageBucketSize must be equal to or smaller than the batch size when using 'simple-batch mode");
+                        }
+                    }
+                    else {
+                        if(pm.getStreamPublishMode() != StreamPublishMode.Message)
+                            throw new TopologyException("Only 'single' streamPublishMode can be used without batching");
+                    }
 
                     if (pm.isUseConfirms())
                         pm.setInFlightLimit(getMandatoryIntValue(pmJson, "inFlightLimit"));
@@ -973,6 +994,16 @@ public class TopologyLoader {
             case "stream": return Protocol.STREAM;
             default:
                 throw new TopologyException("Only 'amqp091' and 'stream' are valid values for 'protocol'");
+        }
+    }
+
+    private StreamPublishMode getStreamPublishMode(String value) {
+        switch(value.toLowerCase()) {
+            case "single": return StreamPublishMode.Message;
+            case "simple-batch": return StreamPublishMode.SimpleBatch;
+            case "subentry-batch": return StreamPublishMode.SubEntryBatch;
+            default:
+                throw new TopologyException("Only 'single', 'simple-batch' and 'subentry-batch' are valid values for 'streamPublishMode'");
         }
     }
 

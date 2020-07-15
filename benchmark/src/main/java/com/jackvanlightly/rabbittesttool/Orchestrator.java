@@ -43,6 +43,7 @@ public class Orchestrator {
     private Stats stats;
     private MessageModel messageModel;
     private String mode;
+    private boolean instrumentMessagePayloads;
     private AtomicBoolean jumpToCleanup;
     private AtomicBoolean complete;
 
@@ -59,7 +60,8 @@ public class Orchestrator {
                         QueueHosts queueHosts,
                         QueueHosts downstreamQueueHosts,
                         ActionSupervisor actionSupervisor,
-                        String mode) {
+                        String mode,
+                        boolean instrumentMessagePayloads) {
         this.logger = new BenchmarkLogger("ORCHESTRATOR");
         this.benchmarkRegister = benchmarkRegister;
         this.topologyGenerator = topologyGenerator;
@@ -70,6 +72,7 @@ public class Orchestrator {
         this.actionSupervisor = actionSupervisor;
         this.stats = stats;
         this.mode = mode;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         this.messageModel = messageModel;
         queueGroups = new ArrayList<>();
@@ -133,8 +136,6 @@ public class Orchestrator {
                 if(deleted)
                     deletedCount++;
             }
-
-//            topologyGenerator.deleteVHost(VirtualHost.getDefaultVHost());
 
             logger.info("Deleted " + deletedCount + " vhosts");
             if(deletedCount > 0) {
@@ -233,9 +234,9 @@ public class Orchestrator {
             PublisherGroup publisherGroup = new PublisherGroup(connSettings,
                     publisherConfig,
                     vhost,
-                    stats,
                     messageModel,
-                    publisherQueueHosts);
+                    publisherQueueHosts,
+                    instrumentMessagePayloads);
             publisherGroup.createInitialPublishers();
             publisherGroups.add(publisherGroup);
         }
@@ -243,25 +244,6 @@ public class Orchestrator {
 
     private void addConsumerGroups(VirtualHost vhost, Topology topology) {
         for(ConsumerConfig consumerConfig : vhost.getConsumers()) {
-            double consumerMaxScale = consumerConfig.getScale();
-
-            switch(topology.getTopologyType()) {
-                case SingleVariable:
-                    if(topology.getVariableConfig().getDimension() == VariableDimension.Consumers) {
-                        if (topology.getVariableConfig().getGroup() == null
-                                || topology.getVariableConfig().getGroup().equals(consumerConfig.getGroup())) {
-                            consumerMaxScale = topology.getVariableConfig().getMaxScale();
-                        }
-                    }
-                    break;
-                case MultiVariable:
-                    Map<VariableDimension,Double> maxScales = topology.getVariableConfig().getMaxScales();
-                    if(maxScales.containsKey(VariableDimension.Consumers)) {
-                        consumerMaxScale = (maxScales.get(VariableDimension.Consumers));
-                    }
-                    break;
-            }
-
             ConnectionSettings connSettings = consumerConfig.isDownstream()
                     ? downstreamConnectionSettingsBase.getClone(vhost.getName())
                     : connectionSettingsBase.getClone(vhost.getName());
@@ -275,7 +257,7 @@ public class Orchestrator {
                     stats,
                     messageModel,
                     consumerQueueHosts,
-                    (int)consumerMaxScale);
+                    instrumentMessagePayloads);
             consumerGroup.createInitialConsumers();
             consumerGroups.add(consumerGroup);
         }

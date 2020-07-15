@@ -1,27 +1,19 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
 import com.hivemq.client.mqtt.datatypes.MqttQos;
-import com.hivemq.client.mqtt.lifecycle.MqttClientAutoReconnect;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
-import com.jackvanlightly.rabbittesttool.statistics.PublisherGroupStats;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
-import com.jackvanlightly.rabbittesttool.topology.model.publishers.DeliveryMode;
-import com.jackvanlightly.rabbittesttool.topology.model.publishers.QueueGroupMode;
-import com.jackvanlightly.rabbittesttool.topology.model.publishers.SendToMode;
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -31,7 +23,7 @@ public class MqttPublisher implements Runnable {
     String publisherId;
 
     MessageModel messageModel;
-    PublisherGroupStats publisherGroupStats;
+    MetricGroup metricGroup;
     PublisherStats publisherStats;
     ConnectionSettings connectionSettings;
     PublisherSettings publisherSettings;
@@ -59,7 +51,7 @@ public class MqttPublisher implements Runnable {
 
     public MqttPublisher(String publisherId,
                          MessageModel messageModel,
-                         PublisherGroupStats publisherGroupStats,
+                         MetricGroup metricGroup,
                          ConnectionSettings connectionSettings,
                          QueueHosts queueHosts,
                          PublisherSettings publisherSettings)
@@ -67,7 +59,7 @@ public class MqttPublisher implements Runnable {
         this.logger = new BenchmarkLogger("MQTT PUBLISHER");
         this.publisherId = publisherId;
         this.messageModel = messageModel;
-        this.publisherGroupStats = publisherGroupStats;
+        this.metricGroup = metricGroup;
         this.connectionSettings = connectionSettings;
         this.queueHosts = queueHosts;
         this.publisherSettings = publisherSettings;
@@ -96,8 +88,8 @@ public class MqttPublisher implements Runnable {
             try {
 
                 ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
-                FlowController flowController = new FlowController(publisherSettings.getPublisherMode().getInFlightLimit());
-                publisherListener = new MqttPublisherListener(publisherId, messageModel, publisherGroupStats, pendingConfirms, flowController);
+                FlowController flowController = new FlowController(publisherSettings.getPublisherMode().getInFlightLimit(), 1);
+                publisherListener = new MqttPublisherListener(publisherId, messageModel, metricGroup, pendingConfirms, flowController);
 
                 client = getClient(publisherListener);
                 messageModel.clientConnected(publisherId);
@@ -229,11 +221,8 @@ public class MqttPublisher implements Runnable {
                 .send()
                 .thenAccept(s -> publisherListener.handleConfirm(seqNo));
 
-        publisherGroupStats.handleSend(body.length,
-                0,
-                0,
-                0);
-        publisherStats.incrementSendCount();
+        metricGroup.increment(MetricType.PublisherSentMessage);
+        metricGroup.increment(MetricType.PublisherSentBytes, body.length);
     }
 
     private Mqtt3AsyncClient getClient(MqttPublisherListener publisherListener) throws ExecutionException, InterruptedException {

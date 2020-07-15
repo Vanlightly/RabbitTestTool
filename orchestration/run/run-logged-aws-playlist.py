@@ -172,10 +172,11 @@ for i in range(common_conf.repeat_count):
             console_out("RUNNER", "Applying broker configuration...")
             deployer.update_broker_config_on_all(configurations, common_conf, entry.broker_configuration)
             
-        if apply_config or run_ordinal > 1:
+        if common_conf.restart_brokers and (apply_config or run_ordinal > 1):
             console_out("RUNNER", "Restarting all clusters before next topology...")
             broker_actions.restart_all_brokers(configurations, common_conf)
-            time.sleep(60)
+            console_out("RUNNER", f"Allowing {common_conf.start_allowance_ms} seconds for brokers to start")
+            time.sleep(common_conf.start_allowance_ms)
 
         # run all instances of the topology benchmark
         b_threads = list()

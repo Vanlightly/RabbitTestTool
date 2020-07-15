@@ -9,6 +9,9 @@ public class PublisherMode {
     int maxBatchSize;
     int maxBatchSizeBytes;
     int maxBatchWaitMs;
+    int maxSubEntryBytes;
+    int singleMessageBucketSize;
+    StreamPublishMode streamPublishMode;
 
     public boolean isUseConfirms() {
         return useConfirms;
@@ -56,5 +59,29 @@ public class PublisherMode {
 
     public void setMaxBatchSizeBytes(int maxBatchSizeBytes) {
         this.maxBatchSizeBytes = maxBatchSizeBytes;
+    }
+
+    public int getMaxSubEntryBytes() {
+        return maxSubEntryBytes;
+    }
+
+    public void setMaxSubEntryBytes(int maxSubEntryBytes) {
+        this.maxSubEntryBytes = maxSubEntryBytes;
+    }
+
+    public StreamPublishMode getStreamPublishMode() {
+        return streamPublishMode;
+    }
+
+    public void setStreamPublishMode(StreamPublishMode streamPublishMode) {
+        this.streamPublishMode = streamPublishMode;
+    }
+
+    public int getSingleMessageBucketSize() {
+        return singleMessageBucketSize;
+    }
+
+    public void setSingleMessageBucketSize(int singleMessageBucketSize) {
+        this.singleMessageBucketSize = singleMessageBucketSize;
     }
 }

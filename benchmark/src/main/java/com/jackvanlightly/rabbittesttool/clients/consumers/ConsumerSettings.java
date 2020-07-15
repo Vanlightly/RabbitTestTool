@@ -8,13 +8,20 @@ public class ConsumerSettings {
     private int frameMax;
     private int processingMs;
     private boolean connectToDownstream;
+    private boolean instrumentMessagePayloads;
 
-    public ConsumerSettings(String queue, AckMode ackMode, int frameMax, int processingMs, boolean connectToDownstream) {
+    public ConsumerSettings(String queue,
+                            AckMode ackMode,
+                            int frameMax,
+                            int processingMs,
+                            boolean connectToDownstream,
+                            boolean instrumentMessagePayloads) {
         this.queue = queue;
         this.ackMode = ackMode;
         this.frameMax = frameMax;
         this.processingMs = processingMs;
         this.connectToDownstream = connectToDownstream;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
     }
 
     public String getQueue() {
@@ -47,5 +54,13 @@ public class ConsumerSettings {
 
     public void setProcessingMs(int processingMs) {
         this.processingMs = processingMs;
+    }
+
+    public boolean shouldInstrumentMessagePayloads() {
+        return instrumentMessagePayloads;
+    }
+
+    public void setInstrumentMessagePayloads(boolean instrumentMessagePayloads) {
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
     }
 }

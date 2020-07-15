@@ -6,19 +6,15 @@ import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.clients.publishers.MessageGenerator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.model.ReceivedMessage;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
-import com.rabbitmq.client.AMQP.BasicProperties;
-import com.rabbitmq.client.*;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.rabbitmq.stream.Client;
 import com.rabbitmq.stream.Message;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class StreamConsumerListener implements Client.ChunkListener, Client.MessageListener {
 
@@ -26,7 +22,7 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
     String consumerId;
     String vhost;
     String queue;
-    Stats stats;
+    MetricGroup metricGroup;
     MessageModel messageModel;
     volatile int ackInterval;
     volatile int ackIntervalMs;
@@ -34,32 +30,35 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
     volatile int processingMs;
     volatile int pendingCreditCounter;
     volatile Instant lastGrantedCreditTime;
-    ConsumerStats consumerStats;
+    boolean instrumentMessagePayloads;
     AtomicLong lastOffset;
+    long lastRecordedLatency;
+    long summedLatency = 0;
+    long latencyMeasurements = 0;
 
     public StreamConsumerListener(String consumerId,
                                   String vhost,
                                   String queue,
-                                  Stats stats,
+                                  MetricGroup metricGroup,
                                   MessageModel messageModel,
-                                  ConsumerStats consumerStats,
                                   AtomicLong lastOffset,
                                   int prefetch,
                                   int ackInterval,
                                   int ackIntervalMs,
-                                  int processingMs) {
+                                  int processingMs,
+                                  boolean instrumentMessagePayloads) {
         this.logger = new BenchmarkLogger("STREAM CONSUMER");
         this.consumerId = consumerId;
         this.vhost = vhost;
         this.queue = queue;
-        this.stats = stats;
+        this.metricGroup = metricGroup;
         this.messageModel = messageModel;
         this.ackInterval = ackInterval;
         this.ackIntervalMs = ackIntervalMs;
         this.prefetch = prefetch;
         this.processingMs = processingMs;
-        this.consumerStats = consumerStats;
         this.lastOffset = lastOffset;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         pendingCreditCounter = 0;
         lastGrantedCreditTime = Instant.now();
@@ -92,36 +91,54 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
     }
 
     void handleMessage(Message message) throws IOException {
-        MessagePayload mp = MessageGenerator.toMessagePayload(message.getBodyAsBinary());
-        long lag = MessageUtils.getLag(mp.getTimestamp());
-        //long seqNO = mp.getSequenceNumber();
-        messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, false, lag, System.currentTimeMillis()));
+        if(this.instrumentMessagePayloads) {
+            MessagePayload mp = MessageGenerator.toMessagePayload(message.getBodyAsBinary());
+            long now = System.nanoTime();
+            long lag = MessageUtils.getLag(now, mp.getTimestamp());
+            messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, false, lag, System.currentTimeMillis()));
 
-        stats.handleRecv(lag, message.getBodyAsBinary().length, 0, prefetch, ackInterval, ackIntervalMs, true);
-        consumerStats.incrementReceivedCount();
+            summedLatency+=lag;
+            latencyMeasurements++;
+
+            if(now-lastRecordedLatency > 100000000) {
+                long avgLag = summedLatency/latencyMeasurements;
+                metricGroup.add(MetricType.ConsumerLatencies, avgLag);
+                summedLatency = 0;
+                latencyMeasurements = 0;
+                lastRecordedLatency = now;
+            }
+        }
     }
 
     @Override
     public void handle(Client client, int subscriptionId, long offset, long messageCount, long dataSize) {
-        stats.handleRecvBatch();
+        try {
+            metricGroup.increment(MetricType.ConsumerStreamBatches);
+            metricGroup.increment(MetricType.ConsumerReceivedMessage, messageCount);
+            metricGroup.increment(MetricType.ConsumerStreamMessages, messageCount);
+            metricGroup.increment(MetricType.ConsumerPrefetch, prefetch*messageCount);
+            metricGroup.increment(MetricType.ConsumerAckInterval, ackInterval*messageCount);
+            metricGroup.increment(MetricType.ConsumerAckIntervalMs, ackIntervalMs*messageCount);
+            metricGroup.increment(MetricType.ConsumerReceivedBytes, dataSize);
 
-        if(this.ackInterval == 1) {
-            client.credit(subscriptionId, 1);
-        }
-        else {
-            pendingCreditCounter++;
-            if(pendingCreditCounter >= ackInterval && pendingCreditCounter % ackInterval == 0) {
-                client.credit(subscriptionId, pendingCreditCounter);
-                pendingCreditCounter = 0;
-                lastGrantedCreditTime = Instant.now();
+            if (this.ackInterval == 1) {
+                client.credit(subscriptionId, 1);
+            } else {
+                pendingCreditCounter++;
+                if (pendingCreditCounter >= ackInterval && pendingCreditCounter % ackInterval == 0) {
+                    client.credit(subscriptionId, pendingCreditCounter);
+                    pendingCreditCounter = 0;
+                    lastGrantedCreditTime = Instant.now();
+                } else if (Duration.between(lastGrantedCreditTime, Instant.now()).toMillis() > ackIntervalMs) {
+                    client.credit(subscriptionId, pendingCreditCounter);
+                    pendingCreditCounter = 0;
+                    lastGrantedCreditTime = Instant.now();
+                }
             }
-            else if(Duration.between(lastGrantedCreditTime, Instant.now()).toMillis() > ackIntervalMs) {
-                client.credit(subscriptionId, pendingCreditCounter);
-                pendingCreditCounter = 0;
-                lastGrantedCreditTime = Instant.now();
-            }
         }
-
+        catch(Exception e) {
+            logger.error("Error in chunk listener: ", e);
+        }
     }
 
     private void waitFor(int milliseconds) {

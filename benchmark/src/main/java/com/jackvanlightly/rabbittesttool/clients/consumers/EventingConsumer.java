@@ -6,6 +6,8 @@ import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.clients.publishers.MessageGenerator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.model.ReceivedMessage;
+import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
+import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
@@ -19,44 +21,44 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class EventingConsumer extends DefaultConsumer {
 
-    private BenchmarkLogger logger;
-    private String consumerId;
-    private String vhost;
-    private String queue;
-    private Stats stats;
-    private MessageModel messageModel;
-    private volatile int ackInterval;
-    private volatile int ackIntervalMs;
-    private volatile short prefetch;
-    private volatile int processingMs;
-    private int requeueEveryN;
-    private long receiveCount;
-    private long nextRequeue;
-    private volatile long delTagLastAcked;
-    private volatile long delTagLastReceived;
-    private volatile Instant lastAckedTime;
-    private ConsumerStats consumerStats;
-    private AtomicBoolean consumerCancelled;
-    private Lock ackLock;
+    BenchmarkLogger logger;
+    String consumerId;
+    String vhost;
+    String queue;
+    MetricGroup metricGroup;
+    MessageModel messageModel;
+    volatile int ackInterval;
+    volatile int ackIntervalMs;
+    volatile short prefetch;
+    volatile int processingMs;
+    int requeueEveryN;
+    long receiveCount;
+    long nextRequeue;
+    volatile long delTagLastAcked;
+    volatile long delTagLastReceived;
+    volatile Instant lastAckedTime;
+    boolean instrumentMessagePayloads;
+    AtomicBoolean consumerCancelled;
+    Lock ackLock;
 
     public EventingConsumer(String consumerId,
                             String vhost,
                             String queue,
                             Channel channel,
-                            Stats stats,
+                            MetricGroup metricGroup,
                             MessageModel messageModel,
-                            ConsumerStats consumerStats,
                             short prefetch,
                             int ackInterval,
                             int ackIntervalMs,
                             int processingMs,
-                            int requeueEveryN) {
+                            int requeueEveryN,
+                            boolean instrumentMessagePayloads) {
         super(channel);
         this.logger = new BenchmarkLogger("CONSUMER");
         this.consumerId = consumerId;
         this.vhost = vhost;
         this.queue = queue;
-        this.stats = stats;
+        this.metricGroup = metricGroup;
         this.messageModel = messageModel;
         this.ackInterval = ackInterval;
         this.ackIntervalMs = ackIntervalMs;
@@ -65,7 +67,7 @@ public class EventingConsumer extends DefaultConsumer {
         this.requeueEveryN = requeueEveryN;
         this.receiveCount = 0;
         this.nextRequeue = requeueEveryN;
-        this.consumerStats = consumerStats;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         consumerCancelled = new AtomicBoolean();
         delTagLastAcked = -1;
@@ -117,7 +119,8 @@ public class EventingConsumer extends DefaultConsumer {
                     getChannel().basicAck(delTagLastReceived, true);
                     delTagLastAcked = delTagLastReceived;
                     lastAckedTime = now;
-                    stats.handleAck((int) msgsToAck);
+                    metricGroup.increment(MetricType.ConsumerAckedMessages, msgsToAck);
+                    metricGroup.increment(MetricType.ConsumerAcks);
                 } catch (IOException e) {
                     logger.warn("Failed to ack on interval ms check", e);
                 }
@@ -146,15 +149,23 @@ public class EventingConsumer extends DefaultConsumer {
     }
 
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
-        MessagePayload mp = MessageGenerator.toMessagePayload(body);
-        long lag = MessageUtils.getLag(mp.getTimestamp());
-        messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, envelope.isRedeliver(), lag, System.currentTimeMillis()));
+        if(instrumentMessagePayloads) {
+            MessagePayload mp = MessageGenerator.toMessagePayload(body);
+            long lag = MessageUtils.getLag(mp.getTimestamp());
+            messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, envelope.isRedeliver(), lag, System.currentTimeMillis()));
+            metricGroup.add(MetricType.ConsumerLatencies, lag);
+        }
 
         int headerCount = 0;
         if(properties != null && properties.getHeaders() != null)
             headerCount = properties.getHeaders().size();
-        stats.handleRecv(lag, body.length, headerCount, prefetch, ackInterval, ackIntervalMs, false);
-        consumerStats.incrementReceivedCount();
+
+        metricGroup.increment(MetricType.ConsumerReceivedMessage);
+        metricGroup.increment(MetricType.ConsumerReceivedBytes, body.length);
+        metricGroup.increment(MetricType.ConsumerReceivedHeaderCount, headerCount);
+        metricGroup.increment(MetricType.ConsumerPrefetch, prefetch);
+        metricGroup.increment(MetricType.ConsumerAckInterval, ackInterval);
+        metricGroup.increment(MetricType.ConsumerAckIntervalMs, ackIntervalMs);
 
         ackLock.lock();
 
@@ -171,7 +182,7 @@ public class EventingConsumer extends DefaultConsumer {
                 }
 
                 delTagLastAcked = deliveryTag;
-                stats.handleAck(1);
+                metricGroup.increment(MetricType.ConsumerAcks);
             } else if (ackInterval > 1) {
                 long msgsToAck = deliveryTag - delTagLastAcked;
                 receiveCount += msgsToAck;
@@ -179,14 +190,14 @@ public class EventingConsumer extends DefaultConsumer {
                 if (msgsToAck > ackInterval || msgsToAck >= Short.MAX_VALUE - 1) {
                     getChannel().basicAck(deliveryTag, true);
                     delTagLastAcked = deliveryTag;
-                    stats.handleAck((int) msgsToAck);
+                    metricGroup.increment(MetricType.ConsumerAcks, msgsToAck);
                 } else {
                     Instant now = Instant.now();
                     if (Duration.between(lastAckedTime, now).toMillis() > ackIntervalMs) {
                         getChannel().basicAck(deliveryTag, true);
                         delTagLastAcked = deliveryTag;
                         lastAckedTime = now;
-                        stats.handleAck((int) msgsToAck);
+                        metricGroup.increment(MetricType.ConsumerAcks, msgsToAck);
                     }
                 }
             }
@@ -212,7 +223,7 @@ public class EventingConsumer extends DefaultConsumer {
     @Override
     public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
         if(sig.isHardError() && !sig.isInitiatedByApplication())
-            this.stats.handleConnectionError();
+            metricGroup.increment(MetricType.ConsumerConnectionErrors);
         logger.info("Consumer shutdown with tag: " + consumerTag + " for reason: " + sig.getMessage());
     }
 

@@ -14,6 +14,10 @@ public class PublisherStats {
         recordedSent.increment();
     }
 
+    public void incrementSendCount(int count) {
+        recordedSent.increment(count);
+    }
+
     public long getAndResetRecordedSent() {
         return recordedSent.getRecordedValueAndReset();
     }

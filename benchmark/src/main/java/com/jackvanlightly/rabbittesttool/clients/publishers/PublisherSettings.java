@@ -20,6 +20,7 @@ public class PublisherSettings {
     private int frameMax;
     private long messageLimit;
     private long initialPublish;
+    private boolean instrumentMessagePayloads;
 
     public PublisherSettings(SendToExchange sendToExchange,
                              PublisherMode publisherMode,
@@ -28,7 +29,8 @@ public class PublisherSettings {
                              DeliveryMode deliveryMode,
                              int frameMax,
                              long messageLimit,
-                             long initialPublish) {
+                             long initialPublish,
+                             boolean instrumentMessagePayloads) {
         this.sendToExchange = sendToExchange;
         this.publisherMode = publisherMode;
         this.streams = streams;
@@ -38,6 +40,7 @@ public class PublisherSettings {
         this.frameMax = frameMax;
         this.messageLimit = messageLimit;
         this.initialPublish = initialPublish;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         this.availableHeaders = new ArrayList<>();
     }
@@ -49,7 +52,8 @@ public class PublisherSettings {
                              DeliveryMode deliveryMode,
                              int frameMax,
                              long messageLimit,
-                             long initialPublish) {
+                             long initialPublish,
+                             boolean instrumentMessagePayloads) {
         this.sendToQueueGroup = sendToQueueGroup;
         this.publisherMode = publisherMode;
         this.streams = streams;
@@ -60,6 +64,7 @@ public class PublisherSettings {
         this.messageLimit = messageLimit;
         this.initialPublish = initialPublish;
         this.useMandatoryFlag = true;
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         this.availableHeaders = new ArrayList<>();
     }
@@ -152,4 +157,11 @@ public class PublisherSettings {
         this.initialPublish = initialPublish;
     }
 
+    public boolean shouldInstrumentMessagePayloads() {
+        return instrumentMessagePayloads;
+    }
+
+    public void setInstrumentMessagePayloads(boolean instrumentMessagePayloads) {
+        this.instrumentMessagePayloads = instrumentMessagePayloads;
+    }
 }

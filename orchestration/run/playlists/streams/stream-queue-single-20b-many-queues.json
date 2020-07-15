@@ -1,0 +1,45 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "10", "queueCount": "10", "consumerCount": "10"  }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "20", "queueCount": "20", "consumerCount": "20" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "30", "queueCount": "30", "consumerCount": "30" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "40", "queueCount": "40", "consumerCount": "40" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "50", "queueCount": "50", "consumerCount": "50" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "60", "queueCount": "60", "consumerCount": "60" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "70", "queueCount": "70", "consumerCount": "70" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "80", "queueCount": "80", "consumerCount": "80" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "90", "queueCount": "90", "consumerCount": "90" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "100", "queueCount": "100", "consumerCount": "100" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "110", "queueCount": "110", "consumerCount": "110" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "120", "queueCount": "120", "consumerCount": "120" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "130", "queueCount": "130", "consumerCount": "130" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "140", "queueCount": "140", "consumerCount": "140" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "150", "queueCount": "150", "consumerCount": "150" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "160", "queueCount": "160", "consumerCount": "160" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "170", "queueCount": "170", "consumerCount": "170" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "180", "queueCount": "180", "consumerCount": "180" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "190", "queueCount": "190", "consumerCount": "190" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "200", "queueCount": "200", "consumerCount": "200" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "210", "queueCount": "210", "consumerCount": "210" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "220", "queueCount": "220", "consumerCount": "220" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "230", "queueCount": "230", "consumerCount": "230" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "240", "queueCount": "240", "consumerCount": "240" }},
+        { "topologyVariables": { "publishRate": "100000", "publisherCount": "250", "queueCount": "250", "consumerCount": "250" }}
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/streams-binary-protocol.json",
+        "topologyVariables": { 
+            "messageSize": "20",
+            "inflightLimit": "1000",
+            "maxBatchSize": "1000", 
+            "maxBatchWaitMs": "100",
+            "maxBatchSizeBytes": "0",
+            "maxSubEntrySizeBytes": "64000",
+            "streamPublishMode": "subentry-batch",
+            "durationSeconds": "300",
+            "initialCredit": "10", 
+            "creditInterval": "1",
+            "creditIntervalMs": "100"
+        }
+    }
+}

@@ -14,9 +14,12 @@
     { "name": "inflightLimit", "default": "1000" },
     { "name": "retentionSizeMb", "default": "20000" },
     { "name": "segmentSizeMb", "default": "500" },
-    { "name": "maxBatchSize", "default": "0" },
+    { "name": "maxBatchSize", "default": "1" },
     { "name": "maxBatchSizeBytes", "default": "0" },
     { "name": "maxBatchWaitMs", "default": "0" },
+    { "name": "maxSubEntrySizeBytes", "default": "0" },
+    { "name": "singleMessageBucketSize", "default": "1" },
+    { "name": "streamPublishMode", "default": "single" },
     { "name": "initialCredit", "default": "10" },
     { "name": "creditInterval", "default": "1" },
     { "name": "creditIntervalMs", "default": "1000" },
@@ -48,7 +51,10 @@
             "inFlightLimit": "{{ var.inflightLimit }}",
             "maxBatchSize": "{{ var.maxBatchSize }}",
             "maxBatchSizeBytes": "{{ var.maxBatchSizeBytes }}",
-            "maxBatchWaitMs": "{{ var.maxBatchWaitMs }}"
+            "maxBatchWaitMs": "{{ var.maxBatchWaitMs }}",
+            "maxSubEntrySizeBytes": "{{ var.maxSubEntrySizeBytes }}",
+            "streamPublishMode": "{{ var.streamPublishMode }}",
+            "singleMessageBucketSize": "{{ var.singleMessageBucketSize }}"
           },
           "sendToQueuePrefix": {
             "queuePrefix": "{{ var.queuePrefix }}",

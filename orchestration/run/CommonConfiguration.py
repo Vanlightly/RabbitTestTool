@@ -11,6 +11,7 @@ class CommonConfiguration:
         self.new_instance_per_run = is_true(get_optional_arg(args, "--new-instance-per-run", "", "false"))
         self.no_destroy = is_true(get_optional_arg(args, "--no-destroy", "", "false"))
         self.no_deploy = is_true(get_optional_arg(args, "--no-deploy", "", "false"))
+        self.restart_brokers = is_true(get_optional_arg(args, "--restart-brokers", "", "true"))
         self.run_tag = get_optional_arg(args, "--run-tag", "", "none")
         self.playlist_file = get_mandatory_arg(args, "--playlist-file", "")
         # note that for AWS, background load has been moved to playlists. TODO: do same for GCP
@@ -20,6 +21,7 @@ class CommonConfiguration:
         self.background_step_seconds = int(get_optional_arg(args, "--bg-step-seconds", "", "0")) # GCP only
         self.background_step_repeat = int(get_optional_arg(args, "--bg-step-repeat", "", "0")) # GCP only
         self.gap_seconds = int(get_mandatory_arg(args, "--gap-seconds", ""))
+        self.start_allowance_ms = int(get_optional_arg(args, "--start-allowance-seconds", "", "60"))
         self.repeat_count = int(get_optional_arg(args, "--repeat", "", "1"))
         self.parallel_count = int(get_optional_arg(args, "--parallel", "", "1"))
         self.override_step_seconds = int(get_optional_arg(args, "--override-step-seconds", "", "0"))

@@ -1,5 +1,6 @@
 package com.jackvanlightly.rabbittesttool.statistics;
 
+import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
 import com.jackvanlightly.rabbittesttool.clients.consumers.ConsumerGroup;
 import com.jackvanlightly.rabbittesttool.clients.publishers.PublisherGroup;
@@ -25,6 +26,7 @@ import java.util.function.DoubleBinaryOperator;
 
 public class Stats {
 
+    BenchmarkLogger logger;
     ScheduledExecutorService reportExecutor;
     BrokerConfiguration brokerConfig;
     MeterRegistry registry;
@@ -49,45 +51,48 @@ public class Stats {
     private final DoubleAccumulator blockedPublisherConnectionRate, unblockedPublisherConnectionRate, routingKeyLength;
     private final DoubleAccumulator perPublisherRateMin, perPublisherRate5, perPublisherRate25, perPublisherRate50, perPublisherRate75, perPublisherRate95, perPublisherRateMax;
     private final DoubleAccumulator perConsumerRateMin, perConsumerRate5, perConsumerRate25, perConsumerRate50, perConsumerRate75, perConsumerRate95, perConsumerRateMax;
-    protected long lastStatsTime;
-    protected long sendCountInterval;
-    protected long returnCountInterval;
-    protected long confirmCountInterval;
-    protected long nackCountInterval;
-    protected long recvCountInterval;
-    protected long publishedMsgBytesInterval;
-    protected long consumedMsgBytesInterval;
-    protected long publishedMsgHeadersInterval;
-    protected long consumedMsgHeadersInterval;
-    protected long deliveryModeInterval;
-    protected long consumerPrefetchInterval;
-    protected long consumerAckInterval;
-    protected long consumerAckIntervalMs;
-    protected long consumerAckCountInterval;
-    protected long consumerAckedMsgsInterval;
-    protected long consumedStreamBatchInterval;
-    protected long consumedStreamMessageInterval;
-    protected long maxBatchSizeCount;
-    protected long maxBatchSizeBytesCount;
-    protected long maxBatchWaitMsCount;
-    protected long messagesPerBatchInterval;
-    protected long currentConsumerCount;
-    protected long currentPublisherCount;
-    protected long currentQueueCount;
-    protected long targetPublishRateCount;
-    protected long publisherInFlightLimitCount;
-    protected long consumerConnectionErrorInterval;
-    protected long blockedPublisherConnectionInterval;
-    protected long unblockedPublisherConnectionInterval;
-    protected long routingKeyLengthInterval;
 
-    protected long sendCountStepTotal;
-    protected long recvCountStepTotal;
-    protected long sendBytesCountStepTotal;
-    protected long recvBytesCountStepTotal;
+    protected volatile long sendCountInterval;
+    protected volatile long returnCountInterval;
+    protected volatile long confirmCountInterval;
+    protected volatile long nackCountInterval;
+    protected volatile long recvCountInterval;
+    protected volatile long publishedMsgBytesInterval;
+    protected volatile long consumedMsgBytesInterval;
+    protected volatile long publishedMsgHeadersInterval;
+    protected volatile long consumedMsgHeadersInterval;
+    protected volatile long deliveryModeInterval;
+    protected volatile long consumerPrefetchInterval;
+    protected volatile long consumerAckInterval;
+    protected volatile long consumerAckIntervalMs;
+    protected volatile long consumerAckCountInterval;
+    protected volatile long consumerAckedMsgsInterval;
+    protected volatile long consumedStreamBatchInterval;
+    protected volatile long consumedStreamMessageInterval;
+
+    protected volatile long consumerConnectionErrorInterval;
+    protected volatile long blockedPublisherConnectionInterval;
+    protected volatile long unblockedPublisherConnectionInterval;
+    protected volatile long routingKeyLengthInterval;
+
+    protected volatile long maxBatchSizeCount;
+    protected volatile long maxBatchSizeBytesCount;
+    protected volatile long maxBatchWaitMsCount;
+    protected volatile long messagesPerBatchInterval;
+    protected volatile long currentConsumerCount;
+    protected volatile long currentPublisherCount;
+    protected volatile long currentQueueCount;
+    protected volatile long targetPublishRateCount;
+    protected volatile long publisherInFlightLimitCount;
+
+    protected volatile long sendCountStepTotal;
+    protected volatile long recvCountStepTotal;
+    protected volatile long sendBytesCountStepTotal;
+    protected volatile long recvBytesCountStepTotal;
 
     protected long elapsedInterval;
     protected long elapsedTotal;
+    protected long lastStatsTime;
 
     protected Histogram latencies = new MetricRegistry().histogram("latency");
     protected Histogram confirmLatencies = new MetricRegistry().histogram("confirm-latency");
@@ -106,11 +111,13 @@ public class Stats {
                  BrokerConfiguration brokerConfig,
                  MeterRegistry registry,
                  String metricsPrefix) {
+        this.logger = new BenchmarkLogger("STATS");
         this.samplingIntervalMs = samplingIntervalMs;
         this.brokerConfig = brokerConfig;
         this.registry = registry;
         this.metricsPrefix = metricsPrefix;
         startTime = System.currentTimeMillis();
+        lastStatsTime = System.currentTimeMillis();
 
         metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
         List<Tag> tags = getTags(brokerConfig);
@@ -197,47 +204,24 @@ public class Stats {
         updateConfirmLatency = latency -> confirmLatencyTimer.record(latency, TimeUnit.NANOSECONDS);
         updateConfirmMultipleFlag = confirms -> confirmMultipleFlagTimer.record(confirms, TimeUnit.MILLISECONDS); // a hack
 
-        reset(startTime);
+        reset();
         startReportTimer();
-    }
-
-    public long getSamplingIntervalMs() {
-        return samplingIntervalMs;
-    }
-
-    public long getStartTime() {
-        return startTime;
-    }
-
-    public Instant getRecordStart() {
-        return recordStart;
-    }
-
-    public Instant getRecordStop() {
-        return recordStop;
-    }
-
-    public BrokerConfiguration getBrokerConfig() {
-        return brokerConfig;
-    }
-
-    public MeterRegistry getRegistry() {
-        return registry;
-    }
-
-    public String getMetricsPrefix() {
-        return metricsPrefix;
     }
 
     private void startReportTimer(){
         TimerTask repeatedTask = new TimerTask() {
             public void run() {
-                report();
+                try {
+                    report();
+                }
+                catch(Exception e) {
+                    logger.error("Statistics reporting error", e);
+                }
             }
         };
         reportExecutor = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ReportStats"));
-        long delay  = 1000L;
-        long period = 1000L;
+        long delay  = 100L;
+        long period = 100L;
         reportExecutor.scheduleAtFixedRate(repeatedTask, delay, period, TimeUnit.MILLISECONDS);
     }
 
@@ -245,12 +229,169 @@ public class Stats {
         reportExecutor.shutdown();
     }
 
-    public synchronized void addGroup(GroupsStats groupsStats) {
-        groupStatsList.add(groupsStats);
-    }
-
     private double rate(long count, long elapsed) {
         return 1000.0 * count / elapsed;
+    }
+
+    public void addClientGroups(List<PublisherGroup> publisherGroups, List<ConsumerGroup> consumerGroups) {
+        this.publisherGroups = publisherGroups;
+        this.consumerGroups = consumerGroups;
+    }
+
+    public void startRecordingStep() {
+        this.recordStart = Instant.now();
+        RecordingActive = true;
+    }
+
+    public void stopRecordingStep() {
+        this.recordStop = Instant.now();
+        RecordingActive = false;
+    }
+
+    private List<Tag> getTags(BrokerConfiguration brokerConfig) {
+        String node = brokerConfig.getNodeNames().stream().min(Comparator.comparing(String::valueOf)).get();
+        return new ArrayList<>(Arrays.asList(
+                Tag.of("technology", brokerConfig.getTechnology()),
+                Tag.of("node", node),
+                Tag.of("group", "all")
+        ));
+    }
+
+    private List<Tag> getTags(List<Tag> tags, String tagKey, String tagValue) {
+        List<Tag> newTags = new ArrayList<>(tags);
+        newTags.add(Tag.of(tagKey, tagValue));
+        return newTags;
+    }
+
+    private void report() {
+        long now = System.currentTimeMillis();
+        elapsedInterval = now - lastStatsTime;
+        gatherStats();
+
+        if (now - lastStatsTime > samplingIntervalMs) {
+            recordStats();
+            reset();
+            lastStatsTime = now;
+        }
+    }
+
+    private void gatherStats() {
+        List<MetricGroup> allMetricsGroups = new ArrayList<>();
+
+        if(publisherGroups != null) {
+            for (PublisherGroup publisherGroup : publisherGroups) {
+                List<MetricGroup> metricGroups = publisherGroup.getPublisherMetrics();
+                allMetricsGroups.addAll(metricGroups);
+            }
+        }
+
+        if(consumerGroups != null) {
+            for (ConsumerGroup consumerGroup : consumerGroups) {
+                List<MetricGroup> metricGroups = consumerGroup.getConsumerMetrics();
+                allMetricsGroups.addAll(metricGroups);
+            }
+        }
+
+        for(MetricGroup metricGroup : allMetricsGroups) {
+            for(MetricCounter metric : metricGroup.getScalarMetrics()) {
+                switch(metric.getMetricType()) {
+                    case ConsumerAckedMessages:
+                        consumerAckedMsgsInterval+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerAckInterval:
+                        consumerAckInterval+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerAckIntervalMs:
+                        consumerAckIntervalMs+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerAcks:
+                        consumerAckCountInterval+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerConnectionErrors:
+                        consumerConnectionErrorInterval+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerPrefetch:
+                        consumerPrefetchInterval+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerReceivedBytes:
+                        long recBytes = metric.getRealDeltaValue();
+                        consumedMsgBytesInterval+=recBytes;
+                        recvBytesCountStepTotal+=recBytes;
+                        break;
+                    case ConsumerReceivedHeaderCount:
+                        consumedMsgHeadersInterval+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerReceivedMessage:
+                        long receivedCount = metric.getRealDeltaValue();
+                        recvCountStepTotal+=receivedCount;
+                        recvCountInterval+=receivedCount;
+                        break;
+                    case ConsumerStreamBatches:
+                        consumedStreamBatchInterval+=metric.getRealDeltaValue();
+                        break;
+                    case ConsumerStreamMessages:
+                        consumedStreamMessageInterval+=metric.getRealDeltaValue();
+                        break;
+                    case PublisherBlockedConnection:
+                        blockedPublisherConnectionInterval+=metric.getRealDeltaValue();
+                        break;
+                    case PublisherConfirm:
+                        long confirms = metric.getRealDeltaValue();
+                        updateConfirmMultipleFlag.accept(confirms);
+                        confirmCountInterval+=confirms;
+                        break;
+                    case PublisherDeliveryMode:
+                        deliveryModeInterval+=metric.getRealDeltaValue();
+                        break;
+                    case PublisherSentHeaderCount:
+                        publishedMsgHeadersInterval+=metric.getRealDeltaValue();
+                        break;
+                    case PublisherNacked:
+                        nackCountInterval+=metric.getRealDeltaValue();
+                        break;
+                    case PublisherReturned:
+                        returnCountInterval+=metric.getRealDeltaValue();
+                        break;
+                    case PublisherRoutingKeyLength:
+                        routingKeyLengthInterval+=metric.getRealDeltaValue();
+                        break;
+                    case PublisherSentBytes:
+                        long pubBytes = metric.getRealDeltaValue();
+                        publishedMsgBytesInterval+=pubBytes;
+                        sendBytesCountStepTotal+=pubBytes;
+                        break;
+                    case PublisherSentMessage:
+                        long sent = metric.getRealDeltaValue();
+                        sendCountInterval+=sent;
+                        sendCountStepTotal+=sent;
+                        break;
+                    case PublisherUnblockedConnection:
+                        unblockedPublisherConnectionInterval+=metric.getRealDeltaValue();
+                        break;
+                    default:
+                        throw new RuntimeException("Unsupported metric: " + metric.getMetricType());
+                }
+            }
+
+            for(MetricListCounter metric : metricGroup.getListMetrics()) {
+                switch (metric.getMetricType()) {
+                    case ConsumerLatencies:
+                        for (long latency : metric.getRealValue()) {
+                            this.latencies.update(latency);
+                            this.updateLatency.accept(latency);
+                        }
+                        break;
+                    case PublisherConfirmLatencies:
+                        for (long latency : metric.getRealValue()) {
+                            this.confirmLatencies.update(latency);
+                            this.updateConfirmLatency.accept(latency);
+                        }
+                        break;
+                }
+            }
+        }
+
+
     }
 
     private void recordStats() {
@@ -333,7 +474,7 @@ public class Stats {
             recordConsumerAckMsgsPerAck(avgMsgsPerAck);
         }
 
-        if(consumedStreamMessageInterval > 0) {
+        if(consumedStreamBatchInterval > 0) {
             double avgMsgsPerBatch = consumedStreamMessageInterval / consumedStreamBatchInterval;
             recordMessagesPerBatch(avgMsgsPerBatch);
 
@@ -359,40 +500,7 @@ public class Stats {
         }
     }
 
-
-    public void addClientGroups(List<PublisherGroup> publisherGroups, List<ConsumerGroup> consumerGroups) {
-        this.publisherGroups = publisherGroups;
-        this.consumerGroups = consumerGroups;
-    }
-
-    public void startRecordingStep() {
-        this.recordStart = Instant.now();
-        RecordingActive = true;
-    }
-
-    public void stopRecordingStep() {
-        this.recordStop = Instant.now();
-        RecordingActive = false;
-    }
-
-    private List<Tag> getTags(BrokerConfiguration brokerConfig) {
-        String node = brokerConfig.getNodeNames().stream().min(Comparator.comparing(String::valueOf)).get();
-        return new ArrayList<>(Arrays.asList(
-                Tag.of("technology", brokerConfig.getTechnology()),
-                Tag.of("node", node),
-                Tag.of("group", "all")
-        ));
-    }
-
-    private List<Tag> getTags(List<Tag> tags, String tagKey, String tagValue) {
-        List<Tag> newTags = new ArrayList<>(tags);
-        newTags.add(Tag.of(tagKey, tagValue));
-        return newTags;
-    }
-
-    private void reset(long t) {
-        lastStatsTime = t;
-
+    private void reset() {
         sendCountInterval = 0;
         returnCountInterval = 0;
         confirmCountInterval = 0;
@@ -415,19 +523,6 @@ public class Stats {
         blockedPublisherConnectionInterval = 0;
         unblockedPublisherConnectionInterval = 0;
         routingKeyLengthInterval = 0;
-    }
-
-    private synchronized void report() {
-        long now = System.currentTimeMillis();
-        elapsedInterval = now - lastStatsTime;
-
-        if (elapsedInterval >= samplingIntervalMs) {
-            elapsedTotal += elapsedInterval;
-            recordStats();
-            for(GroupsStats gs : groupStatsList)
-                gs.recordStats();
-            reset(now);
-        }
     }
 
     public void setConsumerCount(int consumerCount) {
@@ -462,99 +557,100 @@ public class Stats {
         maxBatchWaitMsCount = batchWaitMs;
     }
 
-    public synchronized void handleSend(long msgBytes,
-                                        int msgHeaders,
-                                        int deliveryMode,
-                                        int routingKeyLength) {
-        if(RecordingActive) {
-            sendCountStepTotal++;
-            sendBytesCountStepTotal+=msgBytes;
-        }
-
-        sendCountInterval++;
-        publishedMsgBytesInterval += msgBytes;
-        publishedMsgHeadersInterval += msgHeaders;
-        deliveryModeInterval += deliveryMode;
-        routingKeyLengthInterval += routingKeyLength;
-
-        report();
-    }
-
-    public synchronized void handleReturn() {
-        returnCountInterval++;
-        report();
-    }
-
-    public synchronized void handleConfirm(int numConfirms, long[] latencies) {
-        updateConfirmMultipleFlag.accept((long)numConfirms);
-        confirmCountInterval += numConfirms;
-        for (long latency : latencies) {
-            this.confirmLatencies.update(latency);
-            this.updateConfirmLatency.accept(latency);
-        }
-        report();
-    }
-
-    public synchronized void handleNack(int numAcks) {
-        nackCountInterval += numAcks;
-        report();
-    }
-
-    public synchronized void handleRecv(long latency,
-                                        long msgBytes,
-                                        int msgHeaders,
-                                        int prefetch,
-                                        int ackInterval,
-                                        int ackIntervalMs,
-                                        boolean isStream) {
-        if(RecordingActive) {
-            this.recvCountStepTotal++;
-            this.latencies.update(latency);
-        }
-
-        if(isStream)
-            consumedStreamMessageInterval++;
-
-        recvCountInterval++;
-
-        recvBytesCountStepTotal += msgBytes;
-        consumedMsgBytesInterval += msgBytes;
-        consumedMsgHeadersInterval += msgHeaders;
-        consumerPrefetchInterval += prefetch;
-        consumerAckInterval += ackInterval;
-        consumerAckIntervalMs += ackIntervalMs;
-
-        if (latency > 0) {
-            this.updateLatency.accept(latency);
-        }
-        report();
-    }
-
-    public synchronized void handleRecvBatch() {
-        consumedStreamBatchInterval++;
-    }
-
-    public synchronized void handleAck(int msgCount) {
-        consumerAckCountInterval++;
-        consumerAckedMsgsInterval += msgCount;
-
-        report();
-    }
-
-    public synchronized void handleConnectionError() {
-        consumerConnectionErrorInterval++;
-        report();
-    }
-
-    public synchronized void handleBlockedConnection() {
-        blockedPublisherConnectionInterval++;
-        report();
-    }
-
-    public synchronized void handleUnblockedConnection() {
-        unblockedPublisherConnectionInterval++;
-        report();
-    }
+//    public synchronized void handleSend(long msgBytes,
+//                                        int msgHeaders,
+//                                        int deliveryMode,
+//                                        int routingKeyLength,
+//                                        int count) {
+//        if(RecordingActive) {
+//            sendCountStepTotal+=count;
+//            sendBytesCountStepTotal+=msgBytes*count;
+//        }
+//
+//        sendCountInterval+=count;
+//        publishedMsgBytesInterval += msgBytes*count;
+//        publishedMsgHeadersInterval += msgHeaders*count;
+//        deliveryModeInterval += deliveryMode*count;
+//        routingKeyLengthInterval += routingKeyLength*count;
+//
+//        report();
+//    }
+//
+//    public synchronized void handleReturn() {
+//        returnCountInterval++;
+//        report();
+//    }
+//
+//    public synchronized void handleConfirm(int numConfirms, long[] latencies) {
+//        updateConfirmMultipleFlag.accept((long)numConfirms);
+//        confirmCountInterval += numConfirms;
+//        for (long latency : latencies) {
+//            this.confirmLatencies.update(latency);
+//            this.updateConfirmLatency.accept(latency);
+//        }
+//        report();
+//    }
+//
+//    public synchronized void handleNack(int numAcks) {
+//        nackCountInterval += numAcks;
+//        report();
+//    }
+//
+//    public synchronized void handleRecv(long latency,
+//                                        long msgBytes,
+//                                        int msgHeaders,
+//                                        int prefetch,
+//                                        int ackInterval,
+//                                        int ackIntervalMs,
+//                                        boolean isStream) {
+//        if(RecordingActive) {
+//            this.recvCountStepTotal++;
+//            this.latencies.update(latency);
+//        }
+//
+//        if(isStream)
+//            consumedStreamMessageInterval++;
+//
+//        recvCountInterval++;
+//
+//        recvBytesCountStepTotal += msgBytes;
+//        consumedMsgBytesInterval += msgBytes;
+//        consumedMsgHeadersInterval += msgHeaders;
+//        consumerPrefetchInterval += prefetch;
+//        consumerAckInterval += ackInterval;
+//        consumerAckIntervalMs += ackIntervalMs;
+//
+//        if (latency > 0) {
+//            this.updateLatency.accept(latency);
+//        }
+//        report();
+//    }
+//
+//    public synchronized void handleRecvBatch() {
+//        consumedStreamBatchInterval++;
+//    }
+//
+//    public synchronized void handleAck(int msgCount) {
+//        consumerAckCountInterval++;
+//        consumerAckedMsgsInterval += msgCount;
+//
+//        report();
+//    }
+//
+//    public synchronized void handleConnectionError() {
+//        consumerConnectionErrorInterval++;
+//        report();
+//    }
+//
+//    public synchronized void handleBlockedConnection() {
+//        blockedPublisherConnectionInterval++;
+//        report();
+//    }
+//
+//    public synchronized void handleUnblockedConnection() {
+//        unblockedPublisherConnectionInterval++;
+//        report();
+//    }
 
     protected void recordPublisherCount(double publisherCount) {
         this.publisherCount.accumulate(publisherCount);
@@ -721,24 +817,6 @@ public class Stats {
     }
 
     public StepStatistics getStepStatistics(int stepDurationSeconds) {
-//        StepStatistics stepStats = new StepStatistics();
-//
-//        int recordingSeconds = (int)Duration.between(recordStart, recordStop).getSeconds();
-//        stepStats.setDurationSeconds(stepDurationSeconds);
-//        stepStats.setRecordingSeconds(recordingSeconds);
-//        stepStats.setLatencyPercentiles(new String[] {"Min", "50th", "75th", "95th", "99th", "99.9th", "Max"});
-//        stepStats.setLatencies(getLatencyHistogramValues(latencies));
-//        stepStats.setConfirmLatencies(getLatencyHistogramValues(confirmLatencies));
-//        stepStats.setThroughPutPercentiles(new String[] {"Min", "Avg", "Median", "StdDev", "Max"});
-//        stepStats.setSendRates(getThroughputHistogramValues(sendRates));
-//        stepStats.setReceiveRates(getThroughputHistogramValues(receiveRates));
-//        stepStats.setSentCount(sendCountStepTotal);
-//        stepStats.setSentBytesCount(sendBytesCountStepTotal);
-//        stepStats.setReceivedCount(recvCountStepTotal);
-//        stepStats.setReceivedBytesCount(recvBytesCountStepTotal);
-//        stepStats.setFairnessPercentiles(new String[] {"Min", "5th", "25th", "50th", "75th", "95th", "Max"});
-//        stepStats.setPerPublisherSendRates(getPerPublisherSendRates(recordingSeconds));
-//        stepStats.setPerConsumerReceiveRates(getPerConsumerReceiveRates(recordingSeconds));
         StepStatistics stepStats = readCurrentStepStatistics(stepDurationSeconds);
 
         latencies = new MetricRegistry().histogram("latency");
