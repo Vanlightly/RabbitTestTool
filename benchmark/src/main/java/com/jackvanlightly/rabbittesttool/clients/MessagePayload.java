@@ -1,31 +1,29 @@
 package com.jackvanlightly.rabbittesttool.clients;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.Objects;
 
 public class MessagePayload implements Comparable<MessagePayload> {
     public static final int MinimumMessageSize = 20;
 
-    private Integer stream;
+    private Integer sequence;
     private Long sequenceNumber;
     private long timestamp;
 
     public MessagePayload() {
     }
 
-    public MessagePayload(Integer stream, Long sequenceNumber, long timestamp) {
-        this.stream = stream;
+    public MessagePayload(Integer sequence, Long sequenceNumber, long timestamp) {
+        this.sequence = sequence;
         this.sequenceNumber = sequenceNumber;
         this.timestamp = timestamp;
     }
 
-    public Integer getStream() {
-        return stream;
+    public Integer getSequence() {
+        return sequence;
     }
 
-    public void setStream(Integer stream) {
-        this.stream = stream;
+    public void setSequence(Integer sequence) {
+        this.sequence = sequence;
     }
 
     public Long getSequenceNumber() {
@@ -45,7 +43,7 @@ public class MessagePayload implements Comparable<MessagePayload> {
     }
 
     public MessagePayload getClone() {
-        return new MessagePayload(stream, sequenceNumber, timestamp);
+        return new MessagePayload(sequence, sequenceNumber, timestamp);
     }
 
     @Override
@@ -54,19 +52,19 @@ public class MessagePayload implements Comparable<MessagePayload> {
         if (o == null || getClass() != o.getClass()) return false;
         MessagePayload that = (MessagePayload) o;
         return timestamp == that.timestamp &&
-                stream.equals(that.stream) &&
+                sequence.equals(that.sequence) &&
                 sequenceNumber.equals(that.sequenceNumber);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(stream, sequenceNumber, timestamp);
+        return Objects.hash(sequence, sequenceNumber, timestamp);
     }
 
     @Override
     public String toString() {
         return "MessagePayload{" +
-                "stream=" + stream +
+                "sequence=" + sequence +
                 ", sequenceNumber=" + sequenceNumber +
                 ", timestamp=" + timestamp +
                 '}';

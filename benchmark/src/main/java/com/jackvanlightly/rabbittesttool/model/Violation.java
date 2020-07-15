@@ -61,8 +61,8 @@ public class Violation implements Comparable<Violation> {
 
     @Override
     public int compareTo(Violation o) {
-        int stream1 = messagePayload != null ? messagePayload.getStream() : span.getStream();
-        int stream2 = o.getMessagePayload() != null ? o.getMessagePayload().getStream() : o.getSpan().getStream();
+        int stream1 = messagePayload != null ? messagePayload.getSequence() : span.getSequence();
+        int stream2 = o.getMessagePayload() != null ? o.getMessagePayload().getSequence() : o.getSpan().getSequence();
 
         if(stream1 != stream2)
             return Integer.compare(stream1, stream2);

@@ -441,7 +441,7 @@ public class TopologyLoader {
                         case None:
                             pgConfig.setSendToExchange(SendToExchange.withNoRoutingKey(exchange));
                             break;
-                        case StreamKey:
+                        case SequenceKey:
                             pgConfig.setSendToExchange(SendToExchange.withStreamRoutingKey(exchange));
                             break;
                         case Random:
@@ -1039,7 +1039,7 @@ public class TopologyLoader {
         switch(value.toLowerCase()) {
             case "none": return RoutingKeyMode.None;
             case "random": return RoutingKeyMode.Random;
-            case "streamkey": return RoutingKeyMode.StreamKey;
+            case "streamkey": return RoutingKeyMode.SequenceKey;
             case "fixedvalue": return RoutingKeyMode.FixedValue;
             case "multivalue": return RoutingKeyMode.MultiValue;
             case "index": return RoutingKeyMode.RoutingKeyIndex;

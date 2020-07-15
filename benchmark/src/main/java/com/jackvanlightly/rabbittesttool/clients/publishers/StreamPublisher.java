@@ -36,10 +36,11 @@ public class StreamPublisher implements Runnable {
     ConnectionSettings connectionSettings;
     Broker currentHost;
 
-    // for stream round robin
-    int maxStream;
-    Map<Integer, Long> streamCounter;
-    Map<Integer, Queue<Long>> accumulatedMessages;
+    // for sequence round robin
+    int maxSequence;
+    Map<Integer, Long> sequenceCounter;
+
+    // for when publishing to one or more streams
     List<String> streamQueues;
     int streamQueueCount;
     String fixedStreamQueue;
@@ -51,8 +52,8 @@ public class StreamPublisher implements Runnable {
     int pendingPublish;
     int currentInFlightLimit;
     Instant lastSentBatch;
-    boolean instrumentMessagePayloads;
 
+    int checkHostInterval = 100000;
     MessageGenerator messageGenerator;
 
     // for publishing rate
@@ -60,15 +61,14 @@ public class StreamPublisher implements Runnable {
     RateLimiter rateLimiter;
     long sentCount;
     long sendLimit;
-    int checkHostInterval = 100000;
 
     // batching
+    Map<Integer, Queue<Long>> accumulatedMessages;
     StreamPublishMode publishMode;
     int maxBatchSize;
     int maxBatchSizeBytes;
     int maxBatchWaitMs;
     int maxSubEntryBytes;
-
     // down-samples the tracking of non sub-entry batch publishing
     // to one message per bucket size - to avoid this tool being the bottleneck
     int singleMessageBucketSize;
@@ -92,7 +92,7 @@ public class StreamPublisher implements Runnable {
         this.streamQueues = rmqStreams;
         this.fixedStreamQueue = getQueueCounterpart();
 
-        this.maxStream = publisherSettings.getStreams().size()-1;
+        this.maxSequence = publisherSettings.getSequences().size()-1;
 
         // when batching is used, initialize the accumulated message queues
         this.publishMode = publisherSettings.getPublisherMode().getStreamPublishMode();
@@ -107,19 +107,18 @@ public class StreamPublisher implements Runnable {
             singleMessageBucketSize = publisherSettings.getPublisherMode().getSingleMessageBucketSize();
 
         this.accumulatedMessages = new HashMap<>();
-        for(Integer stream : publisherSettings.getStreams())
-            this.accumulatedMessages.put(stream, new ArrayDeque<>());
+        for(Integer sequence : publisherSettings.getSequences())
+            this.accumulatedMessages.put(sequence, new ArrayDeque<>());
 
         messageGenerator = new MessageGenerator();
         messageGenerator.setBaseMessageSize(publisherSettings.getMessageSize());
 
         this.inFlightLimit = getAdjustedInFlightLimit(this.publisherSettings.getPublisherMode().getInFlightLimit());
         this.messageSize = this.publisherSettings.getMessageSize();
-        this.instrumentMessagePayloads = this.publisherSettings.shouldInstrumentMessagePayloads();
         this.sendLimit = this.publisherSettings.getMessageLimit();
         this.rateLimiter = new RateLimiter();
         this.rateLimit = this.publisherSettings.getPublishRatePerSecond() > 0;
-        initializeStreamCounter();
+        initializeSequenceCounter();
 
         confirmTimeoutThresholdNs = 1000000000L*300L; // 5 minutes. TODO add as an arg
     }
@@ -224,32 +223,32 @@ public class StreamPublisher implements Runnable {
                 int initialPubInflightLimit = Math.max(1000, inFlightLimit);
 
                 FlowController flowController = new FlowController(initialPubInflightLimit, singleMessageBucketSize);
-                boolean isBatchListener = false;
+                boolean isSubEntryBatchListener = false;
                 if(publishMode == StreamPublishMode.SubEntryBatch) {
-                    flowController.configureForBinaryProtocolBatches(instrumentMessagePayloads);
-                    isBatchListener = true;
+                    flowController.configureForBinaryProtocolBatches();
+                    isSubEntryBatchListener = true;
                 }
                 else
-                    flowController.configureForBinaryProtocol(instrumentMessagePayloads);
+                    flowController.configureForBinaryProtocol();
 
-                StreamPublisherListener initSendListener = new StreamPublisherListener(messageModel, metricGroup, flowController, instrumentMessagePayloads, isBatchListener);
+                StreamPublisherListener initSendListener = new StreamPublisherListener(messageModel, metricGroup, flowController, isSubEntryBatchListener);
                 this.lastSentBatch = Instant.now();
 
                 client = getClient(initSendListener);
                 logger.info("Publisher " + publisherId + " opened connection to " + currentHost.getNodeName() + " for initial publish");
 
-                int currentStream = 0;
+                int currentSequence = 0;
                 while (!isCancelled.get()) {
                     boolean lastSend = sentCount >= publisherSettings.getInitialPublish()-1;
-                    boolean stillConnected = publish(client, flowController, currentStream, true, lastSend);
+                    boolean stillConnected = publish(client, flowController, currentSequence, true, lastSend);
                     if(!stillConnected)
                         break;
 
                     sentCount++;
-                    currentStream++;
+                    currentSequence++;
 
-                    if (currentStream > maxStream)
-                        currentStream = 0;
+                    if (currentSequence > maxSequence)
+                        currentSequence = 0;
 
                     if(lastSend)
                         break;
@@ -286,13 +285,13 @@ public class StreamPublisher implements Runnable {
                 FlowController flowController = new FlowController(inFlightLimit, singleMessageBucketSize);
                 boolean isBatchListener = false;
                 if(maxBatchSize > 1 && publishMode == StreamPublishMode.SubEntryBatch) {
-                    flowController.configureForBinaryProtocolBatches(instrumentMessagePayloads);
+                    flowController.configureForBinaryProtocolBatches();
                     isBatchListener = true;
                 }
                 else
-                    flowController.configureForBinaryProtocol(instrumentMessagePayloads);
+                    flowController.configureForBinaryProtocol();
 
-                listener = new StreamPublisherListener(messageModel, metricGroup, flowController, instrumentMessagePayloads, isBatchListener);
+                listener = new StreamPublisherListener(messageModel, metricGroup, flowController, isBatchListener);
 
                 client = getClient(listener);
 
@@ -301,7 +300,7 @@ public class StreamPublisher implements Runnable {
                     streams[i] = streamQueues.get(i);
 
                 messageModel.clientConnected(publisherId);
-                logger.info("Publisher " + publisherId + " opened connection to " + currentHost.getNodeName() + ". Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
+                logger.info("Publisher " + publisherId + " opened connection to " + currentHost.getNodeName() + ". Has sequences: " + String.join(",", publisherSettings.getSequences().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
 
                 if (rateLimit) {
                     this.rateLimiter.configureRateLimit(publisherSettings.getPublishRatePerSecond());
@@ -309,7 +308,7 @@ public class StreamPublisher implements Runnable {
                 }
 
                 currentInFlightLimit = getAdjustedInFlightLimit(publisherSettings.getPublisherMode().getInFlightLimit());
-                int currentStream = 0;
+                int currentSequence = 0;
                 boolean reconnect = false;
                 this.lastSentBatch = Instant.now();
 
@@ -317,25 +316,23 @@ public class StreamPublisher implements Runnable {
                     boolean send = (sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit)) && !reconnect && !isCancelled.get();
 
                     if(send) {
-                        boolean stillConnected;
-                        if(instrumentMessagePayloads)
-                            stillConnected = publish(client, flowController, currentStream, false, false);
-                        else
-                            stillConnected = uninstrumentedPublish(client, flowController, false, false);
+                        boolean stillConnected = publish(client, flowController, currentSequence, false, false);
 
                         if(!stillConnected)
                             break;
 
                         sentCount++;
 
-                        currentStream++;
-                        if (currentStream > maxStream)
-                            currentStream = 0;
+                        currentSequence++;
+                        if (currentSequence > maxSequence)
+                            currentSequence = 0;
 
                         if (rateLimit)
                             rateLimiter.rateLimit();
 
                         if(sentCount % this.checkHostInterval == 0) {
+                            // when publisher configured to follow a leader around, when the leader changes
+                            // the publisher needs to close and reconnect
                             if(reconnectToNewHost()) {
                                 break;
                             }
@@ -388,217 +385,171 @@ public class StreamPublisher implements Runnable {
 
     private boolean publish(Client client,
                          FlowController flowController,
-                         int currentStream,
+                         int currentSequence,
                          boolean isInitialPublish,
                          boolean flushBatch) throws IOException, InterruptedException {
-        Integer stream = publisherSettings.getStreams().get(currentStream);
-        Long streamSeqNo = getAndIncrementStreamCounter(stream);
+        Integer sequence = publisherSettings.getSequences().get(currentSequence);
+        Long sequenceSeqNo = getAndIncrementSequenceCounter(sequence);
 
-        if(maxBatchSize > 1 || maxBatchSizeBytes > 1) {
-            accumulatedMessages.get(stream).add(streamSeqNo);
-            pendingPublish++;
+        if(maxBatchSize > 1 || maxBatchSizeBytes > 1)
+            return publishInBatch(client, flowController, sequence, sequenceSeqNo, isInitialPublish, flushBatch);
+        else
+            return sendSingleMessage(client, flowController, sequence, sequenceSeqNo, isInitialPublish);
+    }
 
-            boolean sendBatch = (maxBatchSize > 0 && pendingPublish >= maxBatchSize)
-                    || (maxBatchSizeBytes > 0 && pendingPublish * messageSize >= maxBatchSizeBytes)
-                    || (maxBatchWaitMs > 0 && Duration.between(lastSentBatch, Instant.now()).toMillis() > maxBatchWaitMs)
-                    || flushBatch;
+    private boolean publishInBatch(Client client,
+                                   FlowController flowController,
+                                   Integer sequence,
+                                   Long sequenceSeqNo,
+                                   boolean isInitialPublish,
+                                   boolean flushBatch) throws IOException, InterruptedException {
+        accumulatedMessages.get(sequence).add(sequenceSeqNo);
+        pendingPublish++;
 
-            if(sendBatch) {
-                List<MessagePayload> payloads = new ArrayList<>();
-                for(Integer streamKey : accumulatedMessages.keySet()) {
-                    Queue<Long> seqNosToSend = accumulatedMessages.get(streamKey);
-                    while(!seqNosToSend.isEmpty()) {
-                        Long seqNoToSend = seqNosToSend.remove();
-                        long timestamp = MessageUtils.getTimestamp();
-                        MessagePayload mp = new MessagePayload(streamKey, seqNoToSend, timestamp);
-                        payloads.add(mp);
-                    }
+        boolean sendBatch = (maxBatchSize > 0 && pendingPublish >= maxBatchSize)
+                || (maxBatchSizeBytes > 0 && pendingPublish * messageSize >= maxBatchSizeBytes)
+                || (maxBatchWaitMs > 0 && Duration.between(lastSentBatch, Instant.now()).toMillis() > maxBatchWaitMs)
+                || flushBatch;
+
+        if(sendBatch) {
+            // here we create a single list of message payloads based on the accumulated messages
+            // we can be sending more than one monotonic sequence
+            List<MessagePayload> payloads = new ArrayList<>();
+            for(Integer sequenceKey : accumulatedMessages.keySet()) {
+                Queue<Long> seqNosToSend = accumulatedMessages.get(sequenceKey);
+                while(!seqNosToSend.isEmpty()) {
+                    Long seqNoToSend = seqNosToSend.remove();
+                    long timestamp = MessageUtils.getTimestamp();
+                    MessagePayload mp = new MessagePayload(sequenceKey, seqNoToSend, timestamp);
+                    payloads.add(mp);
                 }
+            }
 
-                if(publishMode == StreamPublishMode.SimpleBatch) {
-                    List<byte[]> messageBodies = new ArrayList<>();
-                    for(MessagePayload mp : payloads) {
-                        byte[] body = getMessage(mp);
-                        messageBodies.add(body);
-                    }
+            // send the messages as batches
+            boolean stillConnected;
+            if(publishMode == StreamPublishMode.SimpleBatch)
+                stillConnected = sendAsSimpleBatches(client, flowController, isInitialPublish, payloads);
+            else
+                stillConnected = publishAsSubEntries(client, flowController, isInitialPublish, payloads);
 
-                    if(!controlFlow(flowController, client, pendingPublish))
-                        return false;
-
-                    List<Long> seqNos = client.publishBinary(fixedStreamQueue, messageBodies);
-                    int sent = seqNos.size();
-                    for(int i=0; i<sent; i++)
-                        registerPublish(isInitialPublish, flowController, seqNos.get(i), payloads.get(i), messageBodies.get(i));
-                }
-                else {
-                    List<List<MessagePayload>> payloadBatches = new ArrayList<>();
-                    List<MessagePayload> currPayloadBatch = new ArrayList<>();
-                    payloadBatches.add(currPayloadBatch);
-
-                    List<MessageBatch> batches = new ArrayList<>();
-                    MessageBatch currBatch = new MessageBatch();
-                    batches.add(currBatch);
-
-                    int totalLength = 0;
-                    int currBatchLength = 0;
-                    int count = payloads.size();
-                    for (int i = 0; i < count; i++) {
-                        MessagePayload mp = payloads.get(i);
-                        byte[] body = getMessage(mp);
-                        totalLength += body.length;
-                        currBatchLength += body.length;
-                        currBatch.add(body);
-                        currPayloadBatch.add(mp);
-
-                        // if we've past the max individual batch size and we're not on the last message,
-                        // then create a new batch
-                        if (currBatchLength > maxSubEntryBytes && i < count - 1) {
-                            MessageBatch newBatch = new MessageBatch();
-                            batches.add(newBatch);
-                            currBatch = newBatch;
-
-                            List<MessagePayload> newPayloadBatch = new ArrayList<>();
-                            payloadBatches.add(newPayloadBatch);
-                            currPayloadBatch = newPayloadBatch;
-                            currBatchLength = 0;
-                        }
-                    }
-
-                    if(!controlFlow(flowController, client, batches.size()))
-                        return false;
-
-                    List<Long> batchNos = client.publishBatches(fixedStreamQueue, batches);
-                    Map<Long, List<MessagePayload>> batchNosTracking = new HashMap<>();
-                    for(int i=0; i<batchNos.size(); i++) {
-                        batchNosTracking.put(batchNos.get(i), payloadBatches.get(i));
-                    }
-                    registerBatchPublish(isInitialPublish, flowController, batchNosTracking, payloads, totalLength);
-                }
-//                System.out.println("Publish batch " + batchNo);
+            if(stillConnected) {
                 lastSentBatch = Instant.now();
                 pendingPublish = 0;
             }
-        }
-        else {
-            if(singleMessageBucketSize == 1) {
-                if (!controlFlow(flowController, client, 1))
-                    return false;
-            }
-            else {
-                if((sentCount < singleMessageBucketSize && sentCount == 0)
-                    || (sentCount >= singleMessageBucketSize && sentCount % singleMessageBucketSize == 0)) {
-                    if (!controlFlow(flowController, client, 1))
-                        return false;
-                }
-            }
 
-            long timestamp = MessageUtils.getTimestamp();
-            MessagePayload mp = new MessagePayload(stream, streamSeqNo, timestamp);
-
-            byte[] body = getMessage(mp);
-
-            long seqNo = client.publish(
-                    fixedStreamQueue,
-                    body
-            );
-
-            //System.out.println("PUBLISHED: " + seqNo);
-
-            registerPublish(isInitialPublish, flowController, seqNo, mp, body);
+            return stillConnected;
         }
 
         return true;
     }
 
-    private boolean uninstrumentedPublish(Client client,
-                                          FlowController flowController,
-                                          boolean isInitialPublish,
-                                          boolean flushBatch) throws IOException, InterruptedException {
-        if(maxBatchSize > 1 || maxBatchSizeBytes > 1) {
-            pendingPublish++;
-
-            boolean sendBatch =
-                    (maxBatchSize > 0 && pendingPublish >= maxBatchSize)
-                    || (maxBatchSizeBytes > 0 && pendingPublish * messageSize >= maxBatchSizeBytes)
-                    || (maxBatchWaitMs > 0 && Duration.between(lastSentBatch, Instant.now()).toMillis() > maxBatchWaitMs && pendingPublish > 0)
-                    || flushBatch;
-
-            if(sendBatch) {
-                if(publishMode == StreamPublishMode.SimpleBatch) {
-                    List<byte[]> messageBodies = new ArrayList<>();
-                    for(int i=0; i<pendingPublish; i++) {
-                        byte[] body = getMessage(null);
-                        messageBodies.add(body);
-                    }
-
-                    if(!controlFlow(flowController, client, pendingPublish))
-                        return false;
-
-                    List<Long> seqNos = client.publishBinary(fixedStreamQueue, messageBodies);
-                    int sent = seqNos.size();
-                    for(int i=0; i<sent; i++)
-                        registerUninstrumentedPublish(isInitialPublish, flowController, seqNos.get(i), messageBodies.get(i));
-                }
-                else {
-                    List<Integer> batchSizes = new ArrayList<>();
-                    List<MessageBatch> batches = new ArrayList<>();
-                    MessageBatch currBatch = new MessageBatch();
-                    batches.add(currBatch);
-
-                    int totalLength = 0;
-                    int currBatchLength = 0;
-                    int currBatchSize = 0;
-                    for (int i = 0; i < pendingPublish; i++) {
-                        byte[] body = getMessage(null);
-                        totalLength += body.length;
-                        currBatchLength += body.length;
-                        currBatch.add(body);
-                        currBatchSize++;
-
-                        // if we've past the max individual batch size and we're not on the last message,
-                        // then create a new batch
-                        if (currBatchLength > maxSubEntryBytes && i < pendingPublish - 1) {
-                            MessageBatch newBatch = new MessageBatch();
-                            batches.add(newBatch);
-                            currBatch = newBatch;
-                            batchSizes.add(currBatchSize);
-                            currBatchLength = 0;
-                            currBatchSize = 0;
-                        }
-                    }
-                    batchSizes.add(currBatchSize++);
-
-                    if(!controlFlow(flowController, client, batches.size()))
-                        return false;
-
-                    List<Long> batchNos = client.publishBatches(fixedStreamQueue, batches);
-                    Map<Long, Integer> batchNosTracking = new HashMap<>();
-                    for(int i=0; i<batchNos.size(); i++) {
-                        batchNosTracking.put(batchNos.get(i), batchSizes.get(i));
-                    }
-                    registerUninstrumentedBatchPublish(isInitialPublish, flowController, batchNosTracking, totalLength);
-                }
-//                System.out.println("Publish batch " + batchNo);
-                lastSentBatch = Instant.now();
-                pendingPublish = 0;
-            }
+    private boolean sendAsSimpleBatches(Client client,
+                                        FlowController flowController,
+                                        boolean isInitialPublish,
+                                        List<MessagePayload> payloads) throws IOException, InterruptedException {
+        List<byte[]> messageBodies = new ArrayList<>();
+        for(MessagePayload mp : payloads) {
+            byte[] body = getMessage(mp);
+            messageBodies.add(body);
         }
-        else {
-            if(!controlFlow(flowController, client, 1))
-                return false;
 
-            byte[] body = getMessage(null);
-            long seqNo = client.publish(
-                    fixedStreamQueue,
-                    body
-            );
+        // ensure inflight limit not breached
+        if(!controlFlow(flowController, client, pendingPublish))
+            return false;
 
-            //System.out.println("PUBLISHED: " + seqNo);
+        // send the messages as simple batches
+        List<Long> seqNos = client.publishBinary(fixedStreamQueue, messageBodies);
+        int sent = seqNos.size();
 
-            registerUninstrumentedPublish(isInitialPublish, flowController, seqNo, body);
-        }
+        // track the messages
+        for(int i=0; i<sent; i++)
+            trackPublish(isInitialPublish, flowController, seqNos.get(i), payloads.get(i), messageBodies.get(i));
 
         return true;
+    }
+
+    private boolean publishAsSubEntries(Client client,
+                                        FlowController flowController,
+                                        boolean isInitialPublish,
+                                        List<MessagePayload> payloads) throws IOException, InterruptedException {
+
+        // split up the payloads into one or more sub-entries based on the max size in bytes for each sub entry
+        List<List<MessagePayload>> payloadBatches = new ArrayList<>();
+        List<MessagePayload> currPayloadBatch = new ArrayList<>();
+        payloadBatches.add(currPayloadBatch);
+
+        List<MessageBatch> batches = new ArrayList<>();
+        MessageBatch currBatch = new MessageBatch();
+        batches.add(currBatch);
+
+        int totalLength = 0;
+        int currBatchLength = 0;
+        int count = payloads.size();
+        for (int i = 0; i < count; i++) {
+            MessagePayload mp = payloads.get(i);
+            byte[] body = getMessage(mp);
+            totalLength += body.length;
+            currBatchLength += body.length;
+            currBatch.add(body);
+            currPayloadBatch.add(mp);
+
+            // if we've past the max individual batch size and we're not on the last message,
+            // then create a new batch
+            if (currBatchLength > maxSubEntryBytes && i < count - 1) {
+                MessageBatch newBatch = new MessageBatch();
+                batches.add(newBatch);
+                currBatch = newBatch;
+
+                List<MessagePayload> newPayloadBatch = new ArrayList<>();
+                payloadBatches.add(newPayloadBatch);
+                currPayloadBatch = newPayloadBatch;
+                currBatchLength = 0;
+            }
+        }
+
+        // ensure we don't exceed thr inflight sub-entries limit
+        if(!controlFlow(flowController, client, batches.size()))
+            return false;
+
+        // send the sub entries
+        List<Long> batchNos = client.publishBatches(fixedStreamQueue, batches);
+        Map<Long, List<MessagePayload>> batchNosTracking = new HashMap<>();
+        for(int i=0; i<batchNos.size(); i++)
+            batchNosTracking.put(batchNos.get(i), payloadBatches.get(i));
+
+        // track the sub-entries
+        trackBatchPublish(isInitialPublish, flowController, batchNosTracking, payloads, totalLength);
+
+        return true;
+    }
+
+    private boolean sendSingleMessage(Client client,
+                                      FlowController flowController,
+                                      Integer sequence,
+                                      Long sequenceSeqNo,
+                                      boolean isInitialPublish) throws IOException, InterruptedException {
+        if(isFirstInBucket()) {
+            if (!controlFlow(flowController, client, 1))
+                return false;
+        }
+
+        long timestamp = MessageUtils.getTimestamp();
+        MessagePayload mp = new MessagePayload(sequence, sequenceSeqNo, timestamp);
+        byte[] body = getMessage(mp);
+
+        long seqNo = client.publish(
+                fixedStreamQueue,
+                body
+        );
+
+        trackPublish(isInitialPublish, flowController, seqNo, mp, body);
+        return true;
+    }
+
+    private boolean isFirstInBucket() {
+        return singleMessageBucketSize == 1
+                || (sentCount < singleMessageBucketSize && sentCount == 0)
+                || (sentCount >= singleMessageBucketSize && sentCount % singleMessageBucketSize == 0);
     }
 
     private boolean controlFlow(FlowController flowController,
@@ -628,7 +579,8 @@ public class StreamPublisher implements Runnable {
                     permits = count / singleMessageBucketSize + 1;
             }
 
-            // keep trying to acquire until the cancelation or connection dies
+            // keep trying to acquire until the cancellation or connection dies
+            // check if any confirms have exceeded the timeout
             while(!isCancelled.get() && !flowController.tryGetSendPermits(permits, 1000, TimeUnit.MILLISECONDS)) {
                 if (!client.isOpen()) {
                     return false;
@@ -642,21 +594,19 @@ public class StreamPublisher implements Runnable {
     }
 
     private byte[] getMessage(MessagePayload mp) throws IOException {
-        if(instrumentMessagePayloads && mp != null)
-            return messageGenerator.getMessageBytes(mp);
-        else
-            return messageGenerator.getUninstrumentedMessageBytes();
+        return messageGenerator.getMessageBytes(mp);
     }
 
-    private void registerPublish(boolean isInitialPublish,
-                                 FlowController flowController,
-                                 Long seqNo,
-                                 MessagePayload mp,
-                                 byte[] body) {
+    private void trackPublish(boolean isInitialPublish,
+                              FlowController flowController,
+                              Long seqNo,
+                              MessagePayload mp,
+                              byte[] body) {
         if (isInitialPublish || this.useConfirms) {
             flowController.trackBinaryProtocolMessage(seqNo, mp);
         }
         else {
+            // without confirms, we add it to the model now rather than when the confirm is received
             messageModel.sent(mp);
         }
 
@@ -664,49 +614,21 @@ public class StreamPublisher implements Runnable {
         metricGroup.increment(MetricType.PublisherSentBytes, body.length);
     }
 
-    private void registerUninstrumentedPublish(boolean isInitialPublish,
-                                 FlowController flowController,
-                                 Long seqNo,
-                                 byte[] body) {
-        if (isInitialPublish || this.useConfirms) {
-            flowController.trackUninstrumentedBinaryProtocol(seqNo, 1);
-        }
-
-        metricGroup.increment(MetricType.PublisherSentMessage);
-        metricGroup.increment(MetricType.PublisherSentBytes, body.length);
-    }
-
-    private void registerBatchPublish(boolean isInitialPublish,
-                                      FlowController flowController,
-                                      Map<Long, List<MessagePayload>> batchNosTracking,
-                                      List<MessagePayload> messagePayloads,
-                                      long totalLength) {
+    private void trackBatchPublish(boolean isInitialPublish,
+                                   FlowController flowController,
+                                   Map<Long, List<MessagePayload>> batchNosTracking,
+                                   List<MessagePayload> messagePayloads,
+                                   long totalLength) {
         int msgCount = messagePayloads.size();
         if (isInitialPublish || this.useConfirms) {
             for(Long batchNo : batchNosTracking.keySet())
                 flowController.trackBinaryProtocolBatch(batchNo, batchNosTracking.get(batchNo));
         }
-        else if(this.instrumentMessagePayloads){
+        else {
             for(MessagePayload mp : messagePayloads)
                 messageModel.sent(mp);
         }
 
-        if(msgCount > 0) {
-            metricGroup.increment(MetricType.PublisherSentMessage, msgCount);
-            metricGroup.increment(MetricType.PublisherSentBytes, totalLength);
-        }
-    }
-
-    private void registerUninstrumentedBatchPublish(boolean isInitialPublish,
-                                      FlowController flowController,
-                                      Map<Long, Integer> batchNosTracking,
-                                      long totalLength) {
-        if (isInitialPublish || this.useConfirms) {
-            for(Long batchNo : batchNosTracking.keySet())
-                flowController.trackUninstrumentedBinaryProtocol(batchNo, batchNosTracking.get(batchNo));
-        }
-
-        int msgCount = batchNosTracking.values().stream().reduce(Integer::sum).get();
         if(msgCount > 0) {
             metricGroup.increment(MetricType.PublisherSentMessage, msgCount);
             metricGroup.increment(MetricType.PublisherSentBytes, totalLength);
@@ -743,11 +665,11 @@ public class StreamPublisher implements Runnable {
         throw new TopologyException("Could not identify a broker to connect to");
     }
 
-    private void initializeStreamCounter() {
-        streamCounter = new HashMap<>();
+    private void initializeSequenceCounter() {
+        sequenceCounter = new HashMap<>();
 
-        for(Integer stream : publisherSettings.getStreams())
-            streamCounter.put(stream, 0L);
+        for(Integer sequence : publisherSettings.getSequences())
+            sequenceCounter.put(sequence, 0L);
     }
 
     private String getQueueCounterpart() {
@@ -765,9 +687,9 @@ public class StreamPublisher implements Runnable {
         throw new RuntimeException("No stream queue counterpart exists for publisher: " + this.publisherId);
     }
 
-    private Long getAndIncrementStreamCounter(Integer stream) {
-        Long current = streamCounter.get(stream);
-        streamCounter.put(stream, current +  1);
+    private Long getAndIncrementSequenceCounter(Integer sequence) {
+        Long current = sequenceCounter.get(sequence);
+        sequenceCounter.put(sequence, current +  1);
         return current;
     }
 

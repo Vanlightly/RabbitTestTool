@@ -37,7 +37,6 @@ public class EventingConsumer extends DefaultConsumer {
     volatile long delTagLastAcked;
     volatile long delTagLastReceived;
     volatile Instant lastAckedTime;
-    boolean instrumentMessagePayloads;
     AtomicBoolean consumerCancelled;
     Lock ackLock;
 
@@ -51,8 +50,7 @@ public class EventingConsumer extends DefaultConsumer {
                             int ackInterval,
                             int ackIntervalMs,
                             int processingMs,
-                            int requeueEveryN,
-                            boolean instrumentMessagePayloads) {
+                            int requeueEveryN) {
         super(channel);
         this.logger = new BenchmarkLogger("CONSUMER");
         this.consumerId = consumerId;
@@ -67,7 +65,6 @@ public class EventingConsumer extends DefaultConsumer {
         this.requeueEveryN = requeueEveryN;
         this.receiveCount = 0;
         this.nextRequeue = requeueEveryN;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         consumerCancelled = new AtomicBoolean();
         delTagLastAcked = -1;
@@ -149,12 +146,10 @@ public class EventingConsumer extends DefaultConsumer {
     }
 
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
-        if(instrumentMessagePayloads) {
-            MessagePayload mp = MessageGenerator.toMessagePayload(body);
-            long lag = MessageUtils.getLag(mp.getTimestamp());
-            messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, envelope.isRedeliver(), lag, System.currentTimeMillis()));
-            metricGroup.add(MetricType.ConsumerLatencies, lag);
-        }
+        MessagePayload mp = MessageGenerator.toMessagePayload(body);
+        long lag = MessageUtils.getLag(mp.getTimestamp());
+        messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, envelope.isRedeliver(), lag, System.currentTimeMillis()));
+        metricGroup.add(MetricType.ConsumerLatencies, lag);
 
         int headerCount = 0;
         if(properties != null && properties.getHeaders() != null)

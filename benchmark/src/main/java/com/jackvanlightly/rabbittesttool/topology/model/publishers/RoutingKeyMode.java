@@ -5,6 +5,6 @@ public enum RoutingKeyMode {
     FixedValue,
     MultiValue,
     Random,
-    StreamKey,
+    SequenceKey,
     RoutingKeyIndex
 }

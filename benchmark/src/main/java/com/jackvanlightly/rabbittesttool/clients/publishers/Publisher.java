@@ -37,9 +37,9 @@ public class Publisher implements Runnable {
     int checkHostInterval = 100000;
     MetricGroup metricGroup;
 
-    // for stream round robin
-    int maxStream;
-    Map<Integer, Long> streamCounter;
+    // for sequence round robin
+    int maxSequence;
+    Map<Integer, Long> sequenceCounter;
 
     // for send to queue round robin
     List<String> queuesInGroup;
@@ -85,7 +85,7 @@ public class Publisher implements Runnable {
         this.executorService = executorService;
         this.useConfirms = publisherSettings.getPublisherMode().isUseConfirms();
 
-        this.maxStream = publisherSettings.getStreams().size()-1;
+        this.maxSequence = publisherSettings.getSequences().size()-1;
 
         messageGenerator = new MessageGenerator();
         messageGenerator.setBaseMessageSize(publisherSettings.getMessageSize());
@@ -101,14 +101,13 @@ public class Publisher implements Runnable {
         this.availableMessageHeaderCombinations = initializeHeaders(publisherSettings.getMessageHeadersPerMessage());
         this.availableHeaderCount = this.availableMessageHeaderCombinations.size();
         this.inFlightLimit = this.publisherSettings.getPublisherMode().getInFlightLimit();
-        this.instrumentMessagePayloads = this.publisherSettings.shouldInstrumentMessagePayloads();
 
         this.sendLimit = this.publisherSettings.getMessageLimit();
         this.rateLimit = this.publisherSettings.getPublishRatePerSecond() > 0;
 
         this.rateLimiter = new RateLimiter();
 
-        initializeStreamCounter();
+        initializeSequenceCounter();
         initializeRouting();
 
         confirmTimeoutThresholdNs = 1000000000L*300L; // 5 minutes. TODO add as an arg
@@ -216,9 +215,9 @@ public class Publisher implements Runnable {
             try {
                 connection = getConnection();
                 channel = connection.createChannel();
-                ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
                 FlowController flowController = new FlowController(1000, 1);
-                PublisherListener initSendListener = new PublisherListener(messageModel, metricGroup, pendingConfirms, flowController);
+                flowController.configureForAmqp();
+                PublisherListener initSendListener = new PublisherListener(messageModel, metricGroup, flowController);
 
                 logger.info("Publisher " + publisherId + " opened channel for initial publish");
 
@@ -226,16 +225,16 @@ public class Publisher implements Runnable {
                 channel.addConfirmListener(initSendListener);
                 channel.addReturnListener(initSendListener);
 
-                int currentStream = 0;
+                int currentSequence = 0;
                 while (!isCancelled.get()) {
                     flowController.getSendPermit();
 
-                    publish(channel, currentStream, pendingConfirms, true);
+                    publish(channel, flowController, currentSequence, true);
                     sentCount++;
-                    currentStream++;
+                    currentSequence++;
 
-                    if (currentStream > maxStream)
-                        currentStream = 0;
+                    if (currentSequence > maxSequence)
+                        currentSequence = 0;
 
                     if(sentCount >= publisherSettings.getInitialPublish())
                         break;
@@ -270,15 +269,14 @@ public class Publisher implements Runnable {
             Connection connection = null;
             Channel channel = null;
             try {
-                ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
-
                 FlowController flowController = new FlowController(publisherSettings.getPublisherMode().getInFlightLimit(), 1);
-                listener = new PublisherListener(messageModel, metricGroup, pendingConfirms, flowController);
+                flowController.configureForAmqp();
+                listener = new PublisherListener(messageModel, metricGroup, flowController);
 
                 connection = getConnection();
                 channel = connection.createChannel();
                 messageModel.clientConnected(publisherId);
-                logger.info("Publisher " + publisherId + " opened channel to " + currentHost.getNodeName() + ". Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
+                logger.info("Publisher " + publisherId + " opened channel to " + currentHost.getNodeName() + ". Has sequences: " + String.join(",", publisherSettings.getSequences().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
 
                 if (this.useConfirms) {
                     channel.confirmSelect();
@@ -297,7 +295,7 @@ public class Publisher implements Runnable {
                 }
 
                 int currentInFlightLimit = publisherSettings.getPublisherMode().getInFlightLimit();
-                int currentStream = 0;
+                int currentSequence = 0;
                 boolean reconnect = false;
                 while (!isCancelled.get() && !reconnect) {
                     if (this.useConfirms) {
@@ -326,12 +324,12 @@ public class Publisher implements Runnable {
                     boolean send = (sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit)) && !reconnect && !isCancelled.get();
 
                     if(send) {
-                        publish(channel, currentStream, pendingConfirms, false);
+                        publish(channel, flowController, currentSequence, false);
                         sentCount++;
 
-                        currentStream++;
-                        if (currentStream > maxStream)
-                            currentStream = 0;
+                        currentSequence++;
+                        if (currentSequence > maxSequence)
+                            currentSequence = 0;
 
                         if (rateLimit)
                             rateLimiter.rateLimit();
@@ -400,24 +398,25 @@ public class Publisher implements Runnable {
         }
     }
 
-    private void publish(Channel channel, int currentStream, ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms, boolean isInitialPublish) throws IOException {
+    private void publish(Channel channel,
+                         FlowController flowController,
+                         int currentSequence,
+                         boolean isInitialPublish) throws IOException {
         long seqNo = channel.getNextPublishSeqNo();
         long timestamp = MessageUtils.getTimestamp();
 
-        int stream = publisherSettings.getStreams().get(currentStream);
-        Long streamSeqNo = getAndIncrementStreamCounter(stream);
-        MessagePayload mp = new MessagePayload(stream, streamSeqNo, timestamp);
+        int sequence = publisherSettings.getSequences().get(currentSequence);
+        Long sequenceSeqNo = getAndIncrementSequenceCounter(sequence);
+        MessagePayload mp = new MessagePayload(sequence, sequenceSeqNo, timestamp);
         AMQP.BasicProperties messageProperties = getProperties();
 
-        if(isInitialPublish)
-            pendingConfirms.put(seqNo, mp);
-        else if(this.useConfirms)
-            pendingConfirms.put(seqNo, mp);
+        if(isInitialPublish || this.useConfirms)
+            flowController.trackAmqpMessage(seqNo, mp);
         else
             messageModel.sent(mp);
 
         byte[] body = getMessage(mp);
-        String routingKey = getRoutingKey(currentStream);
+        String routingKey = getRoutingKey(currentSequence);
 
         channel.basicPublish(fixedExchange,
                     routingKey,
@@ -436,10 +435,7 @@ public class Publisher implements Runnable {
     }
 
     private byte[] getMessage(MessagePayload mp) throws IOException {
-        if(instrumentMessagePayloads)
-            return messageGenerator.getMessageBytes(mp);
-        else
-            return messageGenerator.getUninstrumentedMessageBytes();
+        return messageGenerator.getMessageBytes(mp);
     }
 
     private Connection getConnection() throws IOException, TimeoutException {
@@ -557,8 +553,8 @@ public class Publisher implements Runnable {
                     case RoutingKeyIndex:
                         isFixedRoutingKey = false;
                         break;
-                    case StreamKey:
-                        if (publisherSettings.getStreams().size() > 1) {
+                    case SequenceKey:
+                        if (publisherSettings.getSequences().size() > 1) {
                             isFixedRoutingKey = false;
                         } else {
                             isFixedRoutingKey = true;
@@ -593,7 +589,7 @@ public class Publisher implements Runnable {
         throw new RuntimeException("No queue counterpart exists for publisher: " + this.publisherId);
     }
 
-    private String getRoutingKey(int currentStream) {
+    private String getRoutingKey(int currentSequence) {
         if(isFixedRoutingKey)
             return fixedRoutingKey;
 
@@ -602,15 +598,15 @@ public class Publisher implements Runnable {
                 switch (publisherSettings.getSendToExchange().getRoutingKeyMode()) {
                     case Random:
                         return UUID.randomUUID().toString();
-                    case StreamKey:
-                        return String.valueOf(currentStream);
+                    case SequenceKey:
+                        return String.valueOf(currentSequence);
                     case MultiValue:
                         int rkIndex = this.rand.nextInt(routingKeyCount);
                         return publisherSettings.getSendToExchange().getRoutingKeys()[rkIndex];
                     case RoutingKeyIndex:
                         return publisherSettings.getSendToExchange().getRoutingKeys()[this.routingKeyIndex];
                     default:
-                        throw new RuntimeException("Only Random or StreamKey RoutingKeyMode is compatible with a changing routing key when sending to a named exchange");
+                        throw new RuntimeException("Only Random or SequenceKey RoutingKeyMode is compatible with a changing routing key when sending to a named exchange");
                 }
             case QueueGroup:
                 switch(publisherSettings.getSendToQueueGroup().getQueueGroupMode()) {
@@ -664,16 +660,16 @@ public class Publisher implements Runnable {
         return headerCombos;
     }
 
-    private void initializeStreamCounter() {
-        streamCounter = new HashMap<>();
+    private void initializeSequenceCounter() {
+        sequenceCounter = new HashMap<>();
 
-        for(Integer stream : publisherSettings.getStreams())
-            streamCounter.put(stream, 0L);
+        for(Integer sequence : publisherSettings.getSequences())
+            sequenceCounter.put(sequence, 0L);
     }
 
-    private Long getAndIncrementStreamCounter(Integer stream) {
-        Long current = streamCounter.get(stream);
-        streamCounter.put(stream, current +  1);
+    private Long getAndIncrementSequenceCounter(Integer sequence) {
+        Long current = sequenceCounter.get(sequence);
+        sequenceCounter.put(sequence, current +  1);
         return current;
     }
 

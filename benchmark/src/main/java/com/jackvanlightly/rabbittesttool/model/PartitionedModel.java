@@ -121,7 +121,7 @@ public class PartitionedModel implements MessageModel {
     @Override
     public void received(ReceivedMessage msg) {
         if(enabled) {
-            SpanningMessageModel model = getModel(msg.getMessagePayload().getStream());
+            SpanningMessageModel model = getModel(msg.getMessagePayload().getSequence());
             model.received(msg);
 
             // check consume interval
@@ -213,7 +213,7 @@ public class PartitionedModel implements MessageModel {
     @Override
     public void sent(MessagePayload messagePayload) {
         if(enabled) {
-            SpanningMessageModel model = getModel(messagePayload.getStream());
+            SpanningMessageModel model = getModel(messagePayload.getSequence());
             if(model != null)
                 model.sent(messagePayload);
         }
@@ -255,16 +255,16 @@ public class PartitionedModel implements MessageModel {
         }
     }
 
-    private SpanningMessageModel getModel(int stream) {
-        SpanningMessageModel model = models.get(stream);
+    private SpanningMessageModel getModel(int sequence) {
+        SpanningMessageModel model = models.get(sequence);
         if(model == null) {
             modelLock.writeLock().lock();
             try {
-                model = models.get(stream);
+                model = models.get(sequence);
                 if(model == null) {
                     model = new SpanningMessageModel(
                             benchmarkId,
-                            stream,
+                            sequence,
                             checkOrdering,
                             checkDataLoss,
                             checkDuplicates,
@@ -276,7 +276,7 @@ public class PartitionedModel implements MessageModel {
                             logCompaction,
                             logJumps);
                     model.monitorProperties(this.executorService);
-                    models.put(stream, model);
+                    models.put(sequence, model);
                 }
             }
             finally{

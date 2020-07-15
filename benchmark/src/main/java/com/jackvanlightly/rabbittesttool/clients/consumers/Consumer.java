@@ -19,19 +19,18 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Consumer implements Runnable  {
-    private BenchmarkLogger logger;
-    private String consumerId;
-    private ConnectionSettings connectionSettings;
-    private ConnectionFactory factory;
-    private QueueHosts queueHosts;
-    //private ExecutorService executorService;
-    private AtomicBoolean isCancelled;
-    private Integer step;
-    private MetricGroup metricGroup;
-    private MessageModel messageModel;
-    private ConsumerSettings consumerSettings;
-    private EventingConsumer eventingConsumer;
-    private Broker currentHost;
+    BenchmarkLogger logger;
+    String consumerId;
+    ConnectionSettings connectionSettings;
+    ConnectionFactory factory;
+    QueueHosts queueHosts;
+    AtomicBoolean isCancelled;
+    Integer step;
+    MetricGroup metricGroup;
+    MessageModel messageModel;
+    ConsumerSettings consumerSettings;
+    EventingConsumer eventingConsumer;
+    Broker currentHost;
     ExecutorService consumerExecutorService;
 
     public Consumer(String consumerId,
@@ -165,14 +164,13 @@ public class Consumer implements Runnable  {
                     connectionSettings.getVhost(),
                     consumerSettings.getQueue(),
                     channel,
-                    MetricGroup.createAmqpConsumerMetricGroup(),
+                    metricGroup,
                     messageModel,
                     consumerSettings.getAckMode().getConsumerPrefetch(),
                     consumerSettings.getAckMode().getAckInterval(),
                     consumerSettings.getAckMode().getAckIntervalMs(),
                     consumerSettings.getProcessingMs(),
-                    consumerSettings.getAckMode().getRequeueEveryNth(),
-                    consumerSettings.shouldInstrumentMessagePayloads());
+                    consumerSettings.getAckMode().getRequeueEveryNth());
 
             String consumerTag = channel.basicConsume(consumerSettings.getQueue(), autoAck, eventingConsumer);
             logger.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());

@@ -4,14 +4,14 @@ import java.time.Instant;
 import java.util.Objects;
 
 public class Span implements Comparable<Span> {
-    int stream;
+    int sequence;
     long low;
     long high;
     Instant created;
     Instant updated;
 
-    public Span(int stream, long low, long high) {
-        this.stream = stream;
+    public Span(int sequence, long low, long high) {
+        this.sequence = sequence;
         this.low = low;
         this.high = high;
         this.created = Instant.now();
@@ -19,44 +19,40 @@ public class Span implements Comparable<Span> {
     }
 
     public Span(Span span) {
-        this.stream = span.getStream();
+        this.sequence = span.getSequence();
         this.low = span.getLow();
         this.high = span.getHigh();
         this.created = span.getCreated();
         this.updated = span.getUpdated();
     }
 
-    public boolean isStream(int stream) {
-        return this.stream == stream;
+    public boolean isInsideSpan(int sequence, long number) {
+        return this.sequence == sequence && number >= low && number <= high;
     }
 
-    public boolean isInsideSpan(int stream, long number) {
-        return this.stream == stream && number >= low && number <= high;
+    public boolean isHigherThan(int sequence, long number) {
+        return this.sequence == sequence && low > number;
     }
 
-    public boolean isHigherThan(int stream, long number) {
-        return this.stream == stream && low > number;
+    public boolean isLowerThan(int sequence, long number) {
+        return this.sequence == sequence && high < number;
     }
 
-    public boolean isLowerThan(int stream, long number) {
-        return this.stream == stream && high < number;
-    }
-
-    public boolean isAdjacent(int stream, long number) {
-        return this.stream == stream && (high == number - 1 || low == number + 1);
+    public boolean isAdjacent(int sequence, long number) {
+        return this.sequence == sequence && (high == number - 1 || low == number + 1);
     }
 
     public boolean isAdjacentRight(Span span) {
-        return isAdjacent(span.getStream(), span.getLow());
+        return isAdjacent(span.getSequence(), span.getLow());
     }
 
     public boolean isAdjacentLeft(Span span) {
-        return isAdjacent(span.getStream(), span.getHigh());
+        return isAdjacent(span.getSequence(), span.getHigh());
     }
 
-    public void include(int stream, long number) {
-        if(this.stream != stream)
-            throw new RuntimeException("Stream mismatch. Span stream is: " + this.stream + " but received stream: " + stream);
+    public void include(int sequence, long number) {
+        if(this.sequence != sequence)
+            throw new RuntimeException("Sequence mismatch. Span sequence is: " + this.sequence + " but received sequence: " + sequence);
 
         if(number > high) {
             high = number;
@@ -66,9 +62,9 @@ public class Span implements Comparable<Span> {
         }
     }
 
-    public void include(int stream, long number, Instant now) {
-        if(this.stream != stream)
-            throw new RuntimeException("Stream mismatch. Span stream is: " + this.stream + " but received stream: " + stream);
+    public void include(int sequence, long number, Instant now) {
+        if(this.sequence != sequence)
+            throw new RuntimeException("Sequence mismatch. Span sequence is: " + this.sequence + " but received sequence: " + sequence);
 
         if(number > high) {
             high = number;
@@ -86,8 +82,8 @@ public class Span implements Comparable<Span> {
         }
     }
 
-    public int getStream() {
-        return stream;
+    public int getSequence() {
+        return sequence;
     }
 
     public long getLow() {
@@ -119,14 +115,14 @@ public class Span implements Comparable<Span> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Span span = (Span) o;
-        return getStream() == span.getStream() &&
+        return getSequence() == span.getSequence() &&
                 getLow() == span.getLow() &&
                 getHigh() == span.getHigh();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getStream(), getLow(), getHigh());
+        return Objects.hash(getSequence(), getLow(), getHigh());
     }
 
     @Override

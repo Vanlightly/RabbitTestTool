@@ -3,12 +3,9 @@ import com.jackvanlightly.rabbittesttool.model.*;
 import com.jackvanlightly.rabbittesttool.register.NullRegister;
 import org.junit.jupiter.api.Test;
 
-import javax.swing.*;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -157,7 +154,7 @@ public class PartitionedModelTest {
         List<Violation> violations = model.getViolations();
         assertThat(violations.size() == 1);
         assertThat(violations.get(0).getViolationType() == ViolationType.Ordering);
-        assertThat(violations.get(0).getMessagePayload().getStream() == 2);
+        assertThat(violations.get(0).getMessagePayload().getSequence() == 2);
         assertThat(violations.get(0).getMessagePayload().getSequenceNumber() == 2);
         assertThat(violations.get(0).getPriorMessagePayload().getSequenceNumber() == 3);
     }
@@ -233,7 +230,7 @@ public class PartitionedModelTest {
         List<Violation> violations = model.getViolations();
         assertThat(violations.size() == 1);
         assertThat(violations.get(0).getViolationType() == ViolationType.NonRedeliveredDuplicate);
-        assertThat(violations.get(0).getMessagePayload().getStream() == 1);
+        assertThat(violations.get(0).getMessagePayload().getSequence() == 1);
         assertThat(violations.get(0).getMessagePayload().getSequenceNumber() == 2);
     }
 

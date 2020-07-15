@@ -43,7 +43,6 @@ public class Orchestrator {
     private Stats stats;
     private MessageModel messageModel;
     private String mode;
-    private boolean instrumentMessagePayloads;
     private AtomicBoolean jumpToCleanup;
     private AtomicBoolean complete;
 
@@ -60,8 +59,7 @@ public class Orchestrator {
                         QueueHosts queueHosts,
                         QueueHosts downstreamQueueHosts,
                         ActionSupervisor actionSupervisor,
-                        String mode,
-                        boolean instrumentMessagePayloads) {
+                        String mode) {
         this.logger = new BenchmarkLogger("ORCHESTRATOR");
         this.benchmarkRegister = benchmarkRegister;
         this.topologyGenerator = topologyGenerator;
@@ -72,7 +70,6 @@ public class Orchestrator {
         this.actionSupervisor = actionSupervisor;
         this.stats = stats;
         this.mode = mode;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         this.messageModel = messageModel;
         queueGroups = new ArrayList<>();
@@ -235,8 +232,7 @@ public class Orchestrator {
                     publisherConfig,
                     vhost,
                     messageModel,
-                    publisherQueueHosts,
-                    instrumentMessagePayloads);
+                    publisherQueueHosts);
             publisherGroup.createInitialPublishers();
             publisherGroups.add(publisherGroup);
         }
@@ -254,10 +250,8 @@ public class Orchestrator {
             ConsumerGroup consumerGroup = new ConsumerGroup(connSettings,
                     consumerConfig,
                     vhost,
-                    stats,
                     messageModel,
-                    consumerQueueHosts,
-                    instrumentMessagePayloads);
+                    consumerQueueHosts);
             consumerGroup.createInitialConsumers();
             consumerGroups.add(consumerGroup);
         }

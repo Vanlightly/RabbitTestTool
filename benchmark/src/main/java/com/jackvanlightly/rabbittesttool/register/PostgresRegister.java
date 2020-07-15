@@ -621,10 +621,10 @@ public class PostgresRegister implements BenchmarkRegister {
 
                             pst.setObject(1, UUID.fromString(benchmarkId));
                             pst.setString(2, violation.getViolationType().toString());
-                            pst.setInt(3, violation.getMessagePayload().getStream());
+                            pst.setInt(3, violation.getMessagePayload().getSequence());
                             pst.setLong(4, violation.getMessagePayload().getSequenceNumber());
                             pst.setLong(5, violation.getMessagePayload().getTimestamp());
-                            pst.setInt(6, violation.getPriorMessagePayload().getStream());
+                            pst.setInt(6, violation.getPriorMessagePayload().getSequence());
                             pst.setLong(7, violation.getPriorMessagePayload().getSequenceNumber());
                             pst.setLong(8, violation.getPriorMessagePayload().getTimestamp());
                             pst.setTimestamp(9, toTimestamp(Instant.now()));
@@ -641,7 +641,7 @@ public class PostgresRegister implements BenchmarkRegister {
 
                             pst.setObject(1, UUID.fromString(benchmarkId));
                             pst.setString(2, violation.getViolationType().toString());
-                            pst.setInt(3, violation.getMessagePayload().getStream());
+                            pst.setInt(3, violation.getMessagePayload().getSequence());
                             pst.setLong(4, violation.getMessagePayload().getSequenceNumber());
                             pst.setLong(5, violation.getMessagePayload().getSequenceNumber());
                             pst.setLong(6, violation.getMessagePayload().getTimestamp());
@@ -659,7 +659,7 @@ public class PostgresRegister implements BenchmarkRegister {
 
                             pst.setObject(1, UUID.fromString(benchmarkId));
                             pst.setString(2, violation.getViolationType().toString());
-                            pst.setInt(3, violation.getSpan().getStream());
+                            pst.setInt(3, violation.getSpan().getSequence());
                             pst.setLong(4, violation.getSpan().getLow());
                             pst.setLong(5, violation.getSpan().getHigh());
                             pst.setLong(6, violation.getSpan().getCreated().toEpochMilli());

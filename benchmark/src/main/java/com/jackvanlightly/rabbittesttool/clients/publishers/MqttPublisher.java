@@ -34,9 +34,10 @@ public class MqttPublisher implements Runnable {
     long confirmTimeoutThresholdNs;
     MqttPublisherListener publisherListener;
 
-    // for stream round robin
-    int maxStream;
-    Map<Integer, Long> streamCounter;
+    // for sequence round robin
+    int maxSequence;
+    Map<Integer, Long> sequenceCounter;
+
     MessageGenerator messageGenerator;
 
     // for publishing rate
@@ -66,7 +67,7 @@ public class MqttPublisher implements Runnable {
         this.publisherStats = new PublisherStats();
 
         this.isCancelled = new AtomicBoolean();
-        this.maxStream = publisherSettings.getStreams().size()-1;
+        this.maxSequence = publisherSettings.getSequences().size()-1;
 
          messageGenerator = new MessageGenerator();
          messageGenerator.setBaseMessageSize(publisherSettings.getMessageSize());
@@ -87,13 +88,13 @@ public class MqttPublisher implements Runnable {
             Mqtt3AsyncClient client = null;
             try {
 
-                ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms = new ConcurrentSkipListMap<>();
                 FlowController flowController = new FlowController(publisherSettings.getPublisherMode().getInFlightLimit(), 1);
-                publisherListener = new MqttPublisherListener(publisherId, messageModel, metricGroup, pendingConfirms, flowController);
+                flowController.configureForAmqp();
+                publisherListener = new MqttPublisherListener(publisherId, messageModel, metricGroup, flowController);
 
                 client = getClient(publisherListener);
                 messageModel.clientConnected(publisherId);
-                logger.info("MQTT Publisher " + publisherId + " opened connection to " + currentHost.getNodeName() + ". Has streams: " + String.join(",", publisherSettings.getStreams().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
+                logger.info("MQTT Publisher " + publisherId + " opened connection to " + currentHost.getNodeName() + ". Has sequences: " + String.join(",", publisherSettings.getSequences().stream().map(x -> String.valueOf(x)).collect(Collectors.toList())));
 
                 if (rateLimit) {
                     this.rateLimiter.configureRateLimit(publisherSettings.getPublishRatePerSecond());
@@ -101,7 +102,7 @@ public class MqttPublisher implements Runnable {
                 }
 
                 int currentInFlightLimit = publisherSettings.getPublisherMode().getInFlightLimit();
-                int currentStream = 0;
+                int currentSequence = 0;
                 boolean reconnect = false;
                 while (!isCancelled.get() && !reconnect) {
                     // is this is a multi-step benchmark with increasing in flight limit
@@ -128,12 +129,12 @@ public class MqttPublisher implements Runnable {
                     boolean send = (sendLimit == 0 || (sendLimit > 0 && sentCount < sendLimit)) && !reconnect && !isCancelled.get();
 
                     if(send) {
-                        publish(client, currentStream, pendingConfirms, false);
+                        publish(client, flowController, currentSequence, false);
                         sentCount++;
 
-                        currentStream++;
-                        if (currentStream > maxStream)
-                            currentStream = 0;
+                        currentSequence++;
+                        if (currentSequence > maxSequence)
+                            currentSequence = 0;
 
                         if (rateLimit)
                             rateLimiter.rateLimit();
@@ -193,19 +194,19 @@ public class MqttPublisher implements Runnable {
         }
     }
 
-    private void publish(Mqtt3AsyncClient client, int currentStream, ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms, boolean isInitialPublish) throws IOException {
+    private void publish(Mqtt3AsyncClient client, FlowController flowController, int currentSequence, boolean isInitialPublish) throws IOException {
         long seqNo = sentCount;
         long timestamp = MessageUtils.getTimestamp();
 
-        int stream = publisherSettings.getStreams().get(currentStream);
-        Long streamSeqNo = getAndIncrementStreamCounter(stream);
-        MessagePayload mp = new MessagePayload(stream, streamSeqNo, timestamp);
+        int sequence = publisherSettings.getSequences().get(currentSequence);
+        Long sequenceSeqNo = getAndIncrementSequenceCounter(sequence);
+        MessagePayload mp = new MessagePayload(sequence, sequenceSeqNo, timestamp);
 
         MqttQos qos = MqttQos.AT_MOST_ONCE;
-        if(isInitialPublish)
-            pendingConfirms.put(seqNo, mp);
-        else if(this.useConfirms) {
-            pendingConfirms.put(seqNo, mp);
+        if(isInitialPublish) {
+            flowController.trackAmqpMessage(seqNo, mp);
+        } else if(this.useConfirms) {
+            flowController.trackAmqpMessage(seqNo, mp);
             qos = MqttQos.AT_LEAST_ONCE;
         }
         else
@@ -279,9 +280,9 @@ public class MqttPublisher implements Runnable {
         return false;
     }
 
-    private Long getAndIncrementStreamCounter(Integer stream) {
-        Long current = streamCounter.get(stream);
-        streamCounter.put(stream, current +  1);
+    private Long getAndIncrementSequenceCounter(Integer sequence) {
+        Long current = sequenceCounter.get(sequence);
+        sequenceCounter.put(sequence, current +  1);
         return current;
     }
 }

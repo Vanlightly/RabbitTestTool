@@ -159,7 +159,7 @@ public class AMQPBenchmarker {
             }
             else {
                 boolean printLiveStats = arguments.getBoolean("--print-live-stats", true);
-                String outputDir = arguments.getStr("--output-dir", "tmp");
+                String outputDir = arguments.getStr("--output-dir", "/tmp");
                 benchmarkRegister = new ConsoleRegister(System.out, printLiveStats, outputDir);
             }
 
@@ -321,11 +321,11 @@ public class AMQPBenchmarker {
 
 
             mainLogger.info("-------------------------------------------------------");
-            mainLogger.info("---------- STREAM SUMMARY -----------------------------");
+            mainLogger.info("---------- SEQUENCE SUMMARY -----------------------------");
             Map<Integer, FinalSeqNos> finalSeqNos = messageModel.getFinalSeqNos();
             for(Integer stream : finalSeqNos.keySet().stream().sorted().collect(Collectors.toList())) {
                 FinalSeqNos seqNos = finalSeqNos.get(stream);
-                mainLogger.info(MessageFormat.format("Stream: {0,number,#}"
+                mainLogger.info(MessageFormat.format("Sequence: {0,number,#}"
                                 + ", First Published: {1,number,#}, First Consumed: {2,number,#}, First Lost: {3,number,#}"
                                 + ", Last Published: {4,number,#}, Last Consumed: {5,number,#}, Last Lost: {6,number,#}",
                         stream, seqNos.getFirstPublished(), seqNos.getFirstConsumed(), seqNos.getFirstLost(),
@@ -436,7 +436,6 @@ public class AMQPBenchmarker {
         String topologyPath = arguments.getStr("--topology");
         int ordinal = arguments.getInt("--run-ordinal", 1);
         boolean declareArtefacts = arguments.getBoolean("--declare", true);
-        boolean instrumentMessagePayloads = arguments.getBoolean("--instrument-msgs", true);
         Map<String,String> topologyVariables = arguments.getTopologyVariables();
         String policyPath = arguments.getStr("--policies", "none");
         Map<String,String> policyVariables = arguments.getPolicyVariables();
@@ -520,8 +519,7 @@ public class AMQPBenchmarker {
                         queueHosts,
                         downstreamHosts,
                         actionSupervisor,
-                        mode,
-                        instrumentMessagePayloads);
+                        mode);
 
 
                 benchmarkRegister.logBenchmarkStart(benchmarkId, ordinal, brokerConfig.getTechnology(), brokerConfig.getVersion(), instanceConfig, topology, argumentsStr, benchmarkTags);

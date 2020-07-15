@@ -13,7 +13,6 @@ import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -23,7 +22,6 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     BenchmarkLogger logger;
     MessageModel messageModel;
     MetricGroup metricGroup;
-    ConcurrentNavigableMap<Long,MessagePayload> pendingConfirms;
     FlowController flowController;
     Set<MessagePayload> undeliverable;
     AtomicInteger pendingConfirmCount;
@@ -31,12 +29,10 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
 
     public PublisherListener(MessageModel messageModel,
                              MetricGroup metricGroup,
-                             ConcurrentNavigableMap<Long, MessagePayload> pendingConfirms,
                              FlowController flowController) {
         this.logger = new BenchmarkLogger("PUBLISHER");
         this.messageModel = messageModel;
         this.metricGroup = metricGroup;
-        this.pendingConfirms = pendingConfirms;
         this.flowController = flowController;
         this.undeliverable = new HashSet<>();
         this.pendingConfirmCount = new AtomicInteger();
@@ -70,7 +66,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
         if (numConfirms > 0) {
             metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
             metricGroup.add(MetricType.PublisherConfirmLatencies, latencies);
-            pendingConfirmCount.set(pendingConfirms.size());
+            pendingConfirmCount.set(flowController.getPendingCount());
         }
 
 //            int numConfirms = 0;
@@ -124,7 +120,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
         List<MessagePayload> confirmedList = flowController.confirmAmqpMessages(seqNo, multiple);
         int numConfirms = confirmedList.size();
         metricGroup.increment(MetricType.PublisherNacked, numConfirms);
-        pendingConfirmCount.set(pendingConfirms.size());
+        pendingConfirmCount.set(flowController.getPendingCount());
     }
 
     @Override

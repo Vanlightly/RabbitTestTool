@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 public class SpanningMessageModel {
-    int stream;
+    int sequence;
     String benchmarkId;
 
 
@@ -78,7 +78,7 @@ public class SpanningMessageModel {
     boolean logJumps;
 
     public SpanningMessageModel(String benchmarkId,
-                                int stream,
+                                int sequence,
                                 boolean checkOrdering,
                                 boolean checkDataLoss,
                                 boolean checkDuplicates,
@@ -89,9 +89,9 @@ public class SpanningMessageModel {
                                 boolean logLastMsg,
                                 boolean logCompaction,
                                 boolean logJumps) {
-        this.logger = new BenchmarkLogger("MESSAGE_MODEL_"+stream);
+        this.logger = new BenchmarkLogger("MESSAGE_MODEL_"+sequence);
         this.benchmarkId = benchmarkId;
-        this.stream = stream;
+        this.sequence = sequence;
 
         this.sendComplete = new AtomicBoolean();
         this.isCancelled = new AtomicBoolean();
@@ -149,13 +149,13 @@ public class SpanningMessageModel {
     public void sent(MessagePayload messagePayload) {
         long seqNo = messagePayload.getSequenceNumber();
 
-        if(currentExpectsToReceiveSpan == null || !currentExpectsToReceiveSpan.isAdjacent(this.stream, seqNo)) {
-            Span newSpan = new Span(this.stream, seqNo, seqNo);
+        if(currentExpectsToReceiveSpan == null || !currentExpectsToReceiveSpan.isAdjacent(this.sequence, seqNo)) {
+            Span newSpan = new Span(this.sequence, seqNo, seqNo);
             addExpectedSpan(newSpan);
             currentExpectsToReceiveSpan = newSpan;
         }
         else {
-            currentExpectsToReceiveSpan.include(this.stream, seqNo);
+            currentExpectsToReceiveSpan.include(this.sequence, seqNo);
         }
 
         publishedCounter.incrementAndGet();
@@ -185,12 +185,13 @@ public class SpanningMessageModel {
     public void monitorProperties(ExecutorService executorService) {
         executorService.submit(() -> {
             while(!isCancelled.get()) {
-                logger.info("Starting message model monitor for stream: " + this.stream);
+                logger.info("Starting message model monitor for sequence: " + this.sequence);
                 try {
                     monitorStart = Instant.now();
                     lastMsg = null;
                     firstMsg = null;
                     lastHouseKeepingTime = Instant.now();
+                    long setCount = 0;
 
                     // detect ordering and duplication in real-time
                     while (!isCancelled.get()) {
@@ -220,7 +221,7 @@ public class SpanningMessageModel {
                                 if(logJumps && lastMsg != null) {
                                     long gap = lastMsg.getMessagePayload().getSequenceNumber() - seqNo;
                                     if(gap > 1) {
-                                        logger.info("GAP DETECTED: Stream=" + stream + ", Gap Size=" + gap
+                                        logger.info("GAP DETECTED: Sequence=" + sequence + ", Gap Size=" + gap
                                                 + ", Gap Start=" + (lastMsg.getMessagePayload().getSequenceNumber() + 1)
                                                 + ", Gap End="+ (seqNo - 1)
                                                 + ", Time="+now);
@@ -244,10 +245,12 @@ public class SpanningMessageModel {
                                     redeliveredCounter.incrementAndGet();
 
                                 actualReceivedSet.add(payload);
+                                setCount++;
 
                                 // when there are competing consumers, ordering can be lost causing span fragmentation
                                 // periodically compaction spans by merging adjacent ones
-                                if (Duration.between(lastHouseKeepingTime, now).getSeconds() > houseKeepingInterval.getSeconds()) {
+                                if (setCount > 1000000 || Duration.between(lastHouseKeepingTime, now).getSeconds() > houseKeepingInterval.getSeconds()) {
+                                    setCount = 0;
                                     houseKeep(now);
                                     detectMessageLossViolations();
                                 }
@@ -264,10 +267,10 @@ public class SpanningMessageModel {
                     monitoringStopped.set(true);
                     monitorStop = Instant.now();
 
-                    logger.info("Stopping message model monitor for stream: " + this.stream);
+                    logger.info("Stopping message model monitor for sequence: " + this.sequence);
                 } catch (Exception e) {
-                    logger.error("Message model monitor failed for stream: " + this.stream, e);
-                    logger.info("Restarting message model monitor for stream: " + this.stream);
+                    logger.error("Message model monitor failed for sequence: " + this.sequence, e);
+                    logger.info("Restarting message model monitor for sequence: " + this.sequence);
                     ClientUtils.waitFor(5000, isCancelled);
                 }
             }
@@ -283,7 +286,7 @@ public class SpanningMessageModel {
             // Key is in a[lo..hi] or not present.
             int mid = lo + (hi - lo) / 2;
             Span midSpan = searchSpans.get(mid);
-            if(midSpan.isInsideSpan(this.stream, seqNo)) {
+            if(midSpan.isInsideSpan(this.sequence, seqNo)) {
                 return midSpan;
             }
 
@@ -304,12 +307,12 @@ public class SpanningMessageModel {
                               int compactedSize) {
         if(logLastMsg) {
             long lastSeqNo = lastMsg.getMessagePayload().getSequenceNumber();
-            logger.info("Last consumed in model: Stream=" + this.stream + ", SeqNo=" + lastSeqNo + ", Time=" + now);
+            logger.info("Last consumed in model: Sequence=" + this.sequence + ", SeqNo=" + lastSeqNo + ", Time=" + now);
         }
 
         if(logCompaction) {
-            logger.info(MessageFormat.format("Compaction: Stream={0,number,#}. {1,number,#} new messages added to spans. {2,number,#} open spans closed. Compacted open spans from {3,number,#} to {4,number,#}",
-                    this.stream,
+            logger.info(MessageFormat.format("Compaction: Sequence={0,number,#}. {1,number,#} new messages added to spans. {2,number,#} open spans closed. Compacted open spans from {3,number,#} to {4,number,#}",
+                    this.sequence,
                     messagesEmptied,
                     spansClosed,
                     actualReceivedOpen.size(),
@@ -332,17 +335,17 @@ public class SpanningMessageModel {
 
         List<MessagePayload> orderedPayloads = actualReceivedSet.stream().sorted().collect(Collectors.toList());
         int count = orderedPayloads.size();
-        Span s = new Span(orderedPayloads.get(0).getStream(),
+        Span s = new Span(orderedPayloads.get(0).getSequence(),
                 orderedPayloads.get(0).getSequenceNumber(),
                 orderedPayloads.get(0).getSequenceNumber());
 
         for(int i=1; i<count; i++) {
             MessagePayload mp = orderedPayloads.get(i);
-            if(s.isAdjacent(mp.getStream(), mp.getSequenceNumber())) {
-                s.include(mp.getStream(), mp.getSequenceNumber(), now);
+            if(s.isAdjacent(mp.getSequence(), mp.getSequenceNumber())) {
+                s.include(mp.getSequence(), mp.getSequenceNumber(), now);
             } else {
                 actualReceivedOpen.add(s);
-                s = new Span(orderedPayloads.get(i).getStream(),
+                s = new Span(orderedPayloads.get(i).getSequence(),
                         orderedPayloads.get(i).getSequenceNumber(),
                         orderedPayloads.get(i).getSequenceNumber());
             }
@@ -441,11 +444,11 @@ public class SpanningMessageModel {
             Span nextSpan = pos2 < count ? spansToCompact.get(pos2) : null;
 
             if (nextSpan != null && span.isAdjacentRight(nextSpan)) {
-                span.include(nextSpan.getStream(), nextSpan.getHigh(), nextSpan.getUpdated());
+                span.include(nextSpan.getSequence(), nextSpan.getHigh(), nextSpan.getUpdated());
                 pos2++;
             }
             else if (nextSpan != null && span.isAdjacentLeft(nextSpan)) {
-                span.include(nextSpan.getStream(), nextSpan.getLow(), nextSpan.getUpdated());
+                span.include(nextSpan.getSequence(), nextSpan.getLow(), nextSpan.getUpdated());
                 pos2++;
             }
             else {
@@ -591,9 +594,9 @@ public class SpanningMessageModel {
             Span currentExpectedSpan = expectedSpans.get(0);
             Span currentActualSpan = actualSpans.get(0);
             for (long i = start; i <= end; i++) {
-                if (!currentExpectedSpan.isInsideSpan(this.stream, i)) {
+                if (!currentExpectedSpan.isInsideSpan(this.sequence, i)) {
                     Span nextSpan = expectedCursor < expectedSpans.size() - 1 ? expectedSpans.get(expectedCursor + 1) : null;
-                    if (nextSpan == null || !nextSpan.isInsideSpan(this.stream, i)) {
+                    if (nextSpan == null || !nextSpan.isInsideSpan(this.sequence, i)) {
                         // not an expected sequence number
                         continue;
                     } else {
@@ -602,14 +605,14 @@ public class SpanningMessageModel {
                     }
                 }
 
-                if (!currentActualSpan.isInsideSpan(this.stream, i)) {
+                if (!currentActualSpan.isInsideSpan(this.sequence, i)) {
                     Span nextSpan = actualCursor < actualSpans.size() - 1 ? actualSpans.get(actualCursor + 1) : null;
-                    if (nextSpan == null || !nextSpan.isInsideSpan(this.stream, i)) {
-                        if (currentMissingSpan == null || !currentMissingSpan.isAdjacent(this.stream, i)) {
-                            currentMissingSpan = new Span(this.stream, i, i);
+                    if (nextSpan == null || !nextSpan.isInsideSpan(this.sequence, i)) {
+                        if (currentMissingSpan == null || !currentMissingSpan.isAdjacent(this.sequence, i)) {
+                            currentMissingSpan = new Span(this.sequence, i, i);
                             missingSpans.add(currentMissingSpan);
                         } else {
-                            currentMissingSpan.include(this.stream, i);
+                            currentMissingSpan.include(this.sequence, i);
                         }
                     } else {
                         currentActualSpan = nextSpan;
@@ -631,9 +634,9 @@ public class SpanningMessageModel {
 
         List<Span> remainder = new ArrayList<>();
         for(Span span : expectsToReceive) {
-            if(span.isInsideSpan(stream, remainderLow))
-                remainder.add(new Span(stream, remainderLow, span.getHigh()));
-            else if(span.isHigherThan(stream, remainderLow))
+            if(span.isInsideSpan(sequence, remainderLow))
+                remainder.add(new Span(sequence, remainderLow, span.getHigh()));
+            else if(span.isHigherThan(sequence, remainderLow))
                 remainder.add(span);
         }
 
@@ -684,7 +687,7 @@ public class SpanningMessageModel {
                 .max(Long::compareTo);
 
         return new FinalSeqNos(
-                stream,
+                sequence,
                 expectsToReceive.isEmpty() ? -1 : expectsToReceive.get(0).getLow(),
                 firstMsg != null ? firstMsg.getMessagePayload().getSequenceNumber() : -1L,
                 firstMissing.isPresent() ? firstMissing.get() : -1L,

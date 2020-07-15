@@ -135,7 +135,7 @@ public class SimpleMessageModel implements MessageModel {
         executorService.submit(() -> {
             try {
                 monitorStart = Instant.now();
-                Map<Integer, ReceivedMessage> streamMessages = new HashMap<>();
+                Map<Integer, ReceivedMessage> sequenceMessages = new HashMap<>();
 
                 // detect ordering and duplication in real-time
                 while (!isCancelled.get()) {
@@ -143,18 +143,18 @@ public class SimpleMessageModel implements MessageModel {
                     if (msg == null) {
                         ClientUtils.waitFor(100, this.isCancelled);
                     } else {
-                        Integer stream = msg.getMessagePayload().getStream();
+                        Integer sequence = msg.getMessagePayload().getSequence();
 
                         // check ordering property
-                        if (streamMessages.containsKey(stream)) {
-                            ReceivedMessage lastMsg = streamMessages.get(stream);
+                        if (sequenceMessages.containsKey(sequence)) {
+                            ReceivedMessage lastMsg = sequenceMessages.get(sequence);
 
                             if (checkOrdering && lastMsg.getMessagePayload().getSequenceNumber() > msg.getMessagePayload().getSequenceNumber()
                                     && !msg.isRedelivered()) {
                                 violations.add(new Violation(ViolationType.Ordering, msg.getMessagePayload(), lastMsg.getMessagePayload()));
                             }
                         }
-                        streamMessages.put(stream, msg);
+                        sequenceMessages.put(sequence, msg);
 
                         // check duplicate property
                         actLock.writeLock().lock();
@@ -191,9 +191,9 @@ public class SimpleMessageModel implements MessageModel {
                 monitoringStopped.set(true);
                 monitorStop = Instant.now();
 
-                // calculate availability based on streams. Assumed that one stream is one queue.
-                int streams = streamMessages.keySet().size();
-                long totalRunTime = Duration.between(monitorStart, monitorStop).getSeconds() * streams;
+                // calculate availability based on sequences. Assumed that one sequence is one queue.
+                int sequences = sequenceMessages.keySet().size();
+                long totalRunTime = Duration.between(monitorStart, monitorStop).getSeconds() * sequences;
                 long totalSeconds = 0;
                 for (ConsumeInterval interval : consumeIntervals) {
                     Instant start = Instant.ofEpochMilli(interval.getStartMessage().getReceiveTimestamp());
@@ -213,7 +213,7 @@ public class SimpleMessageModel implements MessageModel {
     public List<Violation> getViolations() {
         return violations
                 .stream()
-                .sorted(Comparator.<Violation,Integer>comparing(x -> x.getMessagePayload().getStream())
+                .sorted(Comparator.<Violation,Integer>comparing(x -> x.getMessagePayload().getSequence())
                         .thenComparing(x -> x.getMessagePayload().getSequenceNumber()))
                 .collect(Collectors.toList());
     }

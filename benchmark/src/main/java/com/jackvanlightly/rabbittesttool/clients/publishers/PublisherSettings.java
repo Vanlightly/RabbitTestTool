@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PublisherSettings {
-    private List<Integer> streams;
+    private List<Integer> sequences;
     private PublisherMode publisherMode;
     private SendToMode sendToMode;
     private SendToExchange sendToExchange;
@@ -20,43 +20,39 @@ public class PublisherSettings {
     private int frameMax;
     private long messageLimit;
     private long initialPublish;
-    private boolean instrumentMessagePayloads;
 
     public PublisherSettings(SendToExchange sendToExchange,
                              PublisherMode publisherMode,
-                             List<Integer> streams,
+                             List<Integer> sequences,
                              int messageSize,
                              DeliveryMode deliveryMode,
                              int frameMax,
                              long messageLimit,
-                             long initialPublish,
-                             boolean instrumentMessagePayloads) {
+                             long initialPublish) {
         this.sendToExchange = sendToExchange;
         this.publisherMode = publisherMode;
-        this.streams = streams;
+        this.sequences = sequences;
         this.messageSize = messageSize;
         this.deliveryMode = deliveryMode;
         this.sendToMode = SendToMode.Exchange;
         this.frameMax = frameMax;
         this.messageLimit = messageLimit;
         this.initialPublish = initialPublish;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         this.availableHeaders = new ArrayList<>();
     }
 
     public PublisherSettings(SendToQueueGroup sendToQueueGroup,
                              PublisherMode publisherMode,
-                             List<Integer> streams,
+                             List<Integer> sequences,
                              int messageSize,
                              DeliveryMode deliveryMode,
                              int frameMax,
                              long messageLimit,
-                             long initialPublish,
-                             boolean instrumentMessagePayloads) {
+                             long initialPublish) {
         this.sendToQueueGroup = sendToQueueGroup;
         this.publisherMode = publisherMode;
-        this.streams = streams;
+        this.sequences = sequences;
         this.messageSize = messageSize;
         this.deliveryMode = deliveryMode;
         this.sendToMode = SendToMode.QueueGroup;
@@ -64,13 +60,12 @@ public class PublisherSettings {
         this.messageLimit = messageLimit;
         this.initialPublish = initialPublish;
         this.useMandatoryFlag = true;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         this.availableHeaders = new ArrayList<>();
     }
 
-    public List<Integer> getStreams() {
-        return streams;
+    public List<Integer> getSequences() {
+        return sequences;
     }
 
     public int getMessageSize() {
@@ -155,13 +150,5 @@ public class PublisherSettings {
 
     public void setInitialPublish(long initialPublish) {
         this.initialPublish = initialPublish;
-    }
-
-    public boolean shouldInstrumentMessagePayloads() {
-        return instrumentMessagePayloads;
-    }
-
-    public void setInstrumentMessagePayloads(boolean instrumentMessagePayloads) {
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
     }
 }

@@ -332,8 +332,8 @@ Example of 10 lazy queues bound to a single exchange.
 | deliveryMode | yes | - | Persistent or Transient |
 | headersPerMessage | no | 0 | The number of message headers to add to each message. When > 0, the availableHeaders field must have at least one header. |
 | availableHeaders | no | - | Defines the message headers that will be sent with each message. Message headers have the same fields as properties, see Property Fields |
-| streams | no | 1 | A stream is a monotonically increasing number sequence. Each message of a given stream gets a value of the last message + 1. Streams are used when using the Property Based Test feature. For benchmarking, this field can be ignored. |
-| messageSize | no | 16 | The minimum number of bytes is 16, which corresponds to the stream (4 bytes) / sequence number (4 bytes) /  nanosecond timestamp (8 bytes). Additional bytes are randomized. |
+| sequences | no | 1 | A sequence is a monotonically increasing number sequence. Each message of a given sequence gets a value of the last message + 1. Sequences are used when using the Property Based Test feature. For benchmarking, this field can be ignored. |
+| messageSize | no | 16 | The minimum number of bytes is 16, which corresponds to the sequence (4 bytes) / sequence number (4 bytes) /  nanosecond timestamp (8 bytes). Additional bytes are randomized. |
 | msgsPerSecondPerPublisher | no | 0 | The target publish rate per publisher |
 | sendToQueueGroup | no | - | See SendToQueueGroup Fields |
 | sendToExchange | no | - | See SendToExchange Fields |
@@ -443,7 +443,7 @@ The routing key modes available are:
 
 - __None__
 - __Random__. Each message is sent with a unique UUID for a routing key.
-- __StreamKey__. Each message uses the number of its stream as the routing key. Only used in the Property Based Test feature.
+- __SequenceKey__. Each message uses the number of its sequence as the routing key. Only used in the Property Based Test feature.
 - __FixedValue__. The routing key is the same for all messages, and given in the "routingKey" field.
 - __MultiValue__. The routing key for each message is randomly chosen from an array of routing keys defined in the "routingKeys" field.
 - __Index__. An array of routing keys is defined in the "routingKeys" field and the dimension RoutingKeyIndex defines which routing key is sent in each step. So we can define 5 routing keys and a single dimension which determines the routing key to be sent (using its index in the array).

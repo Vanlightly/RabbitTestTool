@@ -111,8 +111,7 @@ public class StreamConsumer implements Runnable  {
                             consumerSettings.getAckMode().getConsumerPrefetch(),
                             consumerSettings.getAckMode().getAckInterval(),
                             consumerSettings.getAckMode().getAckIntervalMs(),
-                            consumerSettings.getProcessingMs(),
-                            consumerSettings.shouldInstrumentMessagePayloads());
+                            consumerSettings.getProcessingMs());
 
                     client = getClient(consumerListener);
                     messageModel.clientConnected(consumerId);
@@ -169,8 +168,7 @@ public class StreamConsumer implements Runnable  {
                     consumerSettings.getAckMode().getConsumerPrefetch(),
                     consumerSettings.getAckMode().getAckInterval(),
                     consumerSettings.getAckMode().getAckIntervalMs(),
-                    consumerSettings.getProcessingMs(),
-                    consumerSettings.shouldInstrumentMessagePayloads());
+                    consumerSettings.getProcessingMs());
 
             while (!isCancelled.get() && currentStep.equals(step)) {
                 ClientUtils.waitFor(1000, this.isCancelled);

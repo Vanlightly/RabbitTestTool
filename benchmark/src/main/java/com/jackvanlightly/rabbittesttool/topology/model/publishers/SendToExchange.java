@@ -35,7 +35,7 @@ public class SendToExchange {
     }
 
     public static SendToExchange withStreamRoutingKey(String exchange) {
-        return new SendToExchange(exchange, RoutingKeyMode.StreamKey);
+        return new SendToExchange(exchange, RoutingKeyMode.SequenceKey);
     }
 
     public static SendToExchange withRoutingKey(String exchange, String routingKey) {

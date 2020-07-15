@@ -1,6 +1,5 @@
 package com.jackvanlightly.rabbittesttool.register;
 
-import com.jackvanlightly.rabbittesttool.CmdArguments;
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
 import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
@@ -126,7 +125,7 @@ public class FileRegister implements BenchmarkRegister {
                 if(violation.getViolationType() == ViolationType.Ordering) {
                     printWriter.println(MessageFormat.format("Type: {0}, Stream: {1}, SeqNo: {2}, Timestamp {3}, Prior Seq No {4}, Prior Timestamp {5}",
                             violation.getViolationType(),
-                            violation.getMessagePayload().getStream(),
+                            violation.getMessagePayload().getSequence(),
                             violation.getMessagePayload().getSequenceNumber(),
                             violation.getMessagePayload().getTimestamp(),
                             violation.getPriorMessagePayload().getSequenceNumber(),
@@ -136,14 +135,14 @@ public class FileRegister implements BenchmarkRegister {
                 else if(violation.getMessagePayload() != null) {
                     printWriter.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}",
                             violation.getViolationType(),
-                            violation.getMessagePayload().getStream(),
+                            violation.getMessagePayload().getSequence(),
                             violation.getMessagePayload().getSequenceNumber(),
                             violation.getMessagePayload().getTimestamp()));
                 }
                 else {
                     printWriter.println(MessageFormat.format("Type: {0}, Stream: {1,number,#}, Size: {2,number,#}, Low SeqNo: {3,number,#}, High SeqNo: {4,number,#}, Span ts {5,number,#}",
                             violation.getViolationType(),
-                            violation.getSpan().getStream(),
+                            violation.getSpan().getSequence(),
                             violation.getSpan().size(),
                             violation.getSpan().getLow(),
                             violation.getSpan().getHigh(),

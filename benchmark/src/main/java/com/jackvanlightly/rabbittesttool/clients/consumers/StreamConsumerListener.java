@@ -30,7 +30,6 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
     volatile int processingMs;
     volatile int pendingCreditCounter;
     volatile Instant lastGrantedCreditTime;
-    boolean instrumentMessagePayloads;
     AtomicLong lastOffset;
     long lastRecordedLatency;
     long summedLatency = 0;
@@ -45,8 +44,7 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
                                   int prefetch,
                                   int ackInterval,
                                   int ackIntervalMs,
-                                  int processingMs,
-                                  boolean instrumentMessagePayloads) {
+                                  int processingMs) {
         this.logger = new BenchmarkLogger("STREAM CONSUMER");
         this.consumerId = consumerId;
         this.vhost = vhost;
@@ -58,7 +56,6 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
         this.prefetch = prefetch;
         this.processingMs = processingMs;
         this.lastOffset = lastOffset;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
 
         pendingCreditCounter = 0;
         lastGrantedCreditTime = Instant.now();
@@ -91,22 +88,20 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
     }
 
     void handleMessage(Message message) throws IOException {
-        if(this.instrumentMessagePayloads) {
-            MessagePayload mp = MessageGenerator.toMessagePayload(message.getBodyAsBinary());
-            long now = System.nanoTime();
-            long lag = MessageUtils.getLag(now, mp.getTimestamp());
-            messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, false, lag, System.currentTimeMillis()));
+        MessagePayload mp = MessageGenerator.toMessagePayload(message.getBodyAsBinary());
+        long now = System.nanoTime();
+        long lag = MessageUtils.getLag(now, mp.getTimestamp());
+        messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, false, lag, System.currentTimeMillis()));
 
-            summedLatency+=lag;
-            latencyMeasurements++;
+        summedLatency+=lag;
+        latencyMeasurements++;
 
-            if(now-lastRecordedLatency > 100000000) {
-                long avgLag = summedLatency/latencyMeasurements;
-                metricGroup.add(MetricType.ConsumerLatencies, avgLag);
-                summedLatency = 0;
-                latencyMeasurements = 0;
-                lastRecordedLatency = now;
-            }
+        if(now-lastRecordedLatency > 100000000) {
+            long avgLag = summedLatency/latencyMeasurements;
+            metricGroup.add(MetricType.ConsumerLatencies, avgLag);
+            summedLatency = 0;
+            latencyMeasurements = 0;
+            lastRecordedLatency = now;
         }
     }
 

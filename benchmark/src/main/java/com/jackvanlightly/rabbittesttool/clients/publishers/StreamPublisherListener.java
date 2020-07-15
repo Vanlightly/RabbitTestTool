@@ -18,8 +18,7 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
     MessageModel messageModel;
     MetricGroup metricGroup;
     FlowController flowController;
-    boolean instrumentMessagePayloads;
-    boolean isBatchListener;
+    boolean isSubEntryBatchListener;
 
     long lastRecordedLatency;
     long summedLatency = 0;
@@ -28,18 +27,16 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
     public StreamPublisherListener(MessageModel messageModel,
                                    MetricGroup metricGroup,
                                    FlowController flowController,
-                                   boolean instrumentMessagePayloads,
-                                   boolean isBatchListener) {
+                                   boolean isSubEntriesBatchListener) {
         this.logger = new BenchmarkLogger("PUBLISHER");
         this.messageModel = messageModel;
         this.metricGroup = metricGroup;
         this.flowController = flowController;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
-        this.isBatchListener = isBatchListener;
+        this.isSubEntryBatchListener = isSubEntriesBatchListener;
     }
 
     public void checkForTimeouts(long confirmTimeoutThresholdNs) {
-        if(isBatchListener) {
+        if(isSubEntryBatchListener) {
             int removed = flowController.discardTimedOutBatches(confirmTimeoutThresholdNs);
             if (removed > 0) {
                 logger.info("Discarded " + removed + " pending batches due to timeout.");
@@ -60,7 +57,7 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
     // confirmListener
     @Override
     public void handle(long seqNo) {
-        if(isBatchListener)
+        if(isSubEntryBatchListener)
             handleBatch(seqNo);
         else
             handleSingle(seqNo);
@@ -69,7 +66,7 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
     // publishErrorListener
     @Override
     public void handle(long seqNo, short i) {
-        if(isBatchListener)
+        if(isSubEntryBatchListener)
             handleBatch(seqNo, i);
         else
             handleSingle(seqNo, i);
@@ -85,46 +82,26 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
         int limit = 10;
         while(attempts <= limit){
             attempts++;
-            if(instrumentMessagePayloads) {
-                MessagePayload mp = flowController.confirmBinaryProtocolMessage(seqNo);
-                if (mp != null) {
+            MessagePayload mp = flowController.confirmBinaryProtocolMessage(seqNo);
+            if (mp != null) {
+                // we didn't track it due to bucket size
+                if(!isTracked(mp))
+                    return;
 
-                    // we didn't track it due to bucket size
-                    if(mp.getSequenceNumber() == -1)
-                        return;
-
-                    // we only track one message per bucket size, so compensate the number of confirms here
-                    numConfirms = 1*flowController.getSingleMessageBucketSize();
-                    messageModel.sent(mp);
-                    long latency = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
-
-                    summedLatency+=latency;
-                    latencyMeasurements++;
-
-                    if(currentTime-lastRecordedLatency > 100000000) {
-                        long avgLag = summedLatency/latencyMeasurements;
-                        metricGroup.add(MetricType.PublisherConfirmLatencies, avgLag);
-                        summedLatency = 0;
-                        latencyMeasurements = 0;
-                        lastRecordedLatency = currentTime;
-                    }
-                } else {
-                    if (attempts <= limit) {
-                        ClientUtils.waitFor(5);
-                        continue;
-                    }
-                    numConfirms = 0;
-                }
-                break;
-            }
-            else {
-                numConfirms = flowController.confirmUninstrumentedBinaryProtocol(seqNo);
-                if (numConfirms == -1 && attempts <= limit) {
+                // we only track one message per bucket size, so compensate the number of confirms here
+                numConfirms = 1*flowController.getSingleMessageBucketSize();
+                messageModel.sent(mp);
+                long latency = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
+                recordLatency(latency, currentTime);
+            } else {
+                // race condition! try again!
+                if (attempts <= limit) {
                     ClientUtils.waitFor(5);
                     continue;
                 }
-                break;
+                numConfirms = 0;
             }
+            break;
         }
 
         if (numConfirms > 0) {
@@ -132,15 +109,27 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
         }
     }
 
+    private boolean isTracked(MessagePayload mp) {
+        // kind of a hack, but -1 represents a payload that was sent but not tracked
+        return mp.getSequenceNumber() == -1;
+    }
+
+    private void recordLatency(long latency, long now) {
+        summedLatency+=latency;
+        latencyMeasurements++;
+
+        if(now-lastRecordedLatency > 100000000) {
+            long avgLag = summedLatency/latencyMeasurements;
+            metricGroup.add(MetricType.PublisherConfirmLatencies, avgLag);
+            summedLatency = 0;
+            latencyMeasurements = 0;
+            lastRecordedLatency = now;
+        }
+    }
+
     private void handleSingle(long seqNo, short i) {
-        if(instrumentMessagePayloads) {
-            flowController.confirmBinaryProtocolMessage(seqNo);
-            metricGroup.increment(MetricType.PublisherNacked, 1);
-        }
-        else {
-            flowController.confirmUninstrumentedBinaryProtocol(seqNo);
-            metricGroup.increment(MetricType.PublisherNacked, 1);
-        }
+        flowController.confirmBinaryProtocolMessage(seqNo);
+        metricGroup.increment(MetricType.PublisherNacked, 1);
     }
 
     private void handleBatch(long seqNo) {
@@ -152,50 +141,34 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
         while(attempts <= limit) {
             attempts++;
 
-            if (instrumentMessagePayloads) {
-                long currentTime = MessageUtils.getTimestamp();
-                List<MessagePayload> confirmedList = flowController.confirmBinaryProtocolBatch(seqNo);
-                if(confirmedList == null && attempts <= limit) {
-                    ClientUtils.waitFor(5);
-                    continue;
-                }
+            long currentTime = MessageUtils.getTimestamp();
+            List<MessagePayload> confirmedList = flowController.confirmBinaryProtocolBatch(seqNo);
 
-                for (MessagePayload mp : confirmedList)
-                    messageModel.sent(mp);
-
-                numConfirms = confirmedList.size();
-                if (numConfirms > 0) {
-                    long latency = MessageUtils.getDifference(confirmedList.get(0).getTimestamp(), currentTime);
-                    metricGroup.add(MetricType.PublisherConfirmLatencies, latency);
-                }
-            } else {
-                numConfirms = flowController.confirmUninstrumentedBinaryProtocol(seqNo);
-                if(numConfirms == 0 && attempts <= limit) {
-                    ClientUtils.waitFor(5);
-                    continue;
-                }
+            // we track all sub-entries, so if we don';t have it, then it's the race condition
+            if(confirmedList == null && attempts <= limit) {
+                ClientUtils.waitFor(5);
+                continue;
             }
 
-            if (numConfirms > 0)
+            // send all messages to the model
+            for (MessagePayload mp : confirmedList)
+                messageModel.sent(mp);
+
+            numConfirms = confirmedList.size();
+            if (numConfirms > 0) {
+                long latency = MessageUtils.getDifference(confirmedList.get(0).getTimestamp(), currentTime);
+                metricGroup.add(MetricType.PublisherConfirmLatencies, latency);
                 metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
+            }
 
             break;
         }
     }
 
     private void handleBatch(long seqNo, short i) {
-        int numConfirms = 0;
-
-        if(instrumentMessagePayloads) {
-            List<MessagePayload> messagePayloads = flowController.confirmBinaryProtocolBatch(seqNo);
-            if (messagePayloads != null) {
-                numConfirms = messagePayloads.size();
-            }
+        List<MessagePayload> messagePayloads = flowController.confirmBinaryProtocolBatch(seqNo);
+        if (messagePayloads != null) {
+            metricGroup.increment(MetricType.PublisherNacked, messagePayloads.size());
         }
-        else {
-            numConfirms = flowController.confirmUninstrumentedBinaryProtocol(seqNo);
-        }
-
-        metricGroup.increment(MetricType.PublisherNacked, numConfirms);
     }
 }

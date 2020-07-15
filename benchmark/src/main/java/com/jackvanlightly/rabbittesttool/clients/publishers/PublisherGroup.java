@@ -31,20 +31,17 @@ public class PublisherGroup {
     private QueueHosts queueHosts;
     private ExecutorService executorService;
     private int publisherCounter;
-    private boolean instrumentMessagePayloads;
 
     public PublisherGroup(ConnectionSettings connectionSettings,
                           PublisherConfig publisherConfig,
                           VirtualHost vhost,
                           MessageModel messageModel,
-                          QueueHosts queueHosts,
-                          boolean instrumentMessagePayloads) {
+                          QueueHosts queueHosts) {
         this.logger = new BenchmarkLogger("PUBLISHER_GROUP");
         this.connectionSettings = connectionSettings;
         this.publisherConfig = publisherConfig;
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
         this.publishers = new ArrayList<>();
         this.streamPublishers = new ArrayList<>();
 
@@ -168,8 +165,7 @@ public class PublisherGroup {
                     publisherConfig.getDeliveryMode(),
                     publisherConfig.getFrameMax(),
                     publisherConfig.getMessageLimit(),
-                    publisherConfig.getInitialPublish(),
-                    instrumentMessagePayloads);
+                    publisherConfig.getInitialPublish());
         }
         else {
             settings = new PublisherSettings(publisherConfig.getSendToQueueGroup(),
@@ -179,8 +175,7 @@ public class PublisherGroup {
                     publisherConfig.getDeliveryMode(),
                     publisherConfig.getFrameMax(),
                     publisherConfig.getMessageLimit(),
-                    publisherConfig.getInitialPublish(),
-                    instrumentMessagePayloads);
+                    publisherConfig.getInitialPublish());
         }
 
         settings.setPublishRatePerSecond(publisherConfig.getPublishRatePerSecond());

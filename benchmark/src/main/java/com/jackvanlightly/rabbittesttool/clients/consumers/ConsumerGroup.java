@@ -34,23 +34,17 @@ public class ConsumerGroup {
     ExecutorService executorService;
     Map<String, Integer> currentQueues;
     int consumerCounter;
-    Stats stats;
-    boolean instrumentMessagePayloads;
 
     public ConsumerGroup(ConnectionSettings connectionSettings,
                          ConsumerConfig consumerConfig,
                          VirtualHost vhost,
-                         Stats stats,
                          MessageModel messageModel,
-                         QueueHosts queueHosts,
-                         boolean instrumentMessagePayloads) {
+                         QueueHosts queueHosts) {
         this.logger = new BenchmarkLogger("CONSUMER_GROUP");
         this.connectionSettings = connectionSettings;
         this.consumerConfig = consumerConfig;
-        this.stats = stats;
         this.messageModel = messageModel;
         this.queueHosts = queueHosts;
-        this.instrumentMessagePayloads = instrumentMessagePayloads;
         this.consumers = new ArrayList<>();
         this.streamConsumers = new ArrayList<>();
 
@@ -200,8 +194,7 @@ public class ConsumerGroup {
                 this.consumerConfig.getAckMode(),
                 this.consumerConfig.getFrameMax(),
                 this.consumerConfig.getProcessingMs(),
-                this.consumerConfig.isDownstream(),
-                instrumentMessagePayloads);
+                this.consumerConfig.isDownstream());
 
         this.currentQueues.put(queue, this.currentQueues.get(queue) + 1);
 
