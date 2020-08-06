@@ -11,7 +11,6 @@ import com.jackvanlightly.rabbittesttool.topology.model.publishers.SendToMode;
 import com.jackvanlightly.rabbittesttool.topology.model.QueueConfig;
 import com.jackvanlightly.rabbittesttool.topology.model.VirtualHost;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -246,7 +245,7 @@ public class PublisherGroup {
                 publisher.setMessageHeaders(headers);
         }
         else
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
     }
 
     public int getPublishRatePerSecond() {
@@ -323,7 +322,7 @@ public class PublisherGroup {
                 publisher.setRoutingKeyIndex(rkIndex);
         }
         else {
-            throw new NotImplementedException();
+            throw new UnsupportedOperationException();
         }
     }
 

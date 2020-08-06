@@ -5,8 +5,8 @@ import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.topology.model.*;
-import com.rabbitmq.stream.Client;
-import com.rabbitmq.stream.ClientException;
+import com.rabbitmq.stream.impl.Client;
+import com.rabbitmq.stream.StreamException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
@@ -256,7 +256,7 @@ public class TopologyGenerator {
 
         boolean declared = false;
         int attempts = 0;
-        ClientException exception = null;
+        StreamException exception = null;
         Client client = null;
 
         while(!declared && attempts < 3) {
@@ -275,7 +275,7 @@ public class TopologyGenerator {
                         .maxSegmentSizeBytes(queueConfig.getSegmentSize()).build());
                 declared = true;
                 tryClose(client);
-            } catch (ClientException e) {
+            } catch (StreamException e) {
                 tryClose(client);
                 logger.info("Failed to declare stream");
                 exception = e;
