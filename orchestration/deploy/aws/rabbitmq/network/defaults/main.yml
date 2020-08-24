@@ -1,0 +1,6 @@
+---
+# defaults
+add_delay: false
+delay_ms: 0
+restrict_bandwidth: false
+bandwidth: 0

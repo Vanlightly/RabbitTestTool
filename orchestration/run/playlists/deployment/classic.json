@@ -1,0 +1,19 @@
+{
+    "benchmarks": [
+        {
+            "topologyVariables": { "publisherCount": "1", "queueCount": "1", "consumerCount": "1", "manualAcks": "false", }},
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "messageSize": "1000",
+            "ackIntervalMs": "200",
+            "durationSeconds": "300"
+        },
+        "policy": "quorum-queue-mem-limit.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0" 
+        }
+    }
+}

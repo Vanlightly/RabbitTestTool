@@ -5,6 +5,7 @@ node_role: "master"
 is_cluster: false
 prometheus_enabled: true
 allocation_strategy: rss
+cluster_partition_handling: autoheal
 disk_limit: 1000000000
 log_level: info
 use_config: raft
@@ -22,3 +23,5 @@ tcp_listen_options_backlog: 0
 tcp_listen_options_buffer: 0
 tcp_listen_options_sndbuf: 0
 tcp_listen_options_recbuf: 0
+aten_heartbeat_interval: 0
+aten_poll_interval: 0

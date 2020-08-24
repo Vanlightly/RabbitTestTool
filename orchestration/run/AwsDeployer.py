@@ -18,6 +18,11 @@ class AwsDeployer(Deployer):
 
     def update_single(self, unique_conf, common_conf):
         status_id = unique_conf.technology + unique_conf.node_number
+
+        if unique_conf.deployment == "eks" or unique_conf.deployment == "gke":
+            self._deploy_status[status_id] = "success"
+            return # each deployment is a new container anyway in k8s
+        
         exit_code = subprocess.call(["bash", "update-benchmark.sh", 
                         common_conf.key_pair, 
                         unique_conf.node_number, 
@@ -55,47 +60,15 @@ class AwsDeployer(Deployer):
             self.add_upstream_hosts(status_id, common_conf, ds_node, ds_node, unique_conf.node_number, unique_conf.node_number)
 
 
-    def deploy_single_broker(self, status_id, unique_conf, common_conf, node_number):
-        print("OH NO!!!!")
-        # volume_type = unique_conf.volume.split("-")[1]
-        # exit_code = subprocess.call(["bash", "deploy-single-broker.sh", 
-        #                     common_conf.ami, 
-        #                     unique_conf.broker_version, 
-        #                     unique_conf.core_count,
-        #                     unique_conf.filesystem, 
-        #                     unique_conf.generic_unix_url,
-        #                     unique_conf.instance, 
-        #                     common_conf.key_pair, 
-        #                     common_conf.loadgen_instance, 
-        #                     common_conf.loadgen_sg, 
-        #                     common_conf.log_level,
-        #                     str(node_number), 
-        #                     common_conf.run_tag, 
-        #                     common_conf.broker_sg, 
-        #                     common_conf.subnet, 
-        #                     unique_conf.technology, 
-        #                     unique_conf.tenancy, 
-        #                     unique_conf.threads_per_core, 
-        #                     unique_conf.vars_file, 
-        #                     unique_conf.data_volume,
-        #                     unique_conf.logs_volume,
-        #                     unique_conf.quorum_volume,
-        #                     unique_conf.wal_volume,
-        #                     unique_conf.volume1_size,
-        #                     unique_conf.volume1_mountpoint,
-        #                     unique_conf.volume2_size,
-        #                     unique_conf.volume2_mountpoint,
-        #                     unique_conf.volume3_size,
-        #                     unique_conf.volume3_mountpoint,
-        #                     volume_type], cwd="../deploy/aws")
-
-        # if exit_code != 0:
-        #     console_out(self.actor, f"deploy {node_number} failed with exit code {exit_code}")
-        #     self._deploy_status[status_id] = "failed"   
-        # else:
-        #     self._deploy_status[status_id] = "success"
-
     def deploy_rabbitmq_cluster(self, unique_conf, common_conf):
+        if unique_conf.deployment == "ec2":
+            self.deploy_rabbitmq_cluster_on_ec2(unique_conf, common_conf)
+        elif unique_conf.deployment == "eks" or unique_conf.deployment == "gke":
+            self.deploy_rabbitmq_cluster_on_managed_k8s(unique_conf, common_conf)
+        else:
+            raise Exception(f"Deployment values of: {unique_conf.deployment} is not valid")  
+
+    def deploy_rabbitmq_cluster_on_ec2(self, unique_conf, common_conf):
         master_node = int(unique_conf.node_number)
         node_range_start = master_node
         node_range_end = master_node + int(unique_conf.cluster_size) - 1
@@ -138,6 +111,7 @@ class AwsDeployer(Deployer):
                                 common_conf.arm_ami, 
                                 str(unique_conf.cluster_size), 
                                 unique_conf.core_count, 
+                                common_conf.influx_subpath, 
                                 unique_conf.instance, 
                                 common_conf.key_pair, 
                                 common_conf.loadgen_instance, 
@@ -198,6 +172,7 @@ class AwsDeployer(Deployer):
                                 unique_conf.core_count, 
                                 unique_conf.filesystem, 
                                 unique_conf.generic_unix_url,
+                                common_conf.influx_subpath, 
                                 unique_conf.instance, 
                                 common_conf.key_pair, 
                                 common_conf.log_level,
@@ -231,6 +206,7 @@ class AwsDeployer(Deployer):
                                 unique_conf.core_count, 
                                 unique_conf.filesystem, 
                                 unique_conf.generic_unix_url,
+                                common_conf.influx_subpath, 
                                 unique_conf.instance, 
                                 common_conf.key_pair, 
                                 common_conf.log_level,
@@ -277,7 +253,7 @@ class AwsDeployer(Deployer):
         else:
             self._deploy_status[status_id] = "success"
 
-    def teardown(self, technology, node, run_tag, no_destroy):
+    def teardown_ec2(self, technology, node, run_tag, no_destroy):
         if no_destroy:
             console_out(self.actor, "No teardown as --no-destroy set to true")
         else:
@@ -289,6 +265,20 @@ class AwsDeployer(Deployer):
                 else:
                     console_out(self.actor, "teardown failed, will retry in 1 minute")
                     time.sleep(60)
+
+    def teardown_managed_k8s(self, unique_conf, no_destroy):
+        if no_destroy:
+            console_out(self.actor, "No teardown as --no-destroy set to true")
+        else:
+            if unique_conf.deployment == "eks":
+                exit_code = subprocess.call(["bash", "delete-eks-cluster.sh"], cwd="../deploy/kubernetes/eks")
+            elif unique_conf.deployment == "gke":
+                exit_code = subprocess.call(["bash", "delete-gke-cluster.sh"], cwd="../deploy/kubernetes/gke")
+            else:
+                raise Exception(f"Could not teardown cluster. Deployment values of: {unique_conf.deployment} is not valid")  
+
+            if exit_code != 0:
+                console_out(self.actor, "Teardown failed, will retry in 1 minute")
 
     def get_logs(self, common_conf, logs_volume, start_node, end_node):
         target_dir = "logs/" + datetime.now().strftime("%Y%m%d%H%M")
@@ -317,3 +307,25 @@ class AwsDeployer(Deployer):
                         str(common_conf.run_tag),
                         quorum_commands_soft_limit,
                         wal_max_batch_size], cwd="../deploy/aws")
+
+    def deploy_rabbitmq_cluster_on_managed_k8s(self, unique_conf, common_conf):
+        status_id = f"{unique_conf.technology}{unique_conf.node_number}"
+        self._deploy_status[status_id] = "started"
+        
+        volume1_type = unique_conf.volume1_type.split("-")[1]
+
+        exit_code = subprocess.call(["bash", "deploy-all.sh",
+                        "-i", unique_conf.instance, 
+                        "-b", str(unique_conf.cluster_size),
+                        "-t", volume1_type, 
+                        "-s", unique_conf.volume1_size,
+                        "-c", str(int(unique_conf.core_count) * int(unique_conf.threads_per_core)),
+                        "-m", str(int(unique_conf.memory_gb)*800),
+                        "-k", unique_conf.deployment] # put limit at 80% of available
+                        , cwd="../deploy/kubernetes")
+        
+        if exit_code != 0:
+            console_out(self.actor, f"Deploy to {unique_conf.deployment} failed. Exit code {exit_code}")
+            self._deploy_status[status_id] = "failed"   
+        else:
+            self._deploy_status[status_id] = "success"

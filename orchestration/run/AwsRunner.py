@@ -32,8 +32,12 @@ class AwsRunner(Runner):
             ds_broker_ips = self.get_broker_ips(unique_conf.technology, ds_node_number, unique_conf.cluster_size, common_conf.run_tag)
             federation_args += f"--downstream-broker-hosts {ds_broker_ips}"
 
+        script = "run-logged-aws-benchmark.sh"
+        if unique_conf.deployment == "eks" or unique_conf.deployment == "gke":
+            script = "run-logged-aws-k8s-benchmark.sh"
+
         self._benchmark_status[status_id] = "started"
-        exit_code = subprocess.call(["bash", "run-logged-aws-benchmark.sh", 
+        exit_code = subprocess.call(["bash", script, 
                                 unique_conf.node_number, 
                                 common_conf.key_pair, 
                                 unique_conf.technology, 
@@ -72,6 +76,7 @@ class AwsRunner(Runner):
                                 str(run_ordinal),
                                 common_conf.tags,
                                 common_conf.attempts,
+                                common_conf.influx_subpath,
                                 playlist_entry.get_topology_variables(),
                                 playlist_entry.get_policy_variables(),
                                 federation_args])

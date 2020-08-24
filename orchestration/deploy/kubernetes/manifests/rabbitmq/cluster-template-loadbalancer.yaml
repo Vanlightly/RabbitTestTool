@@ -1,0 +1,25 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rtt
+spec:
+  replicas: CLUSTER_SIZE
+  service:
+    type: LoadBalancer
+  persistence:
+    storage: VOLUME_SIZEG
+    storageClassName: VOLUME_TYPE
+  resources:
+    limits:
+      cpu: VCPUS
+      memory: MEMORY_MBMi
+    requests:
+      cpu: VCPUS
+      memory: MEMORY_MBMi
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "rabbitmq"
+      effect: "NoSchedule"
+    
+  

@@ -16,3 +16,5 @@ COPY --from=builder \
 
 COPY benchmark/topologies topologies
 COPY benchmark/policies policies
+
+ENTRYPOINT ["java", "-jar", "rabbittesttool.jar"]

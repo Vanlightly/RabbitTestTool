@@ -1,0 +1,27 @@
+{
+    "benchmarks": [
+        { "topologyVariables": 
+            { 
+                "publisherCount": "10", 
+                "queueCount": "10", 
+                "consumerCount": "10"
+            } 
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/streams-binary-protocol.json",
+        "topologyVariables": { 
+            "messageSize": "20",
+            "inflightLimit": "1000",
+            "maxBatchSize": "1000", 
+            "maxBatchWaitMs": "100",
+            "maxBatchSizeBytes": "0",
+            "maxSubEntrySizeBytes": "64000",
+            "streamPublishMode": "subentry-batch",
+            "initialCredit": "10", 
+            "creditInterval": "1",
+            "creditIntervalMs": "100",
+            "durationSeconds": "300"
+        }
+    }
+}

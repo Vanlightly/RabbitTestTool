@@ -15,9 +15,18 @@
         { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50" },
             "policy": "mirrored-queue.json",
             "policyVariables": { "haMode": "exactly", "haParams": "2"} },
-        { "topologyVariables": {"publisherCount": "1", "queueCount": "1", "consumerCount": "1" }, "policy": "quorum-queue.json"},
-        { "topologyVariables": {"publisherCount": "10", "queueCount": "10", "consumerCount": "10" }, "policy": "quorum-queue.json"},
-        { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50" }, "policy": "quorum-queue.json"}
+        { "topologyVariables": {"publisherCount": "1", "queueCount": "1", "consumerCount": "1" },
+            "policy": "mirrored-queue.json",
+            "policyVariables": { "haMode": "all"} },
+        { "topologyVariables": {"publisherCount": "10", "queueCount": "10", "consumerCount": "10" },
+            "policy": "mirrored-queue.json",
+            "policyVariables": { "haMode": "all"} },
+        { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50" },
+            "policy": "mirrored-queue.json",
+            "policyVariables": { "haMode": "all"} },
+        { "topologyVariables": {"publisherCount": "1", "queueCount": "1", "consumerCount": "1" }, "policy": "quorum-queue-mem-limit.json"},
+        { "topologyVariables": {"publisherCount": "10", "queueCount": "10", "consumerCount": "10" }, "policy": "quorum-queue-mem-limit.json"},
+        { "topologyVariables": {"publisherCount": "50", "queueCount": "50", "consumerCount": "50" }, "policy": "quorum-queue-mem-limit.json"}
     ],
     "commonAttributes": {
         "topology": "point-to-point/point-to-point-safe.json",
@@ -26,7 +35,7 @@
             "consumerPrefetch": "1000",
             "messageSize": "20",
             "ackInterval": "1",
-            "durationSeconds": "600"
+            "durationSeconds": "300"
         }
     }
 }

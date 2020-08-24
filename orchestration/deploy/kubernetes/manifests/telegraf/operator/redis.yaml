@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  serviceName: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+      annotations:
+        telegraf.influxdata.com/inputs: |+
+          [[inputs.redis]]
+            servers = ["tcp://localhost:6379"]
+        telegraf.influxdata.com/class: basic
+        telegraf.influxdata.com/limits-cpu: '750m'
+        # invalid memory limit, which will be ignored
+        telegraf.influxdata.com/limits-memory: '800x'
+    spec:
+      containers:
+      - name: redis
+        image: redis:alpine

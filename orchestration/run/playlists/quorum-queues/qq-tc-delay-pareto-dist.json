@@ -1,0 +1,27 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "10", "queueCount": "10", "consumerCount": "10" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "useConfirms": "false",
+            "ackInterval": "1",
+            "messageSize": "100",
+            "publishRate": "100",
+            "durationSeconds": "3600"
+        },
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "10000"
+        },
+        "hasBrokerActions": true,
+        "brokerAction": "traffic-control",
+        "tcBrokers": "all",
+        "tcDelayMs": 5,
+        "tcDelayJitterMs": 50,
+        "tcDelayDist": "pareto",
+        "triggerType": "seconds",
+        "triggerAt": 60
+    }
+}

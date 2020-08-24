@@ -12,12 +12,14 @@ class UniqueConfiguration:
         self.tenancy = get_mandatory_arg_validated(args, "--tenancy", self.suffix, ["default","dedicated"])
         self.core_count = get_mandatory_arg(args, "--core-count", self.suffix)
         self.threads_per_core = get_mandatory_arg(args, "--threads-per-core", self.suffix)
+        self.memory_gb = get_mandatory_arg(args, "--memory-gb", self.suffix)
         self.vars_file = get_optional_arg(args, "--vars-file", self.suffix, f".variables/{self.technology}-generic-vars.yml")
         self.no_tcp_delay = get_optional_arg(args, "--no-tcp-delay", self.suffix, "true")
         self.policies_file = get_optional_arg(args, "--policies-file", self.suffix, "none")
         self.pub_connect_to_node = get_optional_arg_validated(args, "--pub-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.con_connect_to_node = get_optional_arg_validated(args, "--con-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
+        self.deployment = get_optional_arg_validated(args, "--deployment", self.suffix, ["ec2", "eks", "gke"], "ec2")
         self.node_number = -1
-        
+                
     def set_node_number(self, node_number):
         self.node_number = node_number

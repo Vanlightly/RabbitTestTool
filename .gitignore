@@ -47,8 +47,12 @@ target/
 # deployment variables
 .variables
 .config
+.secret
 
 # terraform
 .terraform
 
 __pycache__/
+
+*.csv
+*generated.yaml

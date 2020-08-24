@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegrafORDINAL
+spec:
+  selector:
+    matchLabels:
+      app: telegrafORDINAL
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        app: telegrafORDINAL
+    spec:
+      containers:
+        - image: telegraf:1.10.0
+          name: telegraf
+          envFrom:
+            - secretRef:
+                name: telegraf-secrets
+          volumeMounts:
+            - name: telegraf-config-volumeORDINAL
+              mountPath: /etc/telegraf/telegraf.conf
+              subPath: telegraf.conf
+              readOnly: true
+      volumes:
+        - name: telegraf-config-volumeORDINAL
+          configMap:
+            name: telegraf-configORDINAL

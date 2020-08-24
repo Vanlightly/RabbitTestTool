@@ -1,0 +1,12 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rtt
+spec:
+  replicas: 3
+  service:
+    type: LoadBalancer
+  persistence:
+    storage: 50G
+    storageClassName: io1
+  

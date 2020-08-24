@@ -69,7 +69,7 @@ echo "OH NO! DON@T CALL ME ANYMORE!!!!!!!!!!!!!!"
 # ROOT_PATH=$(pwd)
 
 # INFLUX_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=benchmarking_metrics" --query "Reservations[*].Instances[*].PrivateIpAddress" --output=text)
-# INFLUX_URL="http://$INFLUX_IP:8086"
+# INFLUX_URL="http://$INFLUX_IP/o1VLmdfQytYFnhNzlSzkrhDG5lnY2u"
 # echo "Node $NODE_NUMBER: InfluxDB url is $INFLUX_URL"
 
 # TAG=benchmarking_${TECHNOLOGY}${NODE_NUMBER}_${RUN_TAG}

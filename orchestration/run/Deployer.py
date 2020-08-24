@@ -36,7 +36,10 @@ class Deployer:
     def deploy_rabbitmq_cluster(self, unique_conf, common_conf):
         raise NotImplementedError
 
-    def teardown(self, technology, node, run_tag, no_destroy):
+    def teardown_ec2(self, technology, node, run_tag, no_destroy):
+        raise NotImplementedError
+
+    def teardown_managed_k8s(self, unique_conf, no_destroy):
         raise NotImplementedError
 
     def teardown_loadgen(self, unique_conf, common_conf, no_destroy):
@@ -56,17 +59,22 @@ class Deployer:
                 for p in range(len(unique_conf_list)):
                     unique_conf = unique_conf_list[p]
 
-                    for n in range(0, unique_conf.cluster_size):
-                        node_num = int(unique_conf.node_number) + n
-                        console_out(self.actor, f"TEARDOWN FOR node {node_num}")
-                        self.teardown(unique_conf.technology,
-                                      str(node_num),
-                                      common_conf.run_tag,
-                                      no_destroy)
-                    console_out(self.actor, f"TEARDOWN FOR {unique_conf.config_tag} loadgen")
-                    self.teardown_loadgen(unique_conf,
-                                          common_conf,
-                                          no_destroy)
+                    if unique_conf.deployment == "ec2":
+                        for n in range(0, unique_conf.cluster_size):
+                            node_num = int(unique_conf.node_number) + n
+                            console_out(self.actor, f"TEARDOWN FOR node {node_num}")
+                            self.teardown_ec2(unique_conf.technology,
+                                        str(node_num),
+                                        common_conf.run_tag,
+                                        no_destroy)
+                        console_out(self.actor, f"TEARDOWN FOR {unique_conf.config_tag} loadgen")
+                        self.teardown_loadgen(unique_conf,
+                                            common_conf,
+                                            no_destroy)
+                    elif unique_conf.deployment == "eks" or unique_conf.deployment == "gke":
+                        self.teardown_managed_k8s(unique_conf, no_destroy)
+                    else:
+                        raise Exception(f"Invalid deployment type: {unique_conf.deployment}")
                 console_out(self.actor, "All servers terminated")
             exit(1)
 
@@ -105,10 +113,6 @@ class Deployer:
                     deploy = threading.Thread(target=self.update_single, args=(unique_conf, common_conf,))
                 else:
                     deploy = threading.Thread(target=self.deploy_rabbitmq_cluster, args=(unique_conf, common_conf,))
-                    # if unique_conf.cluster_size == 1:
-                    #     deploy = threading.Thread(target=self.deploy_single, args=(unique_conf, common_conf,))
-                    # else:
-                    #     deploy = threading.Thread(target=self.deploy_rabbitmq_cluster, args=(unique_conf, common_conf,))
 
                 d_threads.append(deploy)
 
@@ -136,11 +140,17 @@ class Deployer:
             for p in range(len(unique_conf_list)):
                 unique_conf = unique_conf_list[p]
 
-                try:
-                    start_node, end_node = self.get_start_end_nodes_of_config(unique_conf)
-                    self.get_logs(common_conf, unique_conf.logs_volume, start_node, end_node)
-                except Exception as e:
-                    console_out_exception(self.actor, "Failed retrieving logs", e)
+                if unique_conf.deployment == "ec2":
+                    try:
+                        start_node, end_node = self.get_start_end_nodes_of_config(unique_conf)
+                        self.get_logs(common_conf, unique_conf.logs_volume, start_node, end_node)
+                    except Exception as e:
+                        console_out_exception(self.actor, "Failed retrieving logs", e)
+                elif unique_conf.deployment == "eks" or unique_conf.deployment == "gke":
+                    console_out(self.actor, "Log gathering not yet supported for EKS/GKE")
+                else:
+                    raise Exception(f"Invalid deployment type: {unique_conf.deployment}")
+                
     
     def get_logs(self, common_conf, logs_volume, start_node, end_node):
         raise NotImplementedError

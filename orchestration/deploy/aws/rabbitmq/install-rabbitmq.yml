@@ -5,7 +5,7 @@
     # change to location of var files
     - .variables/telegraf-vars.yml
   roles:
-    - preliminary
     - volumes
+    - preliminary
     - rabbitmq
     - telegraf

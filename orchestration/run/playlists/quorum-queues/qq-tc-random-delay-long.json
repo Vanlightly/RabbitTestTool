@@ -1,0 +1,33 @@
+{
+    "benchmarks": [
+        { "tcBrokers": "all", "tcDelayMs": 1, "tcDelayJitterMs": 100, "tcDelayDist": "pareto" },
+        { "tcBrokers": "all", "tcDelayMs": 1, "tcDelayJitterMs": 500, "tcDelayDist": "pareto" },
+        { "tcBrokers": "all", "tcDelayMs": 1, "tcDelayJitterMs": 1000, "tcDelayDist": "pareto" },
+        { "tcBrokers": "all", "tcDelayMs": 1, "tcDelayJitterMs": 5000, "tcDelayDist": "pareto" },
+        { "tcBrokers": "1", "tcDelayMs": 1, "tcDelayJitterMs": 100, "tcDelayDist": "pareto" },
+        { "tcBrokers": "1", "tcDelayMs": 1, "tcDelayJitterMs": 500, "tcDelayDist": "pareto" },
+        { "tcBrokers": "1", "tcDelayMs": 1, "tcDelayJitterMs": 1000, "tcDelayDist": "pareto" },
+        { "tcBrokers": "1", "tcDelayMs": 1, "tcDelayJitterMs": 5000, "tcDelayDist": "pareto" }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "publisherCount": "10", 
+            "queueCount": "10", 
+            "consumerCount": "10",
+            "useConfirms": "false",
+            "ackInterval": "1",
+            "messageSize": "100",
+            "publishRate": "100",
+            "durationSeconds": "7200"
+        },
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "10000"
+        },
+        "hasBrokerActions": true,
+        "brokerAction": "traffic-control",
+        "triggerType": "seconds",
+        "triggerAt": 300
+    }
+}

@@ -1,0 +1,5 @@
+---
+- name: Install iproute packge
+  apt:
+    name: iproute2
+    state: present

@@ -5,7 +5,7 @@ class AwsUniqueConfiguration(UniqueConfiguration):
     def __init__(self, args, suffix):
         super().__init__(args, suffix)
 
-        self.generic_unix_url = get_mandatory_arg(args, "--generic-unix-url", self.suffix)
+        self.generic_unix_url = get_optional_arg(args, "--generic-unix-url", self.suffix, "must-be-using-eks")
         self.instance = get_mandatory_arg(args, "--instance", self.suffix)
         self.volume1_iops_per_gb = get_optional_arg(args, "--volume1-iops-per-gb", self.suffix, "50") # only applicable to io1, else ignored
         self.volume2_iops_per_gb = get_optional_arg(args, "--volume2-iops-per-gb", self.suffix, "50") # only applicable to io1, else ignored
@@ -13,9 +13,9 @@ class AwsUniqueConfiguration(UniqueConfiguration):
         self.volume1_size = get_optional_arg(args, "--volume1-size", self.suffix, "50") 
         self.volume2_size = get_optional_arg(args, "--volume2-size", self.suffix, "0") 
         self.volume3_size = get_optional_arg(args, "--volume3-size", self.suffix, "0") 
-        self.volume1_type = get_optional_arg_validated(args, "--volume1-type", self.suffix, ["ebs-io1","ebs-st1","ebs-sc1","ebs-gp2","local-nvme"], "ebs-gp2") 
-        self.volume2_type = get_optional_arg_validated(args, "--volume2-type", self.suffix, ["ebs-io1","ebs-st1","ebs-sc1","ebs-gp2","local-nvme"], "ebs-gp2") 
-        self.volume3_type = get_optional_arg_validated(args, "--volume3-type", self.suffix, ["ebs-io1","ebs-st1","ebs-sc1","ebs-gp2","local-nvme"], "ebs-gp2") 
+        self.volume1_type = get_optional_arg_validated(args, "--volume1-type", self.suffix, ["ebs-io1","ebs-st1","ebs-sc1","ebs-gp2","local-nvme","pd-ssd"], "ebs-gp2") 
+        self.volume2_type = get_optional_arg_validated(args, "--volume2-type", self.suffix, ["ebs-io1","ebs-st1","ebs-sc1","ebs-gp2","local-nvme","pd-ssd"], "ebs-gp2") 
+        self.volume3_type = get_optional_arg_validated(args, "--volume3-type", self.suffix, ["ebs-io1","ebs-st1","ebs-sc1","ebs-gp2","local-nvme","pd-ssd"], "ebs-gp2") 
         self.volume1_mountpoint = get_optional_arg(args, "--volume1-mountpoint", self.suffix, "/volume1") 
         self.volume2_mountpoint = get_optional_arg(args, "--volume2-mountpoint", self.suffix, "/volume2") 
         self.volume3_mountpoint = get_optional_arg(args, "--volume3-mountpoint", self.suffix, "/volume3") 

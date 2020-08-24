@@ -75,14 +75,27 @@ def get_playlist_entries(playlist_file):
             entry.trigger_type = get_entry_mandatory_field(playlist_entry, common_attr, "triggerType")
             entry.trigger_at = get_entry_mandatory_field(playlist_entry, common_attr, "triggerAt")
 
+            if entry.broker_action == "traffic-control":
+                entry.tc_brokers = get_entry_optional_field(playlist_entry, common_attr, "tcBrokers", "all")
+                entry.tc_delay_ms = int(get_entry_optional_field(playlist_entry, common_attr, "tcDelayMs", "0"))
+                entry.tc_delay_jitter_ms = int(get_entry_optional_field(playlist_entry, common_attr, "tcDelayJitterMs", "0"))
+                entry.tc_delay_dist = get_entry_optional_field(playlist_entry, common_attr, "tcDelayDist", "normal")
+                entry.tc_bandwidth_mbit = int(get_entry_optional_field(playlist_entry, common_attr, "tcBandwidthMbit", "0"))
+                entry.tc_loss_mode = get_entry_optional_field(playlist_entry, common_attr, "tcLossMode", "none")
+                entry.tc_loss_arg1 = get_entry_optional_field(playlist_entry, common_attr, "tcLossArg1", "0%")
+                entry.tc_loss_arg2 = get_entry_optional_field(playlist_entry, common_attr, "tcLossArg2", "0%")
+                entry.tc_loss_arg3 = get_entry_optional_field(playlist_entry, common_attr, "tcLossArg3", "0%")
+                entry.tc_loss_arg4 = get_entry_optional_field(playlist_entry, common_attr, "tcLossArg4", "0%")
+
         entry.grace_period_sec = get_entry_optional_field(playlist_entry, common_attr, "gracePeriodSec", 0)
         
-
         entry.bg_topology = get_entry_optional_field(playlist_entry, common_attr, "bgTopology", "")
         entry.bg_policy = get_entry_optional_field(playlist_entry, common_attr, "bgPolicy", "")
         entry.bg_step_seconds = int(get_entry_optional_field(playlist_entry, common_attr, "bgStepSeconds", "0"))
         entry.bg_step_repeat = int(get_entry_optional_field(playlist_entry, common_attr, "bgStepRepeat", "0"))
         entry.bg_delay_seconds = int(get_entry_optional_field(playlist_entry, common_attr, "bgDelaySeconds", "0"))
+
+
         
         if not os.path.exists("../../benchmark/topologies/" + entry.topology):
             console_out("RUNNER", f"The topology file {entry.topology} does not exist")
@@ -154,13 +167,15 @@ if not common_conf.new_instance_per_run:
     broker_actions.deploy_scripts_to_all_brokers(configurations, common_conf)
 
 # repeat ([deploy], run benchmark, [teardown]) according to configuration
+tc_applied = False
+
 for i in range(common_conf.repeat_count):
     console_out("RUNNER", f"Starting run {i+1}")
 
     if common_conf.new_instance_per_run:
         deployer.deploy(runner, configurations, common_conf)
         broker_actions.deploy_scripts_to_all_brokers(configurations, common_conf)
-    
+
     # run each topology benchmark
     run_ordinal = 1
     for top_counter in range(0, len(playlist_entries)):
@@ -231,7 +246,15 @@ for i in range(common_conf.repeat_count):
                 
 
             # perform action
-            if entry.broker_action == "restart-cluster":
+            if entry.broker_action == "traffic-control":
+                if entry.tc_brokers == "all":
+                    console_out("RUNNER", "Applying traffic control to all brokers...")
+                    broker_actions.traffic_control_for_all_brokers(configurations, common_conf, entry.tc_delay_ms, entry.tc_delay_jitter_ms, entry.tc_delay_dist, entry.tc_bandwidth_mbit, entry.tc_loss_mode, entry.tc_loss_arg1, entry.tc_loss_arg2, entry.tc_loss_arg3, entry.tc_loss_arg4)
+                else:
+                    console_out("RUNNER", "Applying traffic control to one broker...")
+                    broker_actions.traffic_control_for_one_broker(configurations, common_conf, entry.tc_delay_ms, entry.tc_delay_jitter_ms, entry.tc_delay_dist, entry.tc_bandwidth_mbit, entry.tc_loss_mode, entry.tc_loss_arg1, entry.tc_loss_arg2, entry.tc_loss_arg3, entry.tc_loss_arg4)
+                tc_applied = True
+            elif entry.broker_action == "restart-cluster":
                 console_out("RUNNER", "Restarting all clusters...")
                 broker_actions.restart_all_brokers(configurations, common_conf)
             elif entry.broker_action == "restart-broker":
@@ -269,6 +292,10 @@ for i in range(common_conf.repeat_count):
                     exit(1)
 
         # wait for configuration gap seconds
+        if tc_applied:
+            broker_actions.ensure_no_traffic_control_on_all_brokers(configurations, common_conf)
+            tc_applied = False
+
         console_out("RUNNER", f"Finished {entry.topology}")
         time.sleep(common_conf.gap_seconds)
         run_ordinal += 1

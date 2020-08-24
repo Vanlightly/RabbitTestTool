@@ -9,5 +9,15 @@
         {% if raft_segment_max_entries > 0 %}
             ,{segment_max_entries, {{ raft_segment_max_entries }}}
         {% endif %}
+    ]},
+    {aten, [
+        {% if aten_heartbeat_interval > 0 and aten_poll_interval > 0 %}
+            {heartbeat_interval, {{ aten_heartbeat_interval }} },
+            {poll_interval,  {{ aten_poll_interval }} }
+        {% elif aten_heartbeat_interval > 0 %}
+            {heartbeat_interval, {{ aten_heartbeat_interval }} }
+        {% elif aten_poll_interval > 0 %}
+            {poll_interval,  {{ aten_poll_interval }} }
+        {% endif %}
     ]}
 ].
