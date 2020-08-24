@@ -4,6 +4,7 @@ import os
 import sys
 import datetime
 import re
+import glob
 
 def get_queue_name(line):
     match = re.match(".+queue \'([a-zA-Z0-9_\.-]+)\' in vhost.+", line)
@@ -69,18 +70,23 @@ date_time_str = ""
 brokers = set()
 
 files = list()
-for entry in os.listdir(log_dir):
-    if os.path.isfile(os.path.join(log_dir, entry)):
-        file_path = os.path.join(log_dir, entry)
-        if ".log" in file_path:
-            files.append(file_path)
+# for entry in os.listdir(log_dir):
+#     if os.path.isfile(os.path.join(log_dir, entry)):
+#         file_path = os.path.join(log_dir, entry)
+#         if ".log" in file_path:
+#             files.append(file_path)
+
+for filename in glob.iglob(log_dir + '**/*.log', recursive=True):
+    if not "crash.log" in filename and not "upgrade.log" in filename:
+     files.append(filename)
         
 
 for file in files:
     with open(file) as fp:
         broker_match = re.match(r".+(rabbit@[a-zA-Z0-9_\.-]+)\.log.*", file)
         if not broker_match:
-            print("Could not extract broker name from log file name")
+            print("Ignoring: " + file)
+            continue
 
         broker_name = broker_match.group(1)
         brokers.add(broker_name)
@@ -102,12 +108,18 @@ for file in files:
                 if "down" in line:
                     match = re.match(r".+rabbit on node '([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)' down.*", line)
                     if not match:
+                        match = re.match(r".+rabbit on node ([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+) down.*", line)
+
+                    if not match:
                         print("down: " + line)
                         exit(1)
                     broker_down = match.group(1)
                     events.append((date_time_str, "broker_down", broker_name, "", broker_down))    
                 elif "up" in line:
                     match = re.match(r".+rabbit on node '([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)' up.*", line)
+                    if not match:
+                        match = re.match(r".+rabbit on node ([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+) up.*", line)
+                    
                     if not match:
                         print("up: " + line)
                         exit(1)
@@ -129,12 +141,33 @@ for file in files:
                 reason = ""
                 match = re.match(r".+leader saw append_entries_reply from \{\'.+\','([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)'\}.+", line)
                 reason = "append_entries"
+                
+                if not match:
+                    match = re.match(r".+leader saw append_entries_rpc from \{\'.+\','([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)'\}.+", line)
+                    reason = "append_entries"
+
                 if not match:
                     match = re.match(r".+leader saw request_vote_rpc from \{\'.+\','([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)'\}.+", line)
                     reason = "request_vote"
 
                 if not match:
                     match = re.match(r".+leader saw pre_vote_rpc from \{\'.+\','([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)'\}.+", line)
+                    reason = "pre_vote"
+
+                if not match:
+                    match = re.match(r".+leader saw append_entries_reply from \{\'.+\',([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)\}.+", line)
+                    reason = "append_entries"
+
+                if not match:
+                    match = re.match(r".+leader saw append_entries_rpc from \{\'.+\',([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)\}.+", line)
+                    reason = "append_entries"
+
+                if not match:
+                    match = re.match(r".+leader saw request_vote_rpc from \{\'.+\',([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)\}.+", line)
+                    reason = "request_vote"
+
+                if not match:
+                    match = re.match(r".+leader saw pre_vote_rpc from \{\'.+\',([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)\}.+", line)
                     reason = "pre_vote"
                 
                 if not match:
@@ -157,6 +190,9 @@ for file in files:
                 if queue == target_queue and vhost == target_vhost:
                     match = re.match(r".+detected a new leader \{\'.+\','([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)'\}.+", line)
                     if not match:
+                        match = re.match(r".+detected a new leader \{\'.+\',([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)\}.+", line)
+
+                    if not match:
                         print("new leader: " + line)
                         exit(1)
                     new_leader = match.group(1)
@@ -167,6 +203,9 @@ for file in files:
                 term = get_term(line)
                 if queue == target_queue and vhost == target_vhost:
                     match = re.match(r".+granting vote for \{\'.+\','([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)'\}.+", line)
+                    if not match:
+                        match = re.match(r".+granting vote for \{\'.+\',([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)\}.+", line)
+
                     if not match:
                         print("vote: " + line)
                         exit(1)
@@ -195,8 +234,12 @@ for file in files:
                         reason = "timeout"
                     elif "shutdown" in full_reason:
                         reason = "shutdown"
+                    elif "delete" in full_reason:
+                        reason = "delete"
+                    elif "badmatch,{not_found" in full_reason:
+                        reason = "batch_match_not_found"
                     else:
-                        print("Unexpected reason: " + full_state)
+                        print("Unexpected reason: " + full_reason)
                         exit(1)
 
 
