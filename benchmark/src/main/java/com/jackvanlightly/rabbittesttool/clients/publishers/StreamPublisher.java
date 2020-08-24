@@ -9,8 +9,9 @@ import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.jackvanlightly.rabbittesttool.topology.model.publishers.StreamPublishMode;
-import com.rabbitmq.stream.Client;
-import com.rabbitmq.stream.MessageBatch;
+import com.rabbitmq.stream.Message;
+import com.rabbitmq.stream.impl.Client;
+import com.rabbitmq.stream.impl.MessageBatch;
 import com.rabbitmq.stream.codec.SimpleCodec;
 
 import java.io.IOException;
@@ -448,8 +449,10 @@ public class StreamPublisher implements Runnable {
                                         boolean isInitialPublish,
                                         List<MessagePayload> payloads) throws IOException, InterruptedException {
         List<byte[]> messageBodies = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
         for(MessagePayload mp : payloads) {
             byte[] body = getMessage(mp);
+            messages.add(client.messageBuilder().addData(body).build());
             messageBodies.add(body);
         }
 
@@ -458,7 +461,7 @@ public class StreamPublisher implements Runnable {
             return false;
 
         // send the messages as simple batches
-        List<Long> seqNos = client.publishBinary(fixedStreamQueue, messageBodies);
+        List<Long> seqNos = client.publish(fixedStreamQueue, messages);
         int sent = seqNos.size();
 
         // track the messages
@@ -490,7 +493,7 @@ public class StreamPublisher implements Runnable {
             byte[] body = getMessage(mp);
             totalLength += body.length;
             currBatchLength += body.length;
-            currBatch.add(body);
+            currBatch.add(client.messageBuilder().addData(body).build());
             currPayloadBatch.add(mp);
 
             // if we've past the max individual batch size and we're not on the last message,
@@ -539,8 +542,8 @@ public class StreamPublisher implements Runnable {
 
         long seqNo = client.publish(
                 fixedStreamQueue,
-                body
-        );
+                Collections.singletonList(client.messageBuilder().addData(body).build())
+        ).get(0);
 
         trackPublish(isInitialPublish, flowController, seqNo, mp, body);
         return true;

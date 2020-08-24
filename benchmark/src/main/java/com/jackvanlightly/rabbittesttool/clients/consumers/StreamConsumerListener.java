@@ -8,8 +8,8 @@ import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.model.ReceivedMessage;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.statistics.MetricType;
-import com.rabbitmq.stream.Client;
 import com.rabbitmq.stream.Message;
+import com.rabbitmq.stream.impl.Client;
 
 import java.io.IOException;
 import java.time.Duration;

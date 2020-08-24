@@ -8,7 +8,7 @@ import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.statistics.MetricType;
-import com.rabbitmq.stream.Client;
+import com.rabbitmq.stream.impl.Client;
 
 import java.util.*;
 

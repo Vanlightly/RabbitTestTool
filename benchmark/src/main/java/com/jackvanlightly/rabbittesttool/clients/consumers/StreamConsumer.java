@@ -11,9 +11,9 @@ import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.rabbitmq.stream.ChunkChecksum;
-import com.rabbitmq.stream.Client;
 import com.rabbitmq.stream.OffsetSpecification;
 import com.rabbitmq.stream.codec.SimpleCodec;
+import com.rabbitmq.stream.impl.Client;
 
 import java.io.IOException;
 import java.time.Duration;

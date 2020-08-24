@@ -5,7 +5,7 @@ import com.jackvanlightly.rabbittesttool.BrokerConfiguration;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.clients.publishers.StreamPublisherListener;
-import com.rabbitmq.stream.Client;
+import com.rabbitmq.stream.impl.Client;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
