@@ -18,6 +18,7 @@ public class MetricGroup {
     public static MetricGroup createAmqpPublisherMetricGroup() {
         Map<MetricType, MetricCounter> scalarMetrics = new HashMap<>();
         scalarMetrics.put(MetricType.PublisherBlockedConnection, new MetricCounter(MetricType.PublisherBlockedConnection));
+        scalarMetrics.put(MetricType.PublisherUnblockedConnection, new MetricCounter(MetricType.PublisherUnblockedConnection));
         scalarMetrics.put(MetricType.PublisherConfirm, new MetricCounter(MetricType.PublisherConfirm));
         scalarMetrics.put(MetricType.PublisherDeliveryMode, new MetricCounter(MetricType.PublisherDeliveryMode));
         scalarMetrics.put(MetricType.PublisherSentHeaderCount, new MetricCounter(MetricType.PublisherSentHeaderCount));

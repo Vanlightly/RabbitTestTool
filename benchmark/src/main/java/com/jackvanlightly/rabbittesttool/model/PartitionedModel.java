@@ -4,6 +4,7 @@ import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.register.BenchmarkRegister;
+import com.jackvanlightly.rabbittesttool.register.ConsoleRegister;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -29,6 +30,7 @@ public class PartitionedModel implements MessageModel {
     boolean checkConnectivity;
     boolean checkConsumeGaps;
     boolean includeRedelivered;
+    boolean isSafe;
 
     boolean logLastMsg;
     boolean logCompaction;
@@ -44,7 +46,7 @@ public class PartitionedModel implements MessageModel {
     List<ConsumeInterval> allConsumeIntervals;
     List<ConsumeInterval> unloggedConsumeIntervals;
 
-    ConcurrentMap<String, Instant> disconnectedClients;
+    ConcurrentMap<String, Disconnection> disconnectedClients;
     List<DisconnectedInterval> allDisconnectedIntervals;
     List<DisconnectedInterval> unloggedDisconnectedIntervals;
 
@@ -54,6 +56,7 @@ public class PartitionedModel implements MessageModel {
     Instant started;
     volatile double consumeAvailability;
     volatile double connectionAvailability;
+    Instant endOfDisconnectionValidity;
 
     public PartitionedModel() {
         this.enabled = false;
@@ -116,6 +119,16 @@ public class PartitionedModel implements MessageModel {
 
         for(SpanningMessageModel model : models.values())
             model.setBenchmarkId(benchmarkId);
+    }
+
+    @Override
+    public void setIsSafe(boolean isSafe) {
+        this.isSafe = isSafe;
+    }
+
+    @Override
+    public boolean isSafe() {
+        return isSafe;
     }
 
     @Override
@@ -225,11 +238,11 @@ public class PartitionedModel implements MessageModel {
             clientIds.put(clientId, true);
 
             if(disconnectedClients.containsKey(clientId)) {
-                Instant disconnectedAt = disconnectedClients.get(clientId);
+                Disconnection disconnection = disconnectedClients.get(clientId);
                 Instant now = Instant.now();
-                Duration duration = Duration.between(disconnectedAt, now);
+                Duration duration = Duration.between(disconnection.disconnectedAt, now);
                 if(duration.toMillis() > unavailabilityThresholdMs) {
-                    addDisconnectedInterval(new DisconnectedInterval(clientId, disconnectedAt, now));
+                    addDisconnectedInterval(new DisconnectedInterval(clientId, disconnection.disconnectedAt, now));
                 }
 
                 this.disconnectedClients.remove(clientId);
@@ -248,10 +261,10 @@ public class PartitionedModel implements MessageModel {
     }
 
     @Override
-    public void clientDisconnected(String clientId) {
+    public void clientDisconnected(String clientId, boolean finished) {
         if(enabled && checkConnectivity) {
             if(!disconnectedClients.containsKey(clientId))
-                disconnectedClients.put(clientId, Instant.now());
+                disconnectedClients.put(clientId, new Disconnection(Instant.now(), finished));
         }
     }
 
@@ -301,13 +314,15 @@ public class PartitionedModel implements MessageModel {
     }
 
     private void finalUnavailabilityCheck() {
-        Instant now = Instant.now();
-
-        for(Map.Entry<String, Instant> disconnectedClient : disconnectedClients.entrySet()) {
-            Instant disconnectedAt = disconnectedClient.getValue();
-            Duration duration = Duration.between(disconnectedAt, now);
-            if(duration.toMillis() > unavailabilityThresholdMs) {
-                addDisconnectedInterval(new DisconnectedInterval(disconnectedClient.getKey(), disconnectedAt, now));
+        for(Map.Entry<String, Disconnection> disconnectedClient : disconnectedClients.entrySet()) {
+            Disconnection disconnection = disconnectedClient.getValue();
+            if(!disconnection.finished) {
+                if (disconnection.disconnectedAt.isBefore(endOfDisconnectionValidity)) {
+                    Duration duration = Duration.between(disconnection.disconnectedAt, endOfDisconnectionValidity);
+                    if (duration.toMillis() > unavailabilityThresholdMs) {
+                        addDisconnectedInterval(new DisconnectedInterval(disconnectedClient.getKey(), disconnection.disconnectedAt, endOfDisconnectionValidity));
+                    }
+                }
             }
         }
     }
@@ -348,6 +363,11 @@ public class PartitionedModel implements MessageModel {
         catch(Exception e) {
             logger.error("Failed logging violations and intervals. ", e);
         }
+    }
+
+    @Override
+    public void endDisconnectionValidity() {
+        endOfDisconnectionValidity = Instant.now();
     }
 
     @Override
@@ -482,5 +502,94 @@ public class PartitionedModel implements MessageModel {
         }
 
         return seqNos;
+    }
+
+    @Override
+    public Summary generateSummary() {
+        Summary summary = new Summary();
+        summary.setCheckedConnectivity(checkConnectivity);
+        summary.setCheckedConsumeUptime(checkConsumeGaps);
+        summary.setCheckedDataloss(checkDataLoss);
+        summary.setCheckedDuplicates(checkDuplicates);
+        summary.setCheckedOrdering(checkOrdering);
+        summary.setIncludeRedeliveredInChecks(includeRedelivered);
+        summary.setSafeConfiguration(isSafe);
+        summary.setBenchmarkId(benchmarkId);
+
+        List<Violation> violations = getViolations();
+        long orderingViolations = violations.stream()
+                .filter(x -> x.getViolationType() == ViolationType.Ordering)
+                .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                .reduce(0L, Long::sum);
+        summary.setOrderingViolations(orderingViolations);
+
+        long redeliveredOrderingViolations = violations.stream()
+                .filter(x -> x.getViolationType() == ViolationType.RedeliveredOrdering)
+                .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                .reduce(0L, Long::sum);
+        summary.setRedeliveredOrderingViolations(redeliveredOrderingViolations);
+
+        long dataLossViolations = violations.stream()
+                .filter(x -> x.getViolationType() == ViolationType.Missing)
+                .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                .reduce(0L, Long::sum);
+        summary.setDatalossViolations(dataLossViolations);
+
+        long duplicationViolations = violations.stream()
+                .filter(x -> x.getViolationType() == ViolationType.NonRedeliveredDuplicate)
+                .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                .reduce(0L, Long::sum);
+        summary.setDuplicateViolations(duplicationViolations);
+
+        long redeliveredDuplicationViolations = violations.stream()
+                .filter(x -> x.getViolationType() == ViolationType.RedeliveredDuplicate)
+                .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
+                .reduce(0L, Long::sum);
+        summary.setRedeliveredDuplicateViolations(redeliveredDuplicationViolations);
+
+        summary.setPublishedCount(getFinalPublishedCount());
+        summary.setConsumedCount(getFinalConsumedCount());
+        summary.setUnconsumedRemainder(getUnconsumedRemainderCount());
+        summary.setRedeliveredCount(getFinalRedeliveredCount());
+
+        if(checkConnectivity) {
+            List<DisconnectedInterval> disconnectedIntervals = getDisconnectedIntervals();
+            summary.setConnectionAvailability(getConnectionAvailability());
+            summary.setDisconnectionPeriods(disconnectedIntervals.size());
+
+            if(!disconnectedIntervals.isEmpty()) {
+                long maxDisconnectionMs = disconnectedIntervals.stream()
+                        .map(x -> x.getDuration().toMillis())
+                        .max(Long::compareTo)
+                        .get();
+                summary.setMaxDisconnectionMs((int)maxDisconnectionMs);
+            }
+        }
+
+        if(checkConsumeGaps) {
+            List<ConsumeInterval> consumeIntervals = getConsumeIntervals();
+            summary.setConsumeAvailability(getConsumeAvailability());
+            summary.setNoConsumePeriods(consumeIntervals.size());
+
+            if(!consumeIntervals.isEmpty()) {
+                long maxNoConsumePeriod = consumeIntervals.stream()
+                        .map(x -> x.getEndMessage().getReceiveTimestamp() - x.getStartMessage().getReceiveTimestamp())
+                        .max(Long::compareTo)
+                        .get();
+                summary.setMaxNoconsumeMs((int)maxNoConsumePeriod);
+            }
+        }
+
+        return summary;
+    }
+
+    private class Disconnection {
+        public Instant disconnectedAt;
+        public boolean finished;
+
+        public Disconnection(Instant disconnectedAt, boolean finished) {
+            this.disconnectedAt = disconnectedAt;
+            this.finished = finished;
+        }
     }
 }

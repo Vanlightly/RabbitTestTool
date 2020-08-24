@@ -79,6 +79,10 @@ public class QueueHosts {
 
                     if (!nodeName.equals("")) {
                         Broker broker = brokersMap.get(nodeName);
+                        if(broker == null) {
+                            logger.info("Broker could not be determined for queue: " + queueName);
+                            continue;
+                        }
 
                         lock.writeLock().lock();
                         try {

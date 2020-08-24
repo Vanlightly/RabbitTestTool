@@ -3,18 +3,20 @@ package com.jackvanlightly.rabbittesttool.clients.consumers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
+import com.jackvanlightly.rabbittesttool.clients.SequenceLag;
 import com.jackvanlightly.rabbittesttool.clients.publishers.MessageGenerator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.model.ReceivedMessage;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.statistics.MetricType;
-import com.jackvanlightly.rabbittesttool.statistics.Stats;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -39,6 +41,8 @@ public class EventingConsumer extends DefaultConsumer {
     volatile Instant lastAckedTime;
     AtomicBoolean consumerCancelled;
     Lock ackLock;
+    long lastRecordedLatency;
+    Map<Integer, SequenceLag> sequenceLag;
 
     public EventingConsumer(String consumerId,
                             String vhost,
@@ -68,6 +72,7 @@ public class EventingConsumer extends DefaultConsumer {
 
         consumerCancelled = new AtomicBoolean();
         delTagLastAcked = -1;
+        sequenceLag = new HashMap<>();
         lastAckedTime = Instant.now();
         ackLock = new ReentrantLock();
     }
@@ -106,6 +111,9 @@ public class EventingConsumer extends DefaultConsumer {
     }
 
     public void ensureAckTimeLimitEnforced() {
+        if(ackIntervalMs == 0)
+            return;
+
         ackLock.lock();
         try {
             long msgsToAck = delTagLastReceived - delTagLastAcked;
@@ -113,11 +121,13 @@ public class EventingConsumer extends DefaultConsumer {
             Instant now = Instant.now();
             if (msgsToAck > 0 && Duration.between(lastAckedTime, now).toMillis() > ackIntervalMs) {
                 try {
-                    getChannel().basicAck(delTagLastReceived, true);
-                    delTagLastAcked = delTagLastReceived;
-                    lastAckedTime = now;
-                    metricGroup.increment(MetricType.ConsumerAckedMessages, msgsToAck);
-                    metricGroup.increment(MetricType.ConsumerAcks);
+                    if(getChannel().isOpen()) {
+                        getChannel().basicAck(delTagLastReceived, true);
+                        delTagLastAcked = delTagLastReceived;
+                        lastAckedTime = now;
+                        metricGroup.increment(MetricType.ConsumerAckedMessages, msgsToAck);
+                        metricGroup.increment(MetricType.ConsumerAcks);
+                    }
                 } catch (IOException e) {
                     logger.warn("Failed to ack on interval ms check", e);
                 }
@@ -134,22 +144,47 @@ public class EventingConsumer extends DefaultConsumer {
                                BasicProperties properties,
                                byte[] body) throws IOException {
         try {
-            this.handleMessage(envelope, properties, body, super.getChannel());
+            if(consumerTag.equals(super.getConsumerTag())) {
+                this.handleMessage(envelope, properties, body, super.getChannel());
 
-            if(processingMs > 0)
-                waitFor(processingMs);
+                if (processingMs > 0)
+                    waitFor(processingMs);
+            }
         }
         catch(AlreadyClosedException e) {
-            logger.info("Could not ack message as connection was lost");
+            //logger.info("Could not ack message as connection was lost");
             delTagLastAcked = -1;
         }
     }
 
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
         MessagePayload mp = MessageGenerator.toMessagePayload(body);
-        long lag = MessageUtils.getLag(mp.getTimestamp());
+        long now = System.nanoTime();
+        long lag = MessageUtils.getLag(now, mp.getTimestamp());
+        SequenceLag seqLag = sequenceLag.get(mp.getSequence());
+        if(seqLag == null) {
+            seqLag = new SequenceLag();
+            seqLag.totalLag = lag;
+            seqLag.measurements = 1;
+            sequenceLag.put(mp.getSequence(), seqLag);
+        }
+        else {
+            seqLag.totalLag += lag;
+            seqLag.measurements++;
+        }
+
+        if(now-lastRecordedLatency > 100000000) {
+            for(Integer sequence : sequenceLag.keySet()) {
+                SequenceLag summedSeqLag = sequenceLag.get(sequence);
+                long avgLag = summedSeqLag.totalLag / summedSeqLag.measurements;
+                metricGroup.add(MetricType.ConsumerLatencies, avgLag);
+                summedSeqLag.totalLag = 0;
+                summedSeqLag.measurements = 0;
+            }
+            lastRecordedLatency = now;
+        }
+
         messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, envelope.isRedeliver(), lag, System.currentTimeMillis()));
-        metricGroup.add(MetricType.ConsumerLatencies, lag);
 
         int headerCount = 0;
         if(properties != null && properties.getHeaders() != null)
@@ -187,11 +222,11 @@ public class EventingConsumer extends DefaultConsumer {
                     delTagLastAcked = deliveryTag;
                     metricGroup.increment(MetricType.ConsumerAcks, msgsToAck);
                 } else {
-                    Instant now = Instant.now();
-                    if (Duration.between(lastAckedTime, now).toMillis() > ackIntervalMs) {
+                    Instant instantNow = Instant.now();
+                    if (Duration.between(lastAckedTime, instantNow).toMillis() > ackIntervalMs) {
                         getChannel().basicAck(deliveryTag, true);
                         delTagLastAcked = deliveryTag;
-                        lastAckedTime = now;
+                        lastAckedTime = instantNow;
                         metricGroup.increment(MetricType.ConsumerAcks, msgsToAck);
                     }
                 }

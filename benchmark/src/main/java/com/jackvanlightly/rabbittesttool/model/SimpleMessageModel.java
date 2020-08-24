@@ -2,6 +2,7 @@ package com.jackvanlightly.rabbittesttool.model;
 
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -37,6 +38,7 @@ public class SimpleMessageModel implements MessageModel {
     private boolean checkOrdering;
     private boolean checkDataLoss;
     private boolean checkDuplicates;
+    private boolean isSafe;
 
     public SimpleMessageModel(boolean enabled) {
         this(enabled, 30, true, true, true);
@@ -69,6 +71,16 @@ public class SimpleMessageModel implements MessageModel {
 
     public void setBenchmarkId(String benchmarkId) {
         // not used
+    }
+
+    @Override
+    public void setIsSafe(boolean isSafe) {
+        this.isSafe = isSafe;
+    }
+
+    @Override
+    public boolean isSafe() {
+        return isSafe;
     }
 
     public void stopMonitoring() {
@@ -111,7 +123,7 @@ public class SimpleMessageModel implements MessageModel {
     }
 
     @Override
-    public void clientDisconnected(String clientId) {
+    public void clientDisconnected(String clientId, boolean finished) {
 
     }
 
@@ -290,5 +302,15 @@ public class SimpleMessageModel implements MessageModel {
     @Override
     public Map<Integer, FinalSeqNos> getFinalSeqNos() {
         return new HashMap<>();
+    }
+
+    @Override
+    public void endDisconnectionValidity() {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Summary generateSummary() {
+        throw new NotImplementedException();
     }
 }

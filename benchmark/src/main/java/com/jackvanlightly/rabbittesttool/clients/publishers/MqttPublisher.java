@@ -177,7 +177,7 @@ public class MqttPublisher implements Runnable {
                 client.toBlocking().disconnect();
 
                 // TODO: do I need this, doubt it
-                messageModel.clientDisconnected(publisherId);
+                messageModel.clientDisconnected(publisherId, isCancelled.get());
             }
         }
         catch(Exception e){}

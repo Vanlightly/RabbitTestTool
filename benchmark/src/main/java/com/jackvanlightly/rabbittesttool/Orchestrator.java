@@ -680,6 +680,7 @@ public class Orchestrator {
             logger.info("Grace period complete");
         }
 
+        messageModel.endDisconnectionValidity();
         logger.info("Signalling consumers to stop");
         for(ConsumerGroup consumerGroup : consumerGroups)
             consumerGroup.stopAllConsumers();

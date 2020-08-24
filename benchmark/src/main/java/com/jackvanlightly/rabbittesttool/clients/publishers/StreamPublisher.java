@@ -368,7 +368,7 @@ public class StreamPublisher implements Runnable {
     private void tryClose(Client client) {
         try {
             client.close();
-            messageModel.clientDisconnected(publisherId);
+            messageModel.clientDisconnected(publisherId, isCancelled.get());
         }
         catch(Exception e){}
     }

@@ -3,6 +3,7 @@ package com.jackvanlightly.rabbittesttool.register;
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
 import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
 import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
+import com.jackvanlightly.rabbittesttool.model.Summary;
 import com.jackvanlightly.rabbittesttool.model.Violation;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 
@@ -35,6 +36,8 @@ public interface BenchmarkRegister {
                                                  String technology,
                                                  String version,
                                                  String configTag);
+
+    void logModelSummary(Summary sumary);
     void logViolations(String benchmarkId, List<Violation> violations);
     void logConsumeIntervals(String benchmarkId,
                              List<ConsumeInterval> consumeIntervals,

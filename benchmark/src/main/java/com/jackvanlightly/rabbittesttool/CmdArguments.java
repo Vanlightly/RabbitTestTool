@@ -132,16 +132,24 @@ public class CmdArguments {
 
     public CmdArguments(String[] args) {
 
+        List<String> argsList = new ArrayList<>();
+        for(String arg : args) {
+            for(String a1 : arg.split(" ")) {
+                if(!a1.equals("=") && !a1.trim().equals(""))
+                    argsList.add(a1);
+            }
+        }
+
         int startPos = 0;
         this.arguments = new HashMap<>();
-        if(args.length % 2 != 0) {
-            if(args[0].equals("help")) {
+        if(argsList.size() % 2 != 0) {
+            if(argsList.get(0).equals("help")) {
                 startPos = 1;
                 helpRequested = true;
             }
             else {
                 StringBuilder sb = new StringBuilder();
-                for(String arg : args)
+                for(String arg : argsList)
                     sb.append(arg + " ");
                 LOGGER.info(sb.toString());
                 throw new CmdArgumentException("You have supplied an odd number of arguments. Arguments are expected in --key value format. Use the help argument for more information.");
@@ -149,9 +157,9 @@ public class CmdArguments {
         }
 
         // load any config file arguments first
-        for(int i=startPos; i<args.length-1; i+=2) {
-            if (args[i].equals("--config-file")) {
-                JSONObject configJson = loadJson(args[i + 1]);
+        for(int i=startPos; i<argsList.size()-1; i+=2) {
+            if (argsList.get(i).equals("--config-file")) {
+                JSONObject configJson = loadJson(argsList.get(i + 1));
                 for (String key : configJson.keySet()) {
                     arguments.put("--" + key, configJson.getString(key));
                 }
@@ -159,9 +167,9 @@ public class CmdArguments {
         }
 
         // load arguments from command line, overwriting any that were already loaded from file
-        for(int i=startPos; i<args.length-1; i+=2) {
-            if (!args[i].equals("--config-file"))
-                arguments.put(args[i], args[i + 1]);
+        for(int i=startPos; i<argsList.size()-1; i+=2) {
+            if (!argsList.get(i).equals("--config-file"))
+                arguments.put(argsList.get(i), argsList.get(i + 1));
         }
     }
 

@@ -382,7 +382,7 @@ public class Publisher implements Runnable {
                 connection.close();
             }
 
-            messageModel.clientDisconnected(publisherId);
+            messageModel.clientDisconnected(publisherId, isCancelled.get());
         }
         catch(Exception e){}
     }

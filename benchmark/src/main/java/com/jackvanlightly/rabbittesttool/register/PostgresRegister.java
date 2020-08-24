@@ -1,10 +1,7 @@
 package com.jackvanlightly.rabbittesttool.register;
 
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
-import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
-import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
-import com.jackvanlightly.rabbittesttool.model.Violation;
-import com.jackvanlightly.rabbittesttool.model.ViolationType;
+import com.jackvanlightly.rabbittesttool.model.*;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 import com.jackvanlightly.rabbittesttool.topology.model.TopologyType;
 import org.postgresql.util.PGobject;
@@ -19,6 +16,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.summarizingDouble;
 
 public class PostgresRegister implements BenchmarkRegister {
     String jdbcUrl;
@@ -162,7 +160,7 @@ public class PostgresRegister implements BenchmarkRegister {
         if(printLiveStats) {
             Instant now = Instant.now();
             if(Duration.between(lastPrintedLiveStats, now).toMillis() > printLiveStatsInterval.toMillis()) {
-                System.out.println(MessageFormat.format("At seconds: {0,number,#}/{1,number,#}: Msgs Sent={2,number,#}, Bytes Sent={3,number,#},Msgs Received={3,number,#}, Bytes Received={4,number,#}",
+                System.out.println(MessageFormat.format("At seconds: {0,number,#}/{1,number,#}: Msgs Sent={2,number,#}, Bytes Sent={3,number,#},Msgs Received={4,number,#}, Bytes Received={5,number,#}",
                         stepStatistics.getRecordingSeconds(),
                         stepStatistics.getDurationSeconds(),
                         stepStatistics.getSentCount(),
@@ -483,7 +481,7 @@ public class PostgresRegister implements BenchmarkRegister {
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException("Failed logging benchmark start", e);
+            throw new RuntimeException("Failed getting step statistics", e);
         }
 
         return stepStatistics;
@@ -530,7 +528,7 @@ public class PostgresRegister implements BenchmarkRegister {
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException("Failed logging benchmark start", e);
+            throw new RuntimeException("Failed getting instance configuration", e);
         }
 
         return null;
@@ -607,6 +605,67 @@ public class PostgresRegister implements BenchmarkRegister {
                 .map(x -> x.get(0))
                 .sorted(Comparator.comparing(BenchmarkMetaData::getRunOrdinal))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void logModelSummary(Summary summary) {
+       String query = "INSERT INTO model_summary (" +
+                "benchmark_id," +
+                "published_count," +
+                "consumed_count," +
+                "unconsumed_remainder," +
+                "redelivered_count," +
+                "checked_ordering," +
+                "checked_dataloss," +
+                "checked_duplicates," +
+                "checked_connectivity," +
+                "checked_consume_uptime," +
+                "include_redelivered_in_checks," +
+                "safe_config_used," +
+                "ordering_violations," +
+                "dataloss_violations," +
+                "duplicate_violations," +
+                "redelivered_ordering_violations," +
+                "redelivered_duplicate_violations," +
+                "connection_availability," +
+                "disconnection_periods," +
+                "max_disconnection_ms," +
+                "consume_availability," +
+                "no_consume_periods," +
+                "max_noconsume_ms)\n" +
+               "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        try (Connection con = tryGetConnection();
+             PreparedStatement pst = con.prepareStatement(query)) {
+
+            pst.setObject(1, UUID.fromString(summary.getBenchmarkId()));
+            pst.setLong(2, summary.getPublishedCount());
+            pst.setLong(3, summary.getConsumedCount());
+            pst.setLong(4, summary.getUnconsumedRemainder());
+            pst.setLong(5, summary.getRedeliveredCount());
+            pst.setBoolean(6, summary.isCheckedOrdering());
+            pst.setBoolean(7, summary.isCheckedDataloss());
+            pst.setBoolean(8, summary.isCheckedDuplicates());
+            pst.setBoolean(9, summary.isCheckedConnectivity());
+            pst.setBoolean(10, summary.isCheckedConsumeUptime());
+            pst.setBoolean(11, summary.isIncludeRedeliveredInChecks());
+            pst.setBoolean(12, summary.isSafeConfiguration());
+            pst.setLong(13, summary.getOrderingViolations());
+            pst.setLong(14, summary.getDatalossViolations());
+            pst.setLong(15, summary.getDuplicateViolations());
+            pst.setLong(16, summary.getRedeliveredOrderingViolations());
+            pst.setLong(17, summary.getRedeliveredDuplicateViolations());
+            pst.setDouble(18, summary.getConnectionAvailability());
+            pst.setInt(19, summary.getDisconnectionPeriods());
+            pst.setInt(20, summary.getMaxDisconnectionMs());
+            pst.setDouble(21, summary.getConsumeAvailability());
+            pst.setInt(22, summary.getNoConsumePeriods());
+            pst.setInt(23, summary.getMaxNoconsumeMs());
+
+            pst.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed logging model summary", e);
+        }
     }
 
     @Override

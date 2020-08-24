@@ -407,7 +407,7 @@ public class TopologyGenerator {
                 String json = EntityUtils.toString(response.getEntity(), "UTF-8");
                 client.close();
 
-                for(int fixAttempt=0; fixAttempt<10; fixAttempt++) {
+                for(int fixAttempt=0; fixAttempt<1000; fixAttempt++) {
                     try {
                         return new JSONArray(json);
                     } catch (JSONException je) {
@@ -427,6 +427,8 @@ public class TopologyGenerator {
                         }
                     }
                 }
+
+                lastEx = new TopologyException("Reached the JSON fix limit for GET" + url);
             } catch (Exception e) {
                 lastEx = new TopologyException("An exception occurred executing GET " + url, e);
             }

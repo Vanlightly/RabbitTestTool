@@ -1,10 +1,7 @@
 package com.jackvanlightly.rabbittesttool.register;
 
 import com.jackvanlightly.rabbittesttool.InstanceConfiguration;
-import com.jackvanlightly.rabbittesttool.model.ConsumeInterval;
-import com.jackvanlightly.rabbittesttool.model.DisconnectedInterval;
-import com.jackvanlightly.rabbittesttool.model.Violation;
-import com.jackvanlightly.rabbittesttool.model.ViolationType;
+import com.jackvanlightly.rabbittesttool.model.*;
 import com.jackvanlightly.rabbittesttool.topology.model.Topology;
 
 import java.io.FileWriter;
@@ -112,6 +109,11 @@ public class FileRegister implements BenchmarkRegister {
     @Override
     public List<BenchmarkMetaData> getBenchmarkMetaData(String runId, String technology, String version, String configTag) {
         return null;
+    }
+
+    @Override
+    public void logModelSummary(Summary sumary) {
+        // TODO
     }
 
     @Override

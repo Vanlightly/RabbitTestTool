@@ -215,78 +215,50 @@ public class AMQPBenchmarker {
             messageModel.stopMonitoring();
             modelExecutor.shutdown();
 
-            List<Violation> violations = messageModel.getViolations();
-            long orderingViolations = violations.stream()
-                    .filter(x -> x.getViolationType() == ViolationType.Ordering)
-                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
-                    .reduce(0L, Long::sum);
-            long redeliveredOrderingViolations = violations.stream()
-                    .filter(x -> x.getViolationType() == ViolationType.RedeliveredOrdering)
-                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
-                    .reduce(0L, Long::sum);
-            long dataLossViolations = violations.stream()
-                    .filter(x -> x.getViolationType() == ViolationType.Missing)
-                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
-                    .reduce(0L, Long::sum);
-            long duplicationViolations = violations.stream()
-                    .filter(x -> x.getViolationType() == ViolationType.NonRedeliveredDuplicate)
-                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
-                    .reduce(0L, Long::sum);
-            long redeliveredDuplicationViolations = violations.stream()
-                    .filter(x -> x.getViolationType() == ViolationType.RedeliveredDuplicate)
-                    .map(x -> x.getMessagePayload() != null ? 1 : x.getSpan().size())
-                    .reduce(0L, Long::sum);
-
-
-            List<ConsumeInterval> consumeIntervals = messageModel.getConsumeIntervals();
-            List<DisconnectedInterval> disconnectedIntervals = messageModel.getDisconnectedIntervals();
+            Summary summary = messageModel.generateSummary();
+            benchmarkRegister.logModelSummary(summary);
 
             mainLogger.info("-------------------------------------------------------");
             mainLogger.info("---------- SUMMARY ------------------------------------");
             mainLogger.info("Run ID: " + runId + ", BenchmarkId: " + benchmarkId);
-            mainLogger.info("Published Count: " + messageModel.getFinalPublishedCount());
-            mainLogger.info("Consumed Count: " + messageModel.getFinalConsumedCount());
-            mainLogger.info("Unconsumed Remainder Count: " + messageModel.getUnconsumedRemainderCount());
-            mainLogger.info("Redelivered Message Count: " + messageModel.getFinalRedeliveredCount());
+            mainLogger.info("Safe configuration: " + summary.isSafeConfiguration());
+            mainLogger.info("Published Count: " + summary.getPublishedCount());
+            mainLogger.info("Consumed Count: " + summary.getConsumedCount());
+            mainLogger.info("Unconsumed Remainder Count: " + summary.getUnconsumedRemainder());
+            mainLogger.info("Redelivered Message Count: " + summary.getRedeliveredCount());
 
             if(checkOrdering)
-                mainLogger.info("Ordering Property Violations: " + orderingViolations);
+                mainLogger.info("Ordering Property Violations: " + summary.getOrderingViolations());
             else
                 mainLogger.info("No Ordering Property Violation Checks");
 
             if(checkDataLoss)
-                mainLogger.info("Data Loss Property Violations: " + dataLossViolations);
+                mainLogger.info("Data Loss Property Violations: " + summary.getDatalossViolations());
             else
                 mainLogger.info("No Data Loss Property Checks");
 
             if(checkDuplicates)
-                mainLogger.info("Non-Redelivered Duplicate Property Violations: " + duplicationViolations);
+                mainLogger.info("Non-Redelivered Duplicate Property Violations: " + summary.getDuplicateViolations());
             else
                 mainLogger.info("No Duplicate Property Checks");
 
             if(checkConnectivity) {
-                mainLogger.info("Connection availability: " + messageModel.getConnectionAvailability());
-                mainLogger.info("Disconnection periods: " + disconnectedIntervals.size());
+                mainLogger.info("Connection availability: " + summary.getConnectionAvailability() + "%");
+                mainLogger.info("Disconnection periods: " + summary.getDisconnectionPeriods());
 
-                if(!disconnectedIntervals.isEmpty()) {
-                    mainLogger.info("Max disconnection ms: " + disconnectedIntervals.stream()
-                            .map(x -> x.getDuration().toMillis())
-                            .max(Long::compareTo)
-                            .get());
+                if(summary.getDisconnectionPeriods() > 0) {
+                    mainLogger.info("Max disconnection ms: " + summary.getMaxDisconnectionMs());
                 }
             }
             else
                 mainLogger.info("Connectivity not measured");
 
             if(checkConsumeGaps) {
-                mainLogger.info("Consume availability: " + messageModel.getConsumeAvailability());
-                mainLogger.info("No consume periods: " + consumeIntervals.size());
+                mainLogger.info("Consume availability: " + summary.getConsumeAvailability());
+                mainLogger.info("No consume periods: " + summary.getNoConsumePeriods());
 
-                if(!consumeIntervals.isEmpty()) {
-                    mainLogger.info("Max consume gap ms: " + consumeIntervals.stream()
-                            .map(x -> x.getEndMessage().getReceiveTimestamp() - x.getStartMessage().getReceiveTimestamp())
-                            .max(Long::compareTo)
-                            .get());
+                if(summary.getNoConsumePeriods() > 0) {
+                    mainLogger.info("Max consume gap ms: " + summary.getMaxNoconsumeMs());
                 }
             }
             else
@@ -301,7 +273,7 @@ public class AMQPBenchmarker {
             }
 
 
-            if(dataLossViolations > 0 && messageModel.getUnconsumedRemainderCount() > 0) {
+            if(summary.getDatalossViolations() > 0 && summary.getUnconsumedRemainder() > 0) {
                 mainLogger.info("!!!!!!!!!");
                 mainLogger.info("WARNING: Leaving unconsumed messages can cause false positive data loss violations." + System.lineSeparator()
                         + " False positives can occur when all the following conditions are met:" + System.lineSeparator()
@@ -315,8 +287,8 @@ public class AMQPBenchmarker {
                 mainLogger.info("-------------------------------------------------------");
                 mainLogger.info("---------- REDELIVERED MESSAGES INCLUDED IN CHECKS ----");
                 mainLogger.info("Note that RabbitMQ provides no ordering or duplication guarantees with redelivered messages");
-                mainLogger.info("Redelivered duplicates: " + redeliveredDuplicationViolations);
-                mainLogger.info("Redelivered ordering issues: " + redeliveredOrderingViolations);
+                mainLogger.info("Redelivered duplicates: " + summary.getRedeliveredDuplicateViolations());
+                mainLogger.info("Redelivered ordering issues: " + summary.getRedeliveredOrderingViolations());
             }
 
 
@@ -337,11 +309,11 @@ public class AMQPBenchmarker {
             if(!zeroExitCode) {
                 if (messageModel.getFinalPublishedCount() == 0 || messageModel.getFinalConsumedCount() == 0)
                     System.exit(3);
-                else if (dataLossViolations == 0 && consumeIntervals.isEmpty())
+                else if (summary.getDatalossViolations() == 0 && summary.getNoConsumePeriods() == 0)
                     System.exit(0);
-                else if (dataLossViolations > 0)
+                else if (summary.getDatalossViolations() > 0)
                     System.exit(4);
-                else if (consumeIntervals.isEmpty())
+                else if (summary.getNoConsumePeriods() == 0)
                     System.exit(5);
                 else
                     System.exit(6);
@@ -389,7 +361,7 @@ public class AMQPBenchmarker {
                         arguments.getStr("--postgres-user"),
                         arguments.getStr("--postgres-pwd"),
                         brokerConfig.getNodeNames().get(0),
-                        arguments.getStr("--run-id"),
+                        arguments.getStr("--run-id", UUID.randomUUID().toString()),
                         arguments.getStr("--run-tag"),
                         arguments.getStr("--config-tag"),
                         arguments.getBoolean("--print-live-stats", true),
@@ -470,8 +442,10 @@ public class AMQPBenchmarker {
                         x.getPublishers().stream().anyMatch(p -> !p.getPublisherMode().isUseConfirms())
                                 || x.getConsumers().stream().anyMatch(c -> !c.getAckMode().isManualAcks()));
 
-                if (unsafe && mode.equals("model"))
+                if (unsafe && mode.equals("model")) {
+                    messageModel.setIsSafe(!unsafe);
                     logger.warn("!!!WARNING!!! Model mode with unsafe clients detected. There are publishers and/or consumers without confirms/acks. Model mode may report data loss");
+                }
 
                 TopologyGenerator topologyGenerator = new TopologyGenerator(connectionSettings, brokerConfig);
 
@@ -656,13 +630,26 @@ public class AMQPBenchmarker {
             throw new TopologyException("Less nodes are online than indicated by command line arguments");
 
         List<Broker> hosts = new ArrayList<>();
-        for(int i=0; i<ipAndPorts.size(); i++) {
-            Broker b = new Broker(ipAndPorts.get(i).split(":")[0],
-                    ipAndPorts.get(i).split(":")[1],
-                    nodeNames.get(i),
-                    streamPorts.size() == ipAndPorts.size() ? streamPorts.get(i) : "5555");
+        if(ipAndPorts.size() == 1 && nodeNames.size() > 1) {
+            // this will be because we are connected via a load balancer
+            for (int i = 0; i < nodeNames.size(); i++) {
+                Broker b = new Broker(ipAndPorts.get(0).split(":")[0],
+                        ipAndPorts.get(0).split(":")[1],
+                        nodeNames.get(i),
+                        streamPorts.size() == ipAndPorts.size() ? streamPorts.get(0) : "5555");
 
-            hosts.add(b);
+                hosts.add(b);
+            }
+        }
+        else {
+            for (int i = 0; i < ipAndPorts.size(); i++) {
+                Broker b = new Broker(ipAndPorts.get(i).split(":")[0],
+                        ipAndPorts.get(i).split(":")[1],
+                        nodeNames.get(i),
+                        streamPorts.size() == ipAndPorts.size() ? streamPorts.get(i) : "5555");
+
+                hosts.add(b);
+            }
         }
 
         return hosts;

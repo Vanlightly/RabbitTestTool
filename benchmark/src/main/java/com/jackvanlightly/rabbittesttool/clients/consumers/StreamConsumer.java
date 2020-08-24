@@ -128,12 +128,12 @@ public class StreamConsumer implements Runnable  {
                 if(!isCancelled.get())
                     metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " connection failed in step " + step);
-                messageModel.clientDisconnected(consumerId);
+                messageModel.clientDisconnected(consumerId, isCancelled.get());
             } catch (Exception e) {
                 if(!isCancelled.get())
                     metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " has failed unexpectedly in step " + step, e);
-                messageModel.clientDisconnected(consumerId);
+                messageModel.clientDisconnected(consumerId, isCancelled.get());
             }
 
             if(!isCancelled.get()) {
@@ -144,7 +144,7 @@ public class StreamConsumer implements Runnable  {
 
     private void tryClose(Client client) {
         try {
-            messageModel.clientDisconnected(consumerId);
+            messageModel.clientDisconnected(consumerId, isCancelled.get());
             client.close();
         }
         catch(Exception e){}

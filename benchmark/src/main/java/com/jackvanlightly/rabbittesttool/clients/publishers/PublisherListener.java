@@ -4,6 +4,8 @@ import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.FlowController;
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 import com.jackvanlightly.rabbittesttool.clients.MessageUtils;
+import com.jackvanlightly.rabbittesttool.clients.SequenceLag;
+import com.jackvanlightly.rabbittesttool.clients.consumers.EventingConsumer;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.statistics.MetricType;
@@ -26,6 +28,8 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     Set<MessagePayload> undeliverable;
     AtomicInteger pendingConfirmCount;
     Lock timeoutLock;
+    long lastRecordedLatency;
+    Map<Integer, SequenceLag> sequenceLag;
 
     public PublisherListener(MessageModel messageModel,
                              MetricGroup metricGroup,
@@ -37,6 +41,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
         this.undeliverable = new HashSet<>();
         this.pendingConfirmCount = new AtomicInteger();
         this.timeoutLock = new ReentrantLock();
+        this.sequenceLag = new HashMap<>();
     }
 
     public void checkForTimeouts(long confirmTimeoutThresholdNs) {
@@ -51,11 +56,20 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
         long currentTime = MessageUtils.getTimestamp();
         List<MessagePayload> confirmedList = flowController.confirmAmqpMessages(seqNo, multiple);
         int numConfirms = confirmedList.size();
-        long[] latencies = new long[numConfirms];
-        int index = 0;
+
         for (MessagePayload mp : confirmedList) {
-            latencies[index] = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
-            index++;
+            long lag = MessageUtils.getDifference(mp.getTimestamp(), currentTime);
+            SequenceLag seqLag = sequenceLag.get(mp.getSequence());
+            if(seqLag == null) {
+                seqLag = new SequenceLag();
+                seqLag.totalLag = lag;
+                seqLag.measurements = 1;
+                sequenceLag.put(mp.getSequence(), seqLag);
+            }
+            else {
+                seqLag.totalLag += lag;
+                seqLag.measurements++;
+            }
 
             if (!undeliverable.contains(mp))
                 messageModel.sent(mp);
@@ -65,8 +79,19 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
 
         if (numConfirms > 0) {
             metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
-            metricGroup.add(MetricType.PublisherConfirmLatencies, latencies);
             pendingConfirmCount.set(flowController.getPendingCount());
+
+            long now = System.currentTimeMillis();
+            if(now-lastRecordedLatency > 100000000) {
+                for(Integer sequence : sequenceLag.keySet()) {
+                    SequenceLag summedSeqLag = sequenceLag.get(sequence);
+                    long avgLag = summedSeqLag.totalLag / summedSeqLag.measurements;
+                    metricGroup.add(MetricType.PublisherConfirmLatencies, avgLag);
+                    summedSeqLag.totalLag = 0;
+                    summedSeqLag.measurements = 0;
+                }
+                lastRecordedLatency = now;
+            }
         }
 
 //            int numConfirms = 0;

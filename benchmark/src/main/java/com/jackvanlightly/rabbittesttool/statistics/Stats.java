@@ -93,6 +93,7 @@ public class Stats {
     protected long elapsedInterval;
     protected long elapsedTotal;
     protected long lastStatsTime;
+    protected long lastPrintTimeTemp;
 
     protected Histogram latencies = new MetricRegistry().histogram("latency");
     protected Histogram confirmLatencies = new MetricRegistry().histogram("confirm-latency");
@@ -118,6 +119,7 @@ public class Stats {
         this.metricsPrefix = metricsPrefix;
         startTime = System.currentTimeMillis();
         lastStatsTime = System.currentTimeMillis();
+        lastPrintTimeTemp = System.currentTimeMillis();
 
         metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
         List<Tag> tags = getTags(brokerConfig);
@@ -209,20 +211,18 @@ public class Stats {
     }
 
     private void startReportTimer(){
-        TimerTask repeatedTask = new TimerTask() {
-            public void run() {
-                try {
-                    report();
-                }
-                catch(Exception e) {
-                    logger.error("Statistics reporting error", e);
-                }
+        Runnable repeatedTask = () -> {
+            try {
+                report();
+            }
+            catch(Exception e) {
+                logger.error("Statistics reporting error", e);
             }
         };
         reportExecutor = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ReportStats"));
         long delay  = 100L;
         long period = 100L;
-        reportExecutor.scheduleAtFixedRate(repeatedTask, delay, period, TimeUnit.MILLISECONDS);
+        reportExecutor.scheduleWithFixedDelay(repeatedTask, delay, period, TimeUnit.MILLISECONDS);
     }
 
     public void close() {
@@ -263,15 +263,17 @@ public class Stats {
         return newTags;
     }
 
-    private void report() {
-        long now = System.currentTimeMillis();
-        elapsedInterval = now - lastStatsTime;
+    private synchronized void report() {
         gatherStats();
 
-        if (now - lastStatsTime > samplingIntervalMs) {
+//        if (System.currentTimeMillis() - lastPrintTimeTemp > 100) {
+//            logger.info("Sent: " + sendCountInterval + " Received: " + recvCountInterval);
+//            lastPrintTimeTemp = System.currentTimeMillis();
+//        }
+
+        if (System.currentTimeMillis() - lastStatsTime > samplingIntervalMs) {
             recordStats();
             reset();
-            lastStatsTime = now;
         }
     }
 
@@ -395,6 +397,7 @@ public class Stats {
     }
 
     private void recordStats() {
+        elapsedInterval = System.currentTimeMillis() - lastStatsTime;
         recordPublisherCount(currentPublisherCount);
         recordConsumerCount(currentConsumerCount);
         recordQueueCount(currentQueueCount);
@@ -523,6 +526,8 @@ public class Stats {
         blockedPublisherConnectionInterval = 0;
         unblockedPublisherConnectionInterval = 0;
         routingKeyLengthInterval = 0;
+
+        lastStatsTime = System.currentTimeMillis();
     }
 
     public void setConsumerCount(int consumerCount) {

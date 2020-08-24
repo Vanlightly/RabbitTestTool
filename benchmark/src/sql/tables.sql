@@ -124,3 +124,32 @@ CREATE TABLE public.disconnected_intervals
     end_ms bigint NOT NULL,
     CONSTRAINT disconnected_intervals_pkey PRIMARY KEY (benchmark_id, interval_id)
 );
+
+create table public.model_summary
+(
+	benchmark_id uuid not null
+		constraint model_summary_pk1
+			primary key,
+	published_count bigint not null,
+	consumed_count bigint not null,
+	unconsumed_remainder bigint not null,
+	redelivered_count bigint not null,
+	checked_ordering boolean not null,
+	checked_dataloss boolean not null,
+	checked_duplicates boolean not null,
+	checked_connectivity boolean not null,
+	checked_consume_uptime boolean not null,
+	include_redelivered_in_checks boolean not null,
+	safe_config_used boolean not null,
+	ordering_violations bigint not null,
+	dataloss_violations bigint not null,
+	duplicate_violations bigint not null,
+	redelivered_ordering_violations bigint not null,
+	redelivered_duplicate_violations bigint not null,
+    connection_availability numeric(5, 2) not null,
+    disconnection_periods integer not null,
+    max_disconnection_ms integer not null,
+    consume_availability numeric(5, 2) not null,
+    no_consume_periods integer not null,
+    max_noconsume_ms integer not null
+);

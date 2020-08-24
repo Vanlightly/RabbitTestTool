@@ -20,7 +20,7 @@
     { "name": "consumerPrefetch", "default": "1000" },
     { "name": "globalPrefetch", "default": "false" },
     { "name": "ackInterval", "default": "1" },
-    { "name": "ackIntervalMs", "default": "1000" },
+    { "name": "ackIntervalMs", "default": "0" },
     { "name": "processingMs", "default": "0" },
     { "name": "requeueEveryNth", "default": "0" },
     { "name": "queueMode", "default": "default" },

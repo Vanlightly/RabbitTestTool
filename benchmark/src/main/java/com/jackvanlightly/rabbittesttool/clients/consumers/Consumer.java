@@ -1,14 +1,11 @@
 package com.jackvanlightly.rabbittesttool.clients.consumers;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
-import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
-import com.jackvanlightly.rabbittesttool.clients.ConnectToNode;
-import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
+import com.jackvanlightly.rabbittesttool.clients.*;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.statistics.MetricType;
 import com.jackvanlightly.rabbittesttool.topology.Broker;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
-import com.jackvanlightly.rabbittesttool.clients.WithNagleSocketConfigurator;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.topology.TopologyException;
 import com.rabbitmq.client.*;
@@ -115,16 +112,19 @@ public class Consumer implements Runnable  {
                 } finally {
                     tryClose(connection);
                 }
+            } catch(ClientCancelledException e) {
+                // do nothing
+                messageModel.clientDisconnected(consumerId, isCancelled.get());
             } catch (TimeoutException | IOException e) {
                 if(!isCancelled.get())
                     metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " connection failed in step " + step);
-                messageModel.clientDisconnected(consumerId);
+                messageModel.clientDisconnected(consumerId, isCancelled.get());
             } catch (Exception e) {
                 if(!isCancelled.get())
                     metricGroup.increment(MetricType.ConsumerConnectionErrors);
                 logger.error("Consumer " + consumerId + " has failed unexpectedly in step " + step, e);
-                messageModel.clientDisconnected(consumerId);
+                messageModel.clientDisconnected(consumerId, isCancelled.get());
             }
 
             if(!isCancelled.get()) {
@@ -135,7 +135,7 @@ public class Consumer implements Runnable  {
 
     private void tryClose(Connection connection) {
         try {
-            messageModel.clientDisconnected(consumerId);
+            messageModel.clientDisconnected(consumerId, isCancelled.get());
             if (connection != null && connection.isOpen()) {
                 connection.close(AMQP.REPLY_SUCCESS, "Closed by RabbitTestTool", 3000);
             }
@@ -173,11 +173,9 @@ public class Consumer implements Runnable  {
                     consumerSettings.getAckMode().getRequeueEveryNth());
 
             String consumerTag = channel.basicConsume(consumerSettings.getQueue(), autoAck, eventingConsumer);
-            logger.info("Consumer " + consumerId + " consuming with tag: " + consumerTag + " from " + currentHost.getNodeName());
+            logger.info("Consumer " + consumerId + " consuming queue " + consumerSettings.getQueue() + " with tag: " + consumerTag + " from " + currentHost.getNodeName());
 
             while (!isCancelled.get() && currentStep.equals(step) && channel.isOpen() && !eventingConsumer.isConsumerCancelled()) {
-                ClientUtils.waitFor(1000, this.isCancelled);
-
                 if(reconnectToNewHost()) {
                     exitReason = ConsumerExitReason.Cancelled;
                     break;
@@ -185,6 +183,8 @@ public class Consumer implements Runnable  {
 
                 if(consumerSettings.getAckMode().isManualAcks())
                     eventingConsumer.ensureAckTimeLimitEnforced();
+
+                ClientUtils.waitFor(1000, this.isCancelled);
             }
 
             if(isCancelled.get() && consumerSettings.getAckMode().isManualAcks())
@@ -198,6 +198,9 @@ public class Consumer implements Runnable  {
                 else
                     exitReason = ConsumerExitReason.ConnectionFailed;
             }
+        }
+        catch(ClientCancelledException e) {
+            // do nothing
         }
         catch(Exception e) {
             logger.error("Failed setting up a consumer", e);
@@ -272,7 +275,10 @@ public class Consumer implements Runnable  {
                 ClientUtils.waitFor(1000, isCancelled);
         }
 
-        throw new TopologyException("Could not identify a broker to connect to");
+        if(!isCancelled.get())
+            throw new TopologyException("Could not identify a broker to connect to");
+        else
+            throw new ClientCancelledException("Consumer " + consumerId + " has been cancelled");
     }
 
     private boolean reconnectToNewHost() {

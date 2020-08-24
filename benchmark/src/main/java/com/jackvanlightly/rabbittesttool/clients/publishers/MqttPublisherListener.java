@@ -61,7 +61,7 @@ public class MqttPublisherListener implements MqttClientConnectedListener, MqttC
 
     @Override
     public void onDisconnected(MqttClientDisconnectedContext mqttClientDisconnectedContext) {
-        messageModel.clientDisconnected(publisherId);
+        messageModel.clientDisconnected(publisherId, false); //TODO isCancelled.get()
         this.isConnected.set(false);
     }
 
