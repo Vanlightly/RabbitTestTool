@@ -1,7 +1,7 @@
 #!/bin/bash
-
-kubectl apply -f manifests/operator/namespace.yaml
-kubectl apply -f manifests/operator/rbac.yaml
-kubectl apply -f manifests/operator/crd.yaml
-kubectl apply -f manifests/operator/deployment.yaml
+K_CONTEXT=$1
+kubectl --context ${K_CONTEXT} apply -f manifests/operator/namespace.yaml
+kubectl --context ${K_CONTEXT} apply -f manifests/operator/rbac.yaml
+kubectl --context ${K_CONTEXT} apply -f manifests/operator/crd.yaml
+kubectl --context ${K_CONTEXT} apply -f manifests/operator/deployment.yaml
 

@@ -1,0 +1,20 @@
+{
+    "benchmarks": [
+        { "topology": "exchanges/fanout-safe.json" }
+    ],
+    "commonAttributes": {
+        "topologyVariables": { 
+            "publisherCount": "1", 
+            "queueCount": "3", 
+            "consumerCount": "3",
+            "ackInterval": "1",
+            "messageSize": "100",
+            "publishRate": "100",
+            "durationSeconds": "72000"
+        },
+        "policy": "quorum-queue.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "10000"
+        }
+    }
+}

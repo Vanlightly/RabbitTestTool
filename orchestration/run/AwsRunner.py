@@ -33,8 +33,17 @@ class AwsRunner(Runner):
             federation_args += f"--downstream-broker-hosts {ds_broker_ips}"
 
         script = "run-logged-aws-benchmark.sh"
-        if unique_conf.deployment == "eks" or unique_conf.deployment == "gke":
+        # TODO: make these contexts not use hard-coded regions and cluster names
+        if unique_conf.deployment == "eks":
+            context = f"{unique_conf.deployment_user}@benchmarking-eks.eu-west-1.eksctl.io"
             script = "run-logged-aws-k8s-benchmark.sh"
+        elif unique_conf.deployment == "gke":
+            context = f"gke_{unique_conf.deployment_user}_europe-west4-a_benchmarking-gke"
+            script = "run-logged-aws-k8s-benchmark.sh"
+        else:
+            context = "none"
+
+        cluster_name = f"rmq-{unique_conf.deployment}"
 
         self._benchmark_status[status_id] = "started"
         exit_code = subprocess.call(["bash", script, 
@@ -70,7 +79,7 @@ class AwsRunner(Runner):
                                 unique_conf.pub_connect_to_node,
                                 unique_conf.con_connect_to_node,
                                 common_conf.mode,
-                                str(playlist_entry.grace_period_sec),
+                                str(common_conf.grace_period_sec),
                                 common_conf.warmUpSeconds,
                                 common_conf.checks,
                                 str(run_ordinal),
@@ -79,7 +88,10 @@ class AwsRunner(Runner):
                                 common_conf.influx_subpath,
                                 playlist_entry.get_topology_variables(),
                                 playlist_entry.get_policy_variables(),
-                                federation_args])
+                                federation_args,
+                                context,
+                                cluster_name,
+                                unique_conf.memory_gb])
 
         if exit_code != 0:
             console_out(self.actor, f"Benchmark {unique_conf.node_number} failed")

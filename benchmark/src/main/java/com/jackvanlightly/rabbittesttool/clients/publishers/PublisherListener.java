@@ -81,7 +81,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
             metricGroup.increment(MetricType.PublisherConfirm, numConfirms);
             pendingConfirmCount.set(flowController.getPendingCount());
 
-            long now = System.currentTimeMillis();
+            long now = System.nanoTime();
             if(now-lastRecordedLatency > 100000000) {
                 for(Integer sequence : sequenceLag.keySet()) {
                     SequenceLag summedSeqLag = sequenceLag.get(sequence);

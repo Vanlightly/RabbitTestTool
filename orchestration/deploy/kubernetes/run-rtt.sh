@@ -4,22 +4,16 @@ PASSWORD=$1
 POSTGRES_USER=$2
 POSTGRES_PASSWORD=$3
 INFLUX_SUBPATH=$4
+RABBITMQ_CLUSTER_NAME=$5
 
-instance=rtt
-RMQ_USER=$(kubectl get secret ${instance}-rabbitmq-admin -o jsonpath="{.data.username}" | base64 --decode)
-RMQ_PASSWORD=$(kubectl get secret ${instance}-rabbitmq-admin -o jsonpath="{.data.password}" | base64 --decode)
-service=${instance}-rabbitmq-ingress
+
+RMQ_USER=$(kubectl get secret ${RABBITMQ_CLUSTER_NAME}-rabbitmq-admin -o jsonpath="{.data.username}" | base64 --decode)
+RMQ_PASSWORD=$(kubectl get secret ${RABBITMQ_CLUSTER_NAME}-rabbitmq-admin -o jsonpath="{.data.password}" | base64 --decode)
+service=${RABBITMQ_CLUSTER_NAME}-rabbitmq-ingress
 
 INFLUX_IP=$(aws ec2 describe-instances --filters "Name=tag:inventorygroup,Values=benchmarking_metrics" --query "Reservations[*].Instances[*].PublicIpAddress" --output=text)
 INFLUX_URL="http://$INFLUX_IP/$INFLUX_SUBPATH"
 echo $INFLUX_URL
-
-# EXTERNAL_IP=""
-# while [ -z $EXTERNAL_IP ]; do
-#   EXTERNAL_IP=$(kubectl get svc rtt-rabbitmq-client --template="{{range .status.loadBalancer.ingress}}{{.hostname}}{{end}}")
-#   [ -z "$EXTERNAL_IP" ] && sleep 2
-# done
-# echo "End point ready: $EXTERNAL_IP"
 
 echo "Discovering pods..."
 PODS=$(kubectl get pods | grep rabbit | awk '{print $1}')

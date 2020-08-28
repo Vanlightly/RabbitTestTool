@@ -319,9 +319,10 @@ class AwsDeployer(Deployer):
                         "-b", str(unique_conf.cluster_size),
                         "-t", volume1_type, 
                         "-s", unique_conf.volume1_size,
-                        "-c", str(int(unique_conf.core_count) * int(unique_conf.threads_per_core)),
-                        "-m", str(int(unique_conf.memory_gb)*800),
-                        "-k", unique_conf.deployment] # put limit at 80% of available
+                        "-c", str((int(unique_conf.core_count) * int(unique_conf.threads_per_core))-1), # leave 1 CPU free
+                        "-m", str(int(unique_conf.memory_gb)*800), # put limit at 80% of available
+                        "-k", unique_conf.deployment,
+                        "-u", unique_conf.deployment_user] 
                         , cwd="../deploy/kubernetes")
         
         if exit_code != 0:

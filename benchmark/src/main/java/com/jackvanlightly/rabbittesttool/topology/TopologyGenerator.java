@@ -291,7 +291,8 @@ public class TopologyGenerator {
 
     private void tryClose(Client client) {
         try {
-            client.close();
+            if(client != null)
+                client.close();
         }
         catch(Exception e) {
             logger.error("Could not close topology generator stream client", e);
@@ -580,6 +581,7 @@ public class TopologyGenerator {
         boolean success = false;
         int attempts = 0;
         int lastResponseCode = 0;
+        int timeoutMs = 30000;
         CloseableHttpResponse lastResponse = null;
 
         try {
@@ -593,6 +595,12 @@ public class TopologyGenerator {
 
                 CloseableHttpClient client = HttpClients.createDefault();
                 HttpPut httpPut = new HttpPut(url);
+
+                RequestConfig.Builder requestConfig = RequestConfig.custom();
+                requestConfig.setConnectTimeout(timeoutMs);
+                requestConfig.setConnectionRequestTimeout(timeoutMs);
+                requestConfig.setSocketTimeout(timeoutMs);
+                httpPut.setConfig(requestConfig.build());
 
                 StringEntity entity = new StringEntity(json);
                 httpPut.setEntity(entity);

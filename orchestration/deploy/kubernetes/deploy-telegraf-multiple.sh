@@ -1,12 +1,15 @@
 #!/bin/bash
 
-kubectl apply -f manifests/telegraf/.variables/influx-secret.yaml
+K_CONTEXT=$1
+RABBITMQ_CLUSTER_NAME=$2
 
-PODS=$(kubectl get pods | grep rabbit | awk '{print $1}')
+kubectl --context ${K_CONTEXT} apply -f manifests/telegraf/.variables/influx-secret.yaml
+
+PODS=$(kubectl --context ${K_CONTEXT} get pods | grep rabbit | awk '{print $1}')
 COUNTER=0
 while IFS= read -r POD; do
-    BROKER_IP=$(kubectl get pod ${POD} -o jsonpath="{.status.podIP}")
-    BROKER_NAME="rabbit@${POD}.rtt-rabbitmq-headless.default"
+    BROKER_IP=$(kubectl --context ${K_CONTEXT} get pod ${POD} -o jsonpath="{.status.podIP}")
+    BROKER_NAME="rabbit@${POD}.${RABBITMQ_CLUSTER_NAME}-rabbitmq-headless.default"
     BROKER_URL="\"http://${BROKER_IP}:15692/metrics\""
 
     cp manifests/telegraf/telegraf-config-template.yaml manifests/telegraf/telegraf-config-generated.yaml
@@ -18,8 +21,8 @@ while IFS= read -r POD; do
     sed -i "s#ORDINAL#$COUNTER#g" manifests/telegraf/telegraf-deployment-generated.yaml
 
     echo "Applying manifests for $POD"
-    kubectl apply -f ./manifests/telegraf/telegraf-config-generated.yaml
-    kubectl apply -f ./manifests/telegraf/telegraf-deployment-generated.yaml    
+    kubectl --context ${K_CONTEXT} apply -f ./manifests/telegraf/telegraf-config-generated.yaml
+    kubectl --context ${K_CONTEXT} apply -f ./manifests/telegraf/telegraf-deployment-generated.yaml    
 
     COUNTER=$((COUNTER + 1))
 done <<< "$PODS"

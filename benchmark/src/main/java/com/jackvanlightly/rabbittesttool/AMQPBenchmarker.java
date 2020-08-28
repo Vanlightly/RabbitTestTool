@@ -378,7 +378,7 @@ public class AMQPBenchmarker {
                     metrics,
                     brokerConfig,
                     arguments.hasMetrics(),
-                    new SimpleMessageModel(false),
+                    new NullMessageModel(),
                     Duration.ZERO,
                     mainLogger);
         }

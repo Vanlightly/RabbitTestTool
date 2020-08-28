@@ -10,7 +10,7 @@ echo "Deploying k8s cluster of 6 nodes of instance type: $1"
 #  --region=europe-west1 \
 #  --machine-type=$1
 
-gcloud container clusters create benchmarking \
+gcloud container clusters create benchmarking-gke \
  --cluster-version 1.16.13-gke.1 \
  --num-nodes 2 \
  --zone europe-west4-a \
@@ -18,4 +18,4 @@ gcloud container clusters create benchmarking \
  --machine-type $1
 
 
-gcloud container clusters get-credentials benchmarking
+gcloud container clusters get-credentials benchmarking-gke

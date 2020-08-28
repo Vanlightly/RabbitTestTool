@@ -255,14 +255,14 @@ class BrokerActions:
         self._action_status[status_id] = "success"
 
 
-    def traffic_control_for_one_broker(self, configurations, common_conf, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4):
+    def traffic_control_for_one_broker(self, configurations, common_conf, tc_apply_to_clients, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4):
         r_threads = list()
         for config_tag in configurations:
             unique_conf_list = configurations[config_tag]
             # iterate over configurations
             for p in range(len(unique_conf_list)):
                 unique_conf = unique_conf_list[p]
-                tc_thread = threading.Thread(target=self.apply_traffic_control, args=(unique_conf.node_number, unique_conf, common_conf, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4))
+                tc_thread = threading.Thread(target=self.apply_traffic_control, args=(unique_conf.node_number, unique_conf, common_conf, tc_apply_to_clients, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4))
                 r_threads.append(tc_thread)
 
         for rt in r_threads:
@@ -282,7 +282,7 @@ class BrokerActions:
                     if not common_conf.no_deploy:
                         self._deployer.teardown_all(configurations, common_conf, False)
 
-    def traffic_control_for_all_brokers(self, configurations, common_conf, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4):
+    def traffic_control_for_all_brokers(self, configurations, common_conf, tc_apply_to_clients, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4):
         r_threads = list()
         for config_tag in configurations:
             unique_conf_list = configurations[config_tag]
@@ -293,7 +293,7 @@ class BrokerActions:
                  # iterate over nodes of this configuration
                 for n in range(unique_conf.cluster_size):
                     node = int(unique_conf.node_number) + n
-                    tc_thread = threading.Thread(target=self.apply_traffic_control, args=(str(node), unique_conf, common_conf, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4))
+                    tc_thread = threading.Thread(target=self.apply_traffic_control, args=(str(node), unique_conf, common_conf, tc_apply_to_clients, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4))
                     r_threads.append(tc_thread)
 
         for rt in r_threads:
@@ -313,7 +313,7 @@ class BrokerActions:
                     if not common_conf.no_deploy:
                         self._deployer.teardown_all(configurations, common_conf, False)
     
-    def apply_traffic_control(self, node, unique_conf, common_conf, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4):
+    def apply_traffic_control(self, node, unique_conf, common_conf, tc_apply_to_clients, tc_delay_ms, tc_delay_jitter_ms, tc_delay_dist, tc_bandwidth_mbit, tc_loss_mode, tc_loss_arg1, tc_loss_arg2, tc_loss_arg3, tc_loss_arg4):
         status_id = unique_conf.technology + node
 
         target_ips = ""
@@ -327,10 +327,12 @@ class BrokerActions:
 
         exit_code = subprocess.call(["bash", "apply-traffic-control.sh", 
                         common_conf.key_pair, 
+                        unique_conf.node_number,
                         node, 
                         common_conf.run_tag,
                         unique_conf.technology,
                         target_ips,
+                        tc_apply_to_clients,
                         str(tc_delay_ms),
                         str(tc_delay_jitter_ms),
                         str(tc_delay_dist),

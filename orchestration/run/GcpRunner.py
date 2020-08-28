@@ -52,7 +52,7 @@ class GcpRunner(Runner):
                         f"--override-step-msg-limit {common_conf.override_step_msg_limit} "
                         f"--pub-connect-to-node {unique_conf.pub_connect_to_node} "
                         f"--con-connect-to-node {unique_conf.con_connect_to_node} "
-                        f"--grace-period-sec {playlist_entry.grace_period_sec} "
+                        f"--grace-period-sec {common_conf.grace_period_sec} "
                         f"--run-ordinal {run_ordinal} "
                         f"--benchmark-tags {common_conf.tags} "
                         f"{playlist_entry.get_topology_variables()} "

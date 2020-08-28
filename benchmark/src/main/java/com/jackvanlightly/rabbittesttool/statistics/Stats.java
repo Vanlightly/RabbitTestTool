@@ -121,6 +121,9 @@ public class Stats {
         lastStatsTime = System.currentTimeMillis();
         lastPrintTimeTemp = System.currentTimeMillis();
 
+        publisherGroups = new ArrayList<>();
+        consumerGroups = new ArrayList<>();
+
         metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
         List<Tag> tags = getTags(brokerConfig);
 
@@ -378,17 +381,29 @@ public class Stats {
             for(MetricListCounter metric : metricGroup.getListMetrics()) {
                 switch (metric.getMetricType()) {
                     case ConsumerLatencies:
-                        for (long latency : metric.getRealValue()) {
-                            this.latencies.update(latency);
-                            this.updateLatency.accept(latency);
+                        List<Long> values = metric.getRealValue();
+                        if(values.isEmpty()) {
+                            this.latencies.update(0L);
+                            this.updateLatency.accept(0L);
+                        } else {
+                            for (long latency : values) {
+                                this.latencies.update(latency);
+                                this.updateLatency.accept(latency);
+                            }
                         }
                         break;
                     case PublisherConfirmLatencies:
-                        for (long latency : metric.getRealValue()) {
-                            this.confirmLatencies.update(latency);
-                            this.updateConfirmLatency.accept(latency);
+                        List<Long> confirmValues = metric.getRealValue();
+                        if(confirmValues.isEmpty()) {
+                            this.confirmLatencies.update(0L);
+                            this.updateConfirmLatency.accept(0L);
+                        } else {
+                            for (long latency : confirmValues) {
+                                this.confirmLatencies.update(latency);
+                                this.updateConfirmLatency.accept(latency);
+                            }
+                            break;
                         }
-                        break;
                 }
             }
         }
@@ -413,8 +428,8 @@ public class Stats {
         double ratePublishedBytes = rate(publishedMsgBytesInterval, elapsedInterval);
         recordPublishedBytes(ratePublishedBytes);
 
-        if(consumerConnectionErrorInterval > 0)
-            recordConsumerConnError(consumerConnectionErrorInterval);
+        //if(consumerConnectionErrorInterval > 0)
+        recordConsumerConnError(consumerConnectionErrorInterval);
 
         double blockedPublisherRate = rate(blockedPublisherConnectionInterval, elapsedInterval);
         recordPublisherBlocked(blockedPublisherRate);
@@ -422,37 +437,36 @@ public class Stats {
         double unblockedPublisherRate = rate(unblockedPublisherConnectionInterval, elapsedInterval);
         recordPublisherUnblocked(unblockedPublisherRate);
 
-        if(sendCountInterval > 0) {
-            double avgPublishedMsgSize = publishedMsgBytesInterval / sendCountInterval;
-            recordPublishedMsgSize(avgPublishedMsgSize);
+        double avgPublishedMsgSize = sendCountInterval == 0 ? 0 : publishedMsgBytesInterval / sendCountInterval;
+        recordPublishedMsgSize(avgPublishedMsgSize);
 
-            double avgPublishedMsgHeaders = publishedMsgHeadersInterval / sendCountInterval;
-            recordPublishedMsgHeaders(avgPublishedMsgHeaders);
+        double avgPublishedMsgHeaders = sendCountInterval == 0 ? 0 : publishedMsgHeadersInterval / sendCountInterval;
+        recordPublishedMsgHeaders(avgPublishedMsgHeaders);
 
-            double avgDeliveryMode = deliveryModeInterval / sendCountInterval;
-            recordDeliveryMode(avgDeliveryMode);
+        double avgDeliveryMode = sendCountInterval == 0 ? 0 : deliveryModeInterval / sendCountInterval;
+        recordDeliveryMode(avgDeliveryMode);
 
-            double avgRoutingKeyLength = routingKeyLengthInterval / sendCountInterval;
-            recordRoutingKeyLength(avgRoutingKeyLength);
+        double avgRoutingKeyLength = sendCountInterval == 0 ? 0 : routingKeyLengthInterval / sendCountInterval;
+        recordRoutingKeyLength(avgRoutingKeyLength);
 
-            List<Long> allSendCounts = new ArrayList<>();
-            for(PublisherGroup publisherGroup : publisherGroups) {
-                List<Long> sendCounts = publisherGroup.getRealSendCounts();
-                for(Long count : sendCounts) {
-                    allSendCounts.add((long)rate(count, elapsedInterval));
-                }
+        List<Long> allSendCounts = new ArrayList<>();
+        for(PublisherGroup publisherGroup : publisherGroups) {
+            List<Long> sendCounts = publisherGroup.getRealSendCounts();
+            for(Long count : sendCounts) {
+                allSendCounts.add((long)rate(count, elapsedInterval));
             }
-            recordPerPublisherPublished(allSendCounts);
-
-            List<Long> allReceiveCounts = new ArrayList<>();
-            for(ConsumerGroup consumerGroup : consumerGroups) {
-                List<Long> receiveCounts = consumerGroup.getRealReceiveCounts();
-                for(Long count : receiveCounts) {
-                    allReceiveCounts.add((long)rate(count, elapsedInterval));
-                }
-            }
-            recordPerConsumerReceived(allReceiveCounts);
         }
+        recordPerPublisherPublished(allSendCounts);
+
+        List<Long> allReceiveCounts = new ArrayList<>();
+        for(ConsumerGroup consumerGroup : consumerGroups) {
+            List<Long> receiveCounts = consumerGroup.getRealReceiveCounts();
+            for(Long count : receiveCounts) {
+                allReceiveCounts.add((long)rate(count, elapsedInterval));
+            }
+        }
+        recordPerConsumerReceived(allReceiveCounts);
+
 
         double rateReturned = rate(returnCountInterval, elapsedInterval);
         recordReturned(rateReturned);
@@ -472,35 +486,29 @@ public class Stats {
         double ackCount = rate(consumerAckCountInterval, elapsedInterval);
         recordConsumerAckCount(ackCount);
 
-        if(consumerAckCountInterval > 0) {
-            double avgMsgsPerAck = consumerAckedMsgsInterval / consumerAckCountInterval;
-            recordConsumerAckMsgsPerAck(avgMsgsPerAck);
-        }
+        double avgMsgsPerAck = consumerAckCountInterval == 0 ? 0 : consumerAckedMsgsInterval / consumerAckCountInterval;
+        recordConsumerAckMsgsPerAck(avgMsgsPerAck);
 
-        if(consumedStreamBatchInterval > 0) {
-            double avgMsgsPerBatch = consumedStreamMessageInterval / consumedStreamBatchInterval;
-            recordMessagesPerBatch(avgMsgsPerBatch);
+        double avgMsgsPerBatch = consumedStreamBatchInterval == 0 ? 0 : consumedStreamMessageInterval / consumedStreamBatchInterval;
+        recordMessagesPerBatch(avgMsgsPerBatch);
 
-            double batchRate = rate(consumedStreamBatchInterval, elapsedInterval);
-            recordConsumedStreamBatchCount(batchRate);
-        }
+        double batchRate = rate(consumedStreamBatchInterval, elapsedInterval);
+        recordConsumedStreamBatchCount(batchRate);
 
-        if(recvCountInterval > 0) {
-            double avgConsumedMsgSize = consumedMsgBytesInterval / recvCountInterval;
-            recordReceivedMsgSize(avgConsumedMsgSize);
+        double avgConsumedMsgSize = recvCountInterval == 0 ? 0 : consumedMsgBytesInterval / recvCountInterval;
+        recordReceivedMsgSize(avgConsumedMsgSize);
 
-            double avgConsumedMsgHeaders = consumedMsgHeadersInterval / recvCountInterval;
-            recordReceivedMsgHeaders(avgConsumedMsgHeaders);
+        double avgConsumedMsgHeaders = recvCountInterval == 0 ? 0 : consumedMsgHeadersInterval / recvCountInterval;
+        recordReceivedMsgHeaders(avgConsumedMsgHeaders);
 
-            double consumerAcks = consumerAckInterval / recvCountInterval;
-            recordConsumerAck(consumerAcks);
+        double consumerAcks = recvCountInterval == 0 ? 0 : consumerAckInterval / recvCountInterval;
+        recordConsumerAck(consumerAcks);
 
-            double consumerAckMs = consumerAckIntervalMs / recvCountInterval;
-            recordConsumerAckMs(consumerAckMs);
+        double consumerAckMs = recvCountInterval == 0 ? 0 : consumerAckIntervalMs / recvCountInterval;
+        recordConsumerAckMs(consumerAckMs);
 
-            double consumerPrefetchVal = consumerPrefetchInterval / recvCountInterval;
-            recordConsumerPrefetch(consumerPrefetchVal);
-        }
+        double consumerPrefetchVal = recvCountInterval == 0 ? 0 : consumerPrefetchInterval / recvCountInterval;
+        recordConsumerPrefetch(consumerPrefetchVal);
     }
 
     private void reset() {

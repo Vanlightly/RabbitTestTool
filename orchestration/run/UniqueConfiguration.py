@@ -19,6 +19,12 @@ class UniqueConfiguration:
         self.pub_connect_to_node = get_optional_arg_validated(args, "--pub-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.con_connect_to_node = get_optional_arg_validated(args, "--con-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.deployment = get_optional_arg_validated(args, "--deployment", self.suffix, ["ec2", "eks", "gke"], "ec2")
+        
+        if self.deployment == "eks" or self.deployment == "gke":
+            self.deployment_user = get_mandatory_arg(args, "--deployment-user", self.suffix)
+        else:
+            self.deployment_user = "none"
+
         self.node_number = -1
                 
     def set_node_number(self, node_number):

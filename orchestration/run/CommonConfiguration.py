@@ -34,7 +34,8 @@ class CommonConfiguration:
 
 
         # model mode only. Value: dataloss,duplicates,ordering,consumption,connectivity. Don't use ordering unless one consumer per queue.
-        self.checks = get_optional_arg(args, "--checks", "", "dataloss,duplicates,connectivity") 
+        self.checks = get_optional_arg(args, "--checks", "", "dataloss,duplicates,connectivity")
+        self.grace_period_sec = get_optional_arg(args, "--grace-period-sec", "", "60")
         
         self.username = "benchmark"
         self.password = get_mandatory_arg(args, "--password", "")

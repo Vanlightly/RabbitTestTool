@@ -1,3 +1,3 @@
 #!/bin/bash
-
-kubectl create -f pd-ssd.yaml
+K_CONTEXT=$1
+kubectl --context ${K_CONTEXT} create -f pd-ssd.yaml

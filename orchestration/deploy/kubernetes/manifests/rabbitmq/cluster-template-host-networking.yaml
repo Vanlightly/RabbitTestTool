@@ -1,7 +1,7 @@
 apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
-  name: rtt
+  name: CLUSTER_NAME
 spec:
   replicas: CLUSTER_SIZE
   service:
@@ -27,6 +27,7 @@ spec:
         template:
           spec:
             hostNetwork: true
+            dnsPolicy: ClusterFirstWithHostNet
             containers:
             - name: rabbitmq
               ports:

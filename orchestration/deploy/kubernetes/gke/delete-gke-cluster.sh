@@ -1,5 +1,5 @@
 #!/bin/bash
 
-gcloud container clusters delete benchmarking
+gcloud container clusters delete benchmarking-gke
 
 # TODO delete persistent volumes

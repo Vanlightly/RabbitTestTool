@@ -37,10 +37,14 @@ public class MetricListCounter {
     }
 
     public List<Long> getRecordedValue() {
-        return new ArrayList<>(recordedValue);
+        List<Long> values = new ArrayList<>(recordedValue);
+        recordedValue = new ArrayList<>();
+        return values;
     }
 
     public List<Long> getRealValue() {
-        return new ArrayList<>(realValue);
+        List<Long> values = new ArrayList<>(realValue);
+        realValue = new ArrayList<>();
+        return values;
     }
 }

@@ -42,6 +42,9 @@ INFLUX_SUBPATH=${39}
 TOPOLOGY_VARIABLES=${40}
 POLICY_VARIABLES=${41}
 FEDERATION_ARGS=${42}
+K_CONTEXT=${43}
+RABBITMQ_CLUSTER_NAME=${44}
+MEMORY_GB=${45}
 
 set -e
 
@@ -50,11 +53,12 @@ INFLUX_URL="http://$INFLUX_IP/$INFLUX_SUBPATH"
 echo "Will connect to InfluxDB at ip $INFLUX_IP"
 
 echo "Discovering pods..."
-PODS=$(kubectl get pods | grep rabbit | awk '{print $1}')
+
+PODS=$(kubectl --context ${K_CONTEXT} get pods | grep rabbit | awk '{print $1}')
 BROKER_IPS=""
 STREAM_PORTS=""
 while IFS= read -r POD; do
-    BROKER_IP=$(kubectl get pod ${POD} -o jsonpath="{.status.podIP}")
+    BROKER_IP=$(kubectl --context ${K_CONTEXT} get pod ${POD} -o jsonpath="{.status.podIP}")
     BROKER_IPS+="${BROKER_IP}:5672,"
     STREAM_PORTS+="5555,"
     echo "$POD"
@@ -64,17 +68,24 @@ BROKER_IPS=${BROKER_IPS%?}
 STREAM_PORTS=${STREAM_PORTS%?}
 echo "Broker IPS: $BROKER_IPS"
 
-if [[ $(kubectl get pods | awk '{ print $1 }' | grep ^rtt$ | wc -l) != "0" ]]
+if [[ $(kubectl --context ${K_CONTEXT} get pods | awk '{ print $1 }' | grep ^rtt$ | wc -l) != "0" ]]
 then
     echo "Deleting existing rtt pod"
-    kubectl delete pod rtt
+    kubectl --context ${K_CONTEXT} delete pod rtt
     sleep 10
 fi
 
-RMQ_USER=$(kubectl get secret rtt-rabbitmq-admin -o jsonpath="{.data.username}" | base64 --decode)
-RMQ_PASS=$(kubectl get secret rtt-rabbitmq-admin -o jsonpath="{.data.password}" | base64 --decode)
+RMQ_USER=$(kubectl --context ${K_CONTEXT} get secret $RABBITMQ_CLUSTER_NAME-rabbitmq-admin -o jsonpath="{.data.username}" | base64 --decode)
+RMQ_PASS=$(kubectl --context ${K_CONTEXT} get secret $RABBITMQ_CLUSTER_NAME-rabbitmq-admin -o jsonpath="{.data.password}" | base64 --decode)
 
-kubectl run rtt --image=jackvanlightly/rtt:1.1.12 --restart=Never -- \
+CPU=$(( (($CORE_COUNT * $THREADS_PER_CORE) - 1 ) * 1000 ))
+REMAINDER=$(( $MEMORY_GB / 5 ))
+MEMORY=$(( ($MEMORY_GB - $REMAINDER) * 1000 ))
+
+LIMITS="--limits=cpu=${CPU}m,memory=${MEMORY}Mi"
+echo "kubectl --context ${K_CONTEXT} run rtt ${LIMITS} --image=jackvanlightly/rtt:1.1.12 --restart=Never --"
+
+kubectl --context ${K_CONTEXT} run rtt ${LIMITS} --image=jackvanlightly/rtt:1.1.12 --restart=Never -- \
 --mode "$MODE" \
 --topology "topologies/$TOPOLOGY" \
 --policies "policies/$POLICIES" \
@@ -118,15 +129,15 @@ kubectl run rtt --image=jackvanlightly/rtt:1.1.12 --restart=Never -- \
 --benchmark-attempts "$ATTEMPTS" "$TOPOLOGY_VARIABLES" "$POLICY_VARIABLES" "$FEDERATION_ARGS"
 
 
-STATUS=$(kubectl get pods rtt | grep rtt | awk '{ print $3}')
+STATUS=$(kubectl --context ${K_CONTEXT} get pods rtt | grep rtt | awk '{ print $3}')
 
 while [[ $STATUS != "Running" ]]
 do
   echo "Waiting for benchmark to start"
   sleep 5
-  STATUS=$(kubectl get pods rtt | grep rtt | awk '{ print $3}')
+  STATUS=$(kubectl --context ${K_CONTEXT} get pods rtt | grep rtt | awk '{ print $3}')
 done
 
-kubectl logs -f rtt
+kubectl --context ${K_CONTEXT} logs -f rtt
 
 echo "Benchmark completed"
