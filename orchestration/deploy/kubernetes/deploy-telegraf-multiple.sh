@@ -12,17 +12,19 @@ while IFS= read -r POD; do
     BROKER_NAME="rabbit@${POD}.${RABBITMQ_CLUSTER_NAME}-rabbitmq-headless.default"
     BROKER_URL="\"http://${BROKER_IP}:15692/metrics\""
 
-    cp manifests/telegraf/telegraf-config-template.yaml manifests/telegraf/telegraf-config-generated.yaml
-    sed -i "s#RABBITMQ_SCRAPE_URLS#$BROKER_URL#g" manifests/telegraf/telegraf-config-generated.yaml
-    sed -i "s#BROKER_NAME#$BROKER_NAME#g" manifests/telegraf/telegraf-config-generated.yaml
-    sed -i "s#ORDINAL#$COUNTER#g" manifests/telegraf/telegraf-config-generated.yaml
+    CONFIG_MANIFEST_FILE="manifests/telegraf/telegraf-config-${RABBITMQ_CLUSTER_NAME}-generated.yaml"
+    cp manifests/telegraf/telegraf-config-template.yaml $CONFIG_MANIFEST_FILE
+    sed -i "s#RABBITMQ_SCRAPE_URLS#$BROKER_URL#g" $CONFIG_MANIFEST_FILE
+    sed -i "s#BROKER_NAME#$BROKER_NAME#g" $CONFIG_MANIFEST_FILE
+    sed -i "s#ORDINAL#$COUNTER#g" $CONFIG_MANIFEST_FILE
 
-    cp manifests/telegraf/telegraf-deployment-template.yaml manifests/telegraf/telegraf-deployment-generated.yaml
-    sed -i "s#ORDINAL#$COUNTER#g" manifests/telegraf/telegraf-deployment-generated.yaml
+    DEPLOYMENT_MANIFEST_FILE="manifests/telegraf/telegraf-deployment-${RABBITMQ_CLUSTER_NAME}-generated.yaml"
+    cp manifests/telegraf/telegraf-deployment-template.yaml $DEPLOYMENT_MANIFEST_FILE
+    sed -i "s#ORDINAL#$COUNTER#g" $DEPLOYMENT_MANIFEST_FILE
 
-    echo "Applying manifests for $POD"
-    kubectl --context ${K_CONTEXT} apply -f ./manifests/telegraf/telegraf-config-generated.yaml
-    kubectl --context ${K_CONTEXT} apply -f ./manifests/telegraf/telegraf-deployment-generated.yaml    
+    echo "Applying manifests for $POD" $DEPLOYMENT_MANIFEST_FILE
+    kubectl --context ${K_CONTEXT} apply -f ./$CONFIG_MANIFEST_FILE
+    kubectl --context ${K_CONTEXT} apply -f ./$DEPLOYMENT_MANIFEST_FILE
 
     COUNTER=$((COUNTER + 1))
 done <<< "$PODS"

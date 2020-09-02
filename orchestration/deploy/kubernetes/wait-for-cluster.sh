@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-k_CONTEXT=$1
+K_CONTEXT=$1
 BROKERS=$2
 RABBITMQ_CLUSTER_NAME=$3
 
