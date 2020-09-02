@@ -152,12 +152,14 @@ public class Publisher implements Runnable {
     public void setPublishRatePerSecond(int msgsPerSecond) {
         this.publisherSettings.setPublishRatePerSecond(msgsPerSecond);
         this.rateLimiter.configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
+        this.rateLimit = this.publisherSettings.getPublishRatePerSecond() > 0;
     }
 
     public void modifyPublishRatePerSecond(double percentModification) {
         int newPublishRate = (int)(percentModification * this.publisherSettings.getPublishRatePerSecond());
         this.publisherSettings.setPublishRatePerSecond(newPublishRate);
         this.rateLimiter.configureRateLimit(this.publisherSettings.getPublishRatePerSecond());
+        this.rateLimit = this.publisherSettings.getPublishRatePerSecond() > 0;
     }
 
     public void setWarmUpModifier(double warmUpModifier) {

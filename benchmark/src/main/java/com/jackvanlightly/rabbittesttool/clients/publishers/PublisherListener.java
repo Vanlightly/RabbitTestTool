@@ -83,12 +83,13 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
 
             long now = System.nanoTime();
             if(now-lastRecordedLatency > 100000000) {
-                for(Integer sequence : sequenceLag.keySet()) {
-                    SequenceLag summedSeqLag = sequenceLag.get(sequence);
-                    long avgLag = summedSeqLag.totalLag / summedSeqLag.measurements;
-                    metricGroup.add(MetricType.PublisherConfirmLatencies, avgLag);
-                    summedSeqLag.totalLag = 0;
-                    summedSeqLag.measurements = 0;
+                for(Map.Entry<Integer, SequenceLag> entry : sequenceLag.entrySet()) {
+                    if(entry.getValue().measurements > 0) {
+                        long avgLag = entry.getValue().totalLag / entry.getValue().measurements;
+                        metricGroup.add(MetricType.PublisherConfirmLatencies, avgLag);
+                        entry.getValue().totalLag = 0;
+                        entry.getValue().measurements = 0;
+                    }
                 }
                 lastRecordedLatency = now;
             }

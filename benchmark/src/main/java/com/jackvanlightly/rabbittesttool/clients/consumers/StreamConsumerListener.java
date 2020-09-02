@@ -74,7 +74,7 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
     }
 
     @Override
-    public void handle(int subscriptionId, long offset, Message message) {
+    public void handle(byte subscriptionId, long offset, Message message) {
         try {
             this.lastOffset.set(offset);
             this.handleMessage(message);
@@ -106,7 +106,7 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
     }
 
     @Override
-    public void handle(Client client, int subscriptionId, long offset, long messageCount, long dataSize) {
+    public void handle(Client client, byte subscriptionId, long offset, long messageCount, long dataSize) {
         try {
             metricGroup.increment(MetricType.ConsumerStreamBatches);
             metricGroup.increment(MetricType.ConsumerReceivedMessage, messageCount);

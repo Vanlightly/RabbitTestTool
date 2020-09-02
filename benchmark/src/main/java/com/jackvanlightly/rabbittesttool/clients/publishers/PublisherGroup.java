@@ -1,6 +1,7 @@
 package com.jackvanlightly.rabbittesttool.clients.publishers;
 
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
+import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
@@ -104,11 +105,13 @@ public class PublisherGroup {
     public void startInitialPublishers() {
         if(!publishers.isEmpty()) {
             for (Publisher publisher : this.publishers) {
+                ClientUtils.waitFor(100);
                 this.executorService.execute(publisher);
             }
         }
         else {
             for (StreamPublisher publisher : this.streamPublishers) {
+                ClientUtils.waitFor(100);
                 this.executorService.execute(publisher);
             }
         }
@@ -149,10 +152,11 @@ public class PublisherGroup {
 
     public void addAndStartPublisher() {
         Runnable publisher = addPublisher();
+        ClientUtils.waitFor(100);
         this.executorService.execute(publisher);
     }
 
-    private Runnable addPublisher() {
+    public Runnable addPublisher() {
         this.publisherCounter++;
 
         PublisherSettings settings = null;

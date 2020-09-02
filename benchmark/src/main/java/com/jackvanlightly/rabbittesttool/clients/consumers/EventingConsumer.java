@@ -42,7 +42,7 @@ public class EventingConsumer extends DefaultConsumer {
     AtomicBoolean consumerCancelled;
     Lock ackLock;
     long lastRecordedLatency;
-    Map<Integer, SequenceLag> sequenceLag;
+    Map<Integer, SequenceLag> sequenceLagMap;
 
     public EventingConsumer(String consumerId,
                             String vhost,
@@ -72,7 +72,7 @@ public class EventingConsumer extends DefaultConsumer {
 
         consumerCancelled = new AtomicBoolean();
         delTagLastAcked = -1;
-        sequenceLag = new HashMap<>();
+        sequenceLagMap = new HashMap<>();
         lastAckedTime = Instant.now();
         ackLock = new ReentrantLock();
     }
@@ -155,18 +155,25 @@ public class EventingConsumer extends DefaultConsumer {
             //logger.info("Could not ack message as connection was lost");
             delTagLastAcked = -1;
         }
+        catch(Exception e) {
+            logger.error("Unexpected error handling message in consumer " + consumerId +  "with tag " + consumerTag, e);
+            throw e;
+        }
     }
 
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
         MessagePayload mp = MessageGenerator.toMessagePayload(body);
         long now = System.nanoTime();
         long lag = MessageUtils.getLag(now, mp.getTimestamp());
-        SequenceLag seqLag = sequenceLag.get(mp.getSequence());
+        SequenceLag seqLag = sequenceLagMap.get(mp.getSequence());
         if(seqLag == null) {
             seqLag = new SequenceLag();
             seqLag.totalLag = lag;
             seqLag.measurements = 1;
-            sequenceLag.put(mp.getSequence(), seqLag);
+            sequenceLagMap.put(mp.getSequence(), seqLag);
+
+            if(seqLag.measurements == 0)
+                System.out.println("Put 0 seq lag for " + mp.getSequence());
         }
         else {
             seqLag.totalLag += lag;
@@ -174,12 +181,13 @@ public class EventingConsumer extends DefaultConsumer {
         }
 
         if(now-lastRecordedLatency > 100000000) {
-            for(Integer sequence : sequenceLag.keySet()) {
-                SequenceLag summedSeqLag = sequenceLag.get(sequence);
-                long avgLag = summedSeqLag.totalLag / summedSeqLag.measurements;
-                metricGroup.add(MetricType.ConsumerLatencies, avgLag);
-                summedSeqLag.totalLag = 0;
-                summedSeqLag.measurements = 0;
+            for(Map.Entry<Integer, SequenceLag> entry : sequenceLagMap.entrySet()) {
+                if(entry.getValue().measurements > 0) {
+                    long avgLag = entry.getValue().totalLag / entry.getValue().measurements;
+                    metricGroup.add(MetricType.ConsumerLatencies, avgLag);
+                    entry.getValue().totalLag = 0;
+                    entry.getValue().measurements = 0;
+                }
             }
             lastRecordedLatency = now;
         }

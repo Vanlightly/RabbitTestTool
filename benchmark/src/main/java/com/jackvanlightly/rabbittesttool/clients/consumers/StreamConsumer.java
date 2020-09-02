@@ -236,7 +236,7 @@ public class StreamConsumer implements Runnable  {
         OffsetSpecification offsetSpecification = OffsetSpecification.offset(this.lastOffset.get());
 
         Client.Response response = consumer.subscribe(
-                this.consumerId.hashCode(),
+                (byte)1,
                 consumerSettings.getQueue(),
                 offsetSpecification,
                 Math.max(10, consumerSettings.getAckMode().getConsumerPrefetch())

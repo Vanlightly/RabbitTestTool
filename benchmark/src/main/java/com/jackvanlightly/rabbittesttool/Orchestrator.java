@@ -416,7 +416,7 @@ public class Orchestrator {
 
         // initialize dimenion values as step 1 values. Acts as an extra ramp up.
         if(variableConfig.getValueType() == ValueType.Value)
-            setSingleDimensionStepValue(variableConfig, variableConfig.getDimension(), variableConfig.getValues().get(0));
+            setSingleDimensionStepValue(variableConfig, variableConfig.getDimension(), variableConfig.getValues().get(0), false);
 
         resetMessageSentCounts();
         setCountStats();
@@ -440,7 +440,8 @@ public class Orchestrator {
                     // configure step dimension
                     setSingleDimensionStepValue(variableConfig,
                             variableConfig.getDimension(),
-                            variableConfig.getValues().get(i));
+                            variableConfig.getValues().get(i),
+                            true);
                     resetMessageSentCounts();
                     setCountStats();
 
@@ -492,7 +493,8 @@ public class Orchestrator {
 
                 setSingleDimensionStepValue(variableConfig,
                         variableConfig.getDimension(),
-                        variableConfig.getValues().get(i));
+                        variableConfig.getValues().get(i),
+                        true);
                 resetMessageSentCounts();
                 setCountStats();
 
@@ -537,7 +539,8 @@ public class Orchestrator {
         for(int vd=0; vd <variableConfig.getMultiDimensions().length; vd++) {
             setSingleDimensionStepValue(variableConfig,
                     variableConfig.getMultiDimensions()[vd],
-                    variableConfig.getMultiValues().get(0)[vd]);
+                    variableConfig.getMultiValues().get(0)[vd],
+                    false);
         }
 
         resetMessageSentCounts();
@@ -564,7 +567,8 @@ public class Orchestrator {
                     for (int vd = 0; vd < variableConfig.getMultiDimensions().length; vd++) {
                         setSingleDimensionStepValue(variableConfig,
                                 variableConfig.getMultiDimensions()[vd],
-                                variableConfig.getMultiValues().get(i)[vd]);
+                                variableConfig.getMultiValues().get(i)[vd],
+                                true);
 
                         if (vd > 0)
                             stepValues += ",";
@@ -698,13 +702,16 @@ public class Orchestrator {
         }
     }
 
-    private void setSingleDimensionStepValue(VariableConfig variableConfig, VariableDimension dimension, double value) throws IOException {
+    private void setSingleDimensionStepValue(VariableConfig variableConfig,
+                                             VariableDimension dimension,
+                                             double value,
+                                             boolean startable) throws IOException {
         switch(dimension) {
             case Consumers:
-                nextConsumerStep(variableConfig, (int)value);
+                nextConsumerStep(variableConfig, (int)value, startable);
                 break;
             case Publishers:
-                nextPublisherStep(variableConfig, (int)value);
+                nextPublisherStep(variableConfig, (int)value, startable);
                 break;
             case Queues:
                 nextQueueStep(variableConfig, (int)value);
@@ -742,30 +749,46 @@ public class Orchestrator {
         }
     }
 
-    private void nextConsumerStep(VariableConfig variableConfig, int value) {
+    private void nextConsumerStep(VariableConfig variableConfig, int value, boolean startable) {
         logger.info("Next step in CONSUMERS variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
             if(variableConfig.getGroup() == null) {
-                while(consumerGroup.getConsumerCount() < value)
-                    consumerGroup.addAndStartConsumer();
+                while(consumerGroup.getConsumerCount() < value) {
+                    if(startable)
+                        consumerGroup.addAndStartConsumer();
+                    else
+                        consumerGroup.addConsumer();
+                }
             }
             else if(consumerGroup.getGroup().equals(variableConfig.getGroup())) {
-                while(consumerGroup.getConsumerCount() < value)
-                    consumerGroup.addAndStartConsumer();
+                while(consumerGroup.getConsumerCount() < value) {
+                    if (startable)
+                        consumerGroup.addAndStartConsumer();
+                    else
+                        consumerGroup.addConsumer();
+                }
             }
         }
     }
 
-    private void nextPublisherStep(VariableConfig variableConfig, int value) {
+    private void nextPublisherStep(VariableConfig variableConfig, int value, boolean startable) {
         logger.info("Next step in PUBLISHERS variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
             if(variableConfig.getGroup() == null) {
-                while(publisherGroup.getPublisherCount() < value)
-                    publisherGroup.addAndStartPublisher();
+                while(publisherGroup.getPublisherCount() < value) {
+                    if(startable)
+                        publisherGroup.addAndStartPublisher();
+                    else
+                        publisherGroup.addPublisher();
+                }
             }
             else if(publisherGroup.getGroup().equals(variableConfig.getGroup())) {
-                while(publisherGroup.getPublisherCount() < value)
-                    publisherGroup.addAndStartPublisher();
+                while(publisherGroup.getPublisherCount() < value){
+                    if(startable)
+                        publisherGroup.addAndStartPublisher();
+                    else
+                        publisherGroup.addPublisher();
+                }
             }
         }
     }
