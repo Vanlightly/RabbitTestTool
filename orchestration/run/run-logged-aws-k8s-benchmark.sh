@@ -83,9 +83,9 @@ REMAINDER=$(( $MEMORY_GB / 5 ))
 MEMORY=$(( ($MEMORY_GB - $REMAINDER) * 1000 ))
 
 LIMITS="--limits=cpu=${CPU}m,memory=${MEMORY}Mi"
-echo "kubectl --context ${K_CONTEXT} run rtt ${LIMITS} --image=jackvanlightly/rtt:1.1.24 --restart=Never --"
+echo "kubectl --context ${K_CONTEXT} run rtt ${LIMITS} --image=jackvanlightly/rtt:1.1.25 --restart=Never --"
 
-kubectl --context ${K_CONTEXT} run rtt ${LIMITS} --image=jackvanlightly/rtt:1.1.24 --restart=Never -- \
+kubectl --context ${K_CONTEXT} run rtt ${LIMITS} --image=jackvanlightly/rtt:1.1.25 --restart=Never -- \
 --mode "$MODE" \
 --topology "topologies/$TOPOLOGY" \
 --policies "policies/$POLICIES" \
