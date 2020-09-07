@@ -61,7 +61,7 @@ public class QueueGroup {
         queueCounter = queues.size();
         int counter = queueCounter;
 
-        while(counter < maxQueues) {
+        while(counter <= maxQueues) {
             topologyGenerator.declareQueue(queueConfig, counter, nodeIndex);
             topologyGenerator.declareQueueBindings(queueConfig, counter);
             nextNode();
@@ -79,6 +79,15 @@ public class QueueGroup {
             topologyGenerator.declareQueueBindings(queueConfig, queueCounter);
             nextNode();
         }
+
+        return queueName;
+    }
+
+    public String removeQueue() {
+        queueCounter--;
+        String queueName = queues.get(queues.size()-1);
+        queues.remove(queues.size()-1);
+        topologyGenerator.deleteQueue(queueConfig, queueName);
 
         return queueName;
     }

@@ -135,6 +135,13 @@ public class Publisher implements Runnable {
         }
     }
 
+    public void removeQueue(String queue) {
+        if(publisherSettings.getSendToMode() == SendToMode.QueueGroup) {
+            queuesInGroup.remove(queue);
+            queueCount = queuesInGroup.size();
+        }
+    }
+
     public void setMessageSize(int bytes) {
         this.messageGenerator.setBaseMessageSize(bytes);
     }

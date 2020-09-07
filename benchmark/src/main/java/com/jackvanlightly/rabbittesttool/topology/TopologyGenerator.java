@@ -71,7 +71,7 @@ public class TopologyGenerator {
 
     public boolean deleteVHost(VirtualHost vhost) {
         String vhostUrl = getVHostUrl(vhost.getName(), vhost.isDownstream());
-        boolean deleted = delete(vhostUrl, true, 120000, 3, Duration.ofSeconds(10));
+        boolean deleted = delete(vhostUrl, true, 300000, 3, Duration.ofSeconds(10));
 
         if(deleted)
             logger.info("Deleted vhost " + vhost.getName() + " on " + (vhost.isDownstream() ? "downstream" : "upstream"));
@@ -287,6 +287,10 @@ public class TopologyGenerator {
             logger.error("Exhausted attempts to declare the stream", exception);
 
 
+    }
+
+    public void deleteQueue(QueueConfig queueConfig, String queueName) {
+        delete(getQueueUrl(queueConfig.getVhostName(), queueName, false), true, 30000, 3, Duration.ofSeconds(5));
     }
 
     private void tryClose(Client client) {

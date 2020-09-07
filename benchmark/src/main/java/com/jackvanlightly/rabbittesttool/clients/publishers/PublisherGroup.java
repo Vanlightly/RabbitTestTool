@@ -3,6 +3,8 @@ package com.jackvanlightly.rabbittesttool.clients.publishers;
 import com.jackvanlightly.rabbittesttool.BenchmarkLogger;
 import com.jackvanlightly.rabbittesttool.clients.ClientUtils;
 import com.jackvanlightly.rabbittesttool.clients.ConnectionSettings;
+import com.jackvanlightly.rabbittesttool.clients.consumers.Consumer;
+import com.jackvanlightly.rabbittesttool.clients.consumers.StreamConsumer;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.topology.QueueHosts;
@@ -216,6 +218,19 @@ public class PublisherGroup {
         }
     }
 
+    public void removePublisher() {
+        if(!publishers.isEmpty()) {
+            Publisher publisher = this.publishers.get(this.publishers.size() - 1);
+            publisher.signalStop();
+            this.publishers.remove(this.publishers.size() - 1);
+        }
+        else if(!streamPublishers.isEmpty()) {
+            StreamPublisher publisher = this.streamPublishers.get(this.streamPublishers.size() - 1);
+            publisher.signalStop();
+            this.streamPublishers.remove(this.streamPublishers.size() - 1);
+        }
+    }
+
     public void addQueue(String queueGroup, String queue) {
         if(publisherConfig.getSendToMode() == SendToMode.QueueGroup
             && publisherConfig.getSendToQueueGroup().getQueueGroup().equals(queueGroup)) {
@@ -228,6 +243,22 @@ public class PublisherGroup {
             else {
                 for (StreamPublisher publisher : this.streamPublishers)
                     publisher.addQueue(queue);
+            }
+        }
+    }
+
+    public void removeQueue(String queueGroup, String queue) {
+        if(publisherConfig.getSendToMode() == SendToMode.QueueGroup
+                && publisherConfig.getSendToQueueGroup().getQueueGroup().equals(queueGroup)) {
+            currentQueuesInGroup.remove(queue);
+
+            if(!publishers.isEmpty()) {
+                for (Publisher publisher : this.publishers)
+                    publisher.removeQueue(queue);
+            }
+            else {
+                for (StreamPublisher publisher : this.streamPublishers)
+                    publisher.removeQueue(queue);
             }
         }
     }

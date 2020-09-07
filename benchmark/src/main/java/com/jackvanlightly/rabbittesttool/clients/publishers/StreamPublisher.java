@@ -28,6 +28,7 @@ public class StreamPublisher implements Runnable {
     long confirmTimeoutThresholdNs;
 
     String publisherId;
+    byte streamPublisherId;
     MessageModel messageModel;
     MetricGroup metricGroup;
     PublisherSettings publisherSettings;
@@ -122,6 +123,7 @@ public class StreamPublisher implements Runnable {
         initializeSequenceCounter();
 
         confirmTimeoutThresholdNs = 1000000000L*300L; // 5 minutes. TODO add as an arg
+        streamPublisherId = 1;
     }
 
     public void signalStop() {
@@ -138,6 +140,11 @@ public class StreamPublisher implements Runnable {
 
     public void addQueue(String queue) {
         streamQueues.add(queue);
+        streamQueueCount = streamQueues.size();
+    }
+
+    public void removeQueue(String queue) {
+        streamQueues.remove(queue);
         streamQueueCount = streamQueues.size();
     }
 
@@ -461,7 +468,7 @@ public class StreamPublisher implements Runnable {
             return false;
 
         // send the messages as simple batches
-        List<Long> seqNos = client.publish(fixedStreamQueue, messages);
+        List<Long> seqNos = client.publish(fixedStreamQueue, streamPublisherId, messages);
         int sent = seqNos.size();
 
         // track the messages
@@ -515,7 +522,7 @@ public class StreamPublisher implements Runnable {
             return false;
 
         // send the sub entries
-        List<Long> batchNos = client.publishBatches(fixedStreamQueue, batches);
+        List<Long> batchNos = client.publishBatches(fixedStreamQueue, streamPublisherId, batches);
         Map<Long, List<MessagePayload>> batchNosTracking = new HashMap<>();
         for(int i=0; i<batchNos.size(); i++)
             batchNosTracking.put(batchNos.get(i), payloadBatches.get(i));
@@ -542,6 +549,7 @@ public class StreamPublisher implements Runnable {
 
         long seqNo = client.publish(
                 fixedStreamQueue,
+                streamPublisherId,
                 Collections.singletonList(client.messageBuilder().addData(body).build())
         ).get(0);
 

@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class ConsumerGroup {
     BenchmarkLogger logger;
@@ -231,6 +232,12 @@ public class ConsumerGroup {
         }
     }
 
+    public void removeQueue(String queueGroup, String queue) {
+        if(this.consumerConfig.getQueueGroup().equals(queueGroup)) {
+            this.currentQueues.remove(queue);
+        }
+    }
+
     public List<MetricGroup> getConsumerMetrics() {
         List<MetricGroup> metrics = new ArrayList<>();
 
@@ -247,7 +254,16 @@ public class ConsumerGroup {
     }
 
     public void removeConsumer() {
-
+        if(!consumers.isEmpty()) {
+            Consumer consumer = this.consumers.get(this.consumers.size() - 1);
+            consumer.signalStop();
+            this.consumers.remove(this.consumers.size() - 1);
+        }
+        else if(!streamConsumers.isEmpty()) {
+            StreamConsumer consumer = this.streamConsumers.get(this.streamConsumers.size() - 1);
+            consumer.signalStop();
+            this.streamConsumers.remove(this.streamConsumers.size() - 1);
+        }
     }
 
     public void stopAllConsumers() {
@@ -286,10 +302,13 @@ public class ConsumerGroup {
     private String getLowestConsumedQueue() {
         int min = Integer.MAX_VALUE;
         String lowestQueue = "";
-        for(Map.Entry<String, Integer> entry : this.currentQueues.entrySet()) {
-            if(entry.getValue() < min) {
-                min = entry.getValue();
-                lowestQueue = entry.getKey();
+
+        List<String> orderedQueues = this.currentQueues.keySet().stream().sorted().collect(Collectors.toList());
+        for(String queue : orderedQueues) {
+            int consumeCount = currentQueues.get(queue);
+            if(consumeCount < min) {
+                min = consumeCount;
+                lowestQueue = queue;
             }
         }
 

@@ -56,7 +56,7 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
 
     // confirmListener
     @Override
-    public void handle(long seqNo) {
+    public void handle(byte publishererId, long seqNo) {
         if(isSubEntryBatchListener)
             handleBatch(seqNo);
         else
@@ -65,7 +65,7 @@ public class StreamPublisherListener implements Client.PublishConfirmListener, C
 
     // publishErrorListener
     @Override
-    public void handle(long seqNo, short i) {
+    public void handle(byte publishererId, long seqNo, short i) {
         if(isSubEntryBatchListener)
             handleBatch(seqNo, i);
         else

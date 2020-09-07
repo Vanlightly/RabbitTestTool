@@ -752,20 +752,19 @@ public class Orchestrator {
     private void nextConsumerStep(VariableConfig variableConfig, int value, boolean startable) {
         logger.info("Next step in CONSUMERS variable dimension with value: " + value);
         for(ConsumerGroup consumerGroup : this.consumerGroups) {
-            if(variableConfig.getGroup() == null) {
-                while(consumerGroup.getConsumerCount() < value) {
-                    if(startable)
-                        consumerGroup.addAndStartConsumer();
-                    else
-                        consumerGroup.addConsumer();
+            if(variableConfig.getGroup() == null || consumerGroup.getGroup().equals(variableConfig.getGroup())) {
+                if(value >= consumerGroup.getConsumerCount()) {
+                    while (consumerGroup.getConsumerCount() < value) {
+                        if (startable)
+                            consumerGroup.addAndStartConsumer();
+                        else
+                            consumerGroup.addConsumer();
+                    }
                 }
-            }
-            else if(consumerGroup.getGroup().equals(variableConfig.getGroup())) {
-                while(consumerGroup.getConsumerCount() < value) {
-                    if (startable)
-                        consumerGroup.addAndStartConsumer();
-                    else
-                        consumerGroup.addConsumer();
+                else {
+                    while (consumerGroup.getConsumerCount() > value) {
+                        consumerGroup.removeConsumer();
+                    }
                 }
             }
         }
@@ -774,20 +773,19 @@ public class Orchestrator {
     private void nextPublisherStep(VariableConfig variableConfig, int value, boolean startable) {
         logger.info("Next step in PUBLISHERS variable dimension with value: " + value);
         for(PublisherGroup publisherGroup : this.publisherGroups) {
-            if(variableConfig.getGroup() == null) {
-                while(publisherGroup.getPublisherCount() < value) {
-                    if(startable)
-                        publisherGroup.addAndStartPublisher();
-                    else
-                        publisherGroup.addPublisher();
+            if(variableConfig.getGroup() == null || publisherGroup.getGroup().equals(variableConfig.getGroup())) {
+                if(value >= publisherGroup.getPublisherCount()) {
+                    while (publisherGroup.getPublisherCount() < value) {
+                        if (startable)
+                            publisherGroup.addAndStartPublisher();
+                        else
+                            publisherGroup.addPublisher();
+                    }
                 }
-            }
-            else if(publisherGroup.getGroup().equals(variableConfig.getGroup())) {
-                while(publisherGroup.getPublisherCount() < value){
-                    if(startable)
-                        publisherGroup.addAndStartPublisher();
-                    else
-                        publisherGroup.addPublisher();
+                else {
+                    while (publisherGroup.getPublisherCount() > value) {
+                        publisherGroup.removePublisher();
+                    }
                 }
             }
         }
@@ -796,13 +794,15 @@ public class Orchestrator {
     private void nextQueueStep(VariableConfig variableConfig, int value) {
         logger.info("Next step in QUEUES variable dimension with value: " + value);
         for(QueueGroup queueGroup : this.queueGroups) {
-            if(variableConfig.getGroup() == null) {
-                while(queueGroup.getQueueCount() < value)
-                    addQueue(queueGroup);
-            }
-            else if(queueGroup.getGroup().equals(variableConfig.getGroup())) {
-                while(queueGroup.getQueueCount() < value)
-                    addQueue(queueGroup);
+            if(variableConfig.getGroup() == null || queueGroup.getGroup().equals(variableConfig.getGroup())) {
+                if (value >= queueGroup.getQueueCount()) {
+                    while (queueGroup.getQueueCount() < value)
+                        addQueue(queueGroup);
+                }
+                else {
+                    while(queueGroup.getQueueCount() > value)
+                        removeQueue(queueGroup);
+                }
             }
         }
     }
@@ -818,6 +818,25 @@ public class Orchestrator {
         // broadcast the queue group change to all consumer groups
         for(ConsumerGroup consumerGroup : consumerGroups)
             consumerGroup.addQueue(queueGroup.getGroup(), queueName);
+    }
+
+    private void removeQueue(QueueGroup queueGroup) {
+        // remove the queue from the queue group which also deletes the queue physically
+        String queueName = null;
+        try {
+            queueName = queueGroup.removeQueue();
+        } catch(Exception e) {
+            logger.error("Dimension change aborted. Unable to delete a queue from queue prefix: " + queueGroup.getGroup(), e);
+            return;
+        }
+
+        // broadcast the queue group change to all publisher groups
+        for (PublisherGroup publisherGroup : publisherGroups)
+            publisherGroup.removeQueue(queueGroup.getGroup(), queueName);
+
+        // broadcast the queue group change to all consumer groups
+        for(ConsumerGroup consumerGroup : consumerGroups)
+            consumerGroup.removeQueue(queueGroup.getGroup(), queueName);
     }
 
     private void nextConsumerPrefetchStep(VariableConfig variableConfig, int value) throws IOException{
