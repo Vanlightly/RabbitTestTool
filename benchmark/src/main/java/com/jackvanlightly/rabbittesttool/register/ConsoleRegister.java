@@ -95,18 +95,23 @@ public class ConsoleRegister implements BenchmarkRegister {
                     stepStatistics.getRecordingSeconds(),
                     stepStatistics.getDurationSeconds()));
 
+            String line = "    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#},Msgs Nacked={4,number,#},Msgs Returned={5,number,#}";
             if (lastStats == null || lastStep != step) {
-                this.out.println(MessageFormat.format("    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#}",
+                this.out.println(MessageFormat.format(line,
                         stepStatistics.getSentCount(),
                         stepStatistics.getSentBytesCount(),
                         stepStatistics.getReceivedCount(),
-                        stepStatistics.getReceivedBytesCount()));
+                        stepStatistics.getReceivedBytesCount(),
+                        stepStatistics.getNackedCount(),
+                        stepStatistics.getReturnedCount()));
             } else {
-                this.out.println(MessageFormat.format("    Msgs Sent={0,number,#}, Bytes Sent={1,number,#},Msgs Received={2,number,#}, Bytes Received={3,number,#}",
+                this.out.println(MessageFormat.format(line,
                         stepStatistics.getSentCount() - lastStats.getSentCount(),
                         stepStatistics.getSentBytesCount() - lastStats.getSentBytesCount(),
                         stepStatistics.getReceivedCount() - lastStats.getReceivedCount(),
-                        stepStatistics.getReceivedBytesCount() - lastStats.getReceivedBytesCount()));
+                        stepStatistics.getReceivedBytesCount() - lastStats.getReceivedBytesCount(),
+                        stepStatistics.getNackedCount() - lastStats.getNackedCount(),
+                        stepStatistics.getReturnedCount() - lastStats.getReturnedCount()));
             }
 
             lastStats = stepStatistics;

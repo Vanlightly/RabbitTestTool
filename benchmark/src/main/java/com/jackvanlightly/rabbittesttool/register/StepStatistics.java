@@ -17,6 +17,8 @@ public class StepStatistics {
     private long receivedCount;
     private long sentBytesCount;
     private long receivedBytesCount;
+    private long nackedCount;
+    private long returnedCount;
 
     private String[] latencyPercentiles;
     private double[] latencies;
@@ -119,6 +121,22 @@ public class StepStatistics {
 
     public void setReceivedCount(long receivedCount) {
         this.receivedCount = receivedCount;
+    }
+
+    public long getNackedCount() {
+        return nackedCount;
+    }
+
+    public void setNackedCount(long nackedCount) {
+        this.nackedCount = nackedCount;
+    }
+
+    public long getReturnedCount() {
+        return returnedCount;
+    }
+
+    public void setReturnedCount(long returnedCount) {
+        this.returnedCount = returnedCount;
     }
 
     public double[] getLatencies() {

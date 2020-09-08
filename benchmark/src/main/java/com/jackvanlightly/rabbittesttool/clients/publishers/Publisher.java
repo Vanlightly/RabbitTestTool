@@ -13,6 +13,7 @@ import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -251,11 +252,9 @@ public class Publisher implements Runnable {
 
                 logger.info("Publisher " + publisherId + " stopping initial publish");
 
-                tryClose(channel);
                 tryClose(connection);
             } catch (Exception e) {
                 logger.error("Publisher" + publisherId + " failed in initial publish", e);
-                tryClose(channel);
                 tryClose(connection);
                 waitFor(5000);
             }
@@ -356,14 +355,12 @@ public class Publisher implements Runnable {
 
                 logger.info("Publisher " + publisherId + " stopping");
 
-                tryClose(channel);
                 tryClose(connection);
             } catch (TimeoutException | IOException e) {
                 logger.error("Publisher" + publisherId + " connection failed");
                 waitFor(5000);
             } catch (Exception e) {
                 logger.error("Publisher" + publisherId + " failed unexpectedly", e);
-                tryClose(channel);
                 tryClose(connection);
                 waitFor(5000);
             }
@@ -377,18 +374,10 @@ public class Publisher implements Runnable {
         logger.info("Publisher " + publisherId + " stopped successfully");
     }
 
-    private void tryClose(Channel channel) {
-        try {
-            if (channel.isOpen())
-                channel.close();
-        }
-        catch(Exception e){}
-    }
-
     private void tryClose(Connection connection) {
         try {
             if (connection.isOpen()) {
-                connection.close();
+                connection.close(30000);
             }
 
             messageModel.clientDisconnected(publisherId, isCancelled.get());
@@ -476,7 +465,9 @@ public class Publisher implements Runnable {
     }
 
     private Broker getBrokerToConnectTo() {
+        int attempts = 0;
         while(!isCancelled.get()) {
+            attempts++;
             Broker host = null;
             if(connectionSettings.getPublisherConnectToNode().equals(ConnectToNode.RoundRobin))
                 host = queueHosts.getHostRoundRobin();
@@ -499,6 +490,9 @@ public class Publisher implements Runnable {
             }
             else {
                 ClientUtils.waitFor(1000, isCancelled);
+
+                if(attempts % 30 == 0)
+                    logger.info("Could not identify a broker to connect to. Attempts: " + attempts);
             }
         }
 

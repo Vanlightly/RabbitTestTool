@@ -89,6 +89,8 @@ public class Stats {
     protected volatile long recvCountStepTotal;
     protected volatile long sendBytesCountStepTotal;
     protected volatile long recvBytesCountStepTotal;
+    protected volatile long nackedCountStepTotal;
+    protected volatile long returnedCountStepTotal;
 
     protected long elapsedInterval;
     protected long elapsedTotal;
@@ -352,10 +354,19 @@ public class Stats {
                         publishedMsgHeadersInterval+=metric.getRealDeltaValue();
                         break;
                     case PublisherNacked:
-                        nackCountInterval+=metric.getRealDeltaValue();
+                        long nacked = metric.getRealDeltaValue();
+                        nackCountInterval+= nacked;
+                        nackedCountStepTotal+= nacked;
                         break;
                     case PublisherReturned:
-                        returnCountInterval+=metric.getRealDeltaValue();
+                        long returned = metric.getRealDeltaValue();
+
+                        if(returned < 0) {
+                            System.out.println(returned);
+                        }
+
+                        returnCountInterval+=returned;
+                        returnedCountStepTotal+=returned;
                         break;
                     case PublisherRoutingKeyLength:
                         routingKeyLengthInterval+=metric.getRealDeltaValue();
@@ -841,6 +852,8 @@ public class Stats {
         recvCountStepTotal = 0;
         sendBytesCountStepTotal = 0;
         recvBytesCountStepTotal = 0;
+        nackedCountStepTotal = 0;
+        returnedCountStepTotal = 0;
 
         return stepStats;
     }
@@ -866,6 +879,8 @@ public class Stats {
         stepStats.setSentBytesCount(sendBytesCountStepTotal);
         stepStats.setReceivedCount(recvCountStepTotal);
         stepStats.setReceivedBytesCount(recvBytesCountStepTotal);
+        stepStats.setNackedCount(nackedCountStepTotal);
+        stepStats.setReturnedCount(returnedCountStepTotal);
         stepStats.setFairnessPercentiles(new String[] {"Min", "5th", "25th", "50th", "75th", "95th", "Max"});
         stepStats.setPerPublisherSendRates(getPerPublisherSendRates(recordingSeconds));
         stepStats.setPerConsumerReceiveRates(getPerConsumerReceiveRates(recordingSeconds));
