@@ -18,6 +18,8 @@ class UniqueConfiguration:
         self.policies_file = get_optional_arg(args, "--policies-file", self.suffix, "none")
         self.pub_connect_to_node = get_optional_arg_validated(args, "--pub-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
         self.con_connect_to_node = get_optional_arg_validated(args, "--con-connect-to-node", self.suffix, ["roundrobin", "local", "non-local", "random"], "roundrobin")
+        self.pub_heartbeat_sec = int(get_optional_arg(args, "--pub-heartbeat-sec", self.suffix, "10"))
+        self.con_heartbeat_sec = int(get_optional_arg(args, "--con-heartbeat-sec", self.suffix, "10"))
         self.deployment = get_optional_arg_validated(args, "--deployment", self.suffix, ["ec2", "eks", "gke"], "ec2")
         
         if self.deployment == "eks" or self.deployment == "gke":

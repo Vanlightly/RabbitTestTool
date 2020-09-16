@@ -78,6 +78,8 @@ class AwsRunner(Runner):
                                 common_conf.override_broker_hosts, 
                                 unique_conf.pub_connect_to_node,
                                 unique_conf.con_connect_to_node,
+                                str(unique_conf.pub_heartbeat_sec),
+                                str(unique_conf.con_heartbeat_sec),
                                 common_conf.mode,
                                 str(common_conf.grace_period_sec),
                                 common_conf.warmUpSeconds,
