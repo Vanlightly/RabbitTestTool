@@ -76,9 +76,14 @@ files = list()
 #         if ".log" in file_path:
 #             files.append(file_path)
 
-for filename in glob.iglob(log_dir + '**/*.log', recursive=True):
+for filename in glob.iglob(log_dir + '**/*.log*', recursive=True):
     if not "crash.log" in filename and not "upgrade.log" in filename:
-     files.append(filename)
+        broker_match = re.match(r".+(rabbit@[a-zA-Z0-9_\.-]+)\.log.*", filename)
+        if not broker_match:
+            print(f"Ignoring {filename}")
+        else:
+            files.append(filename)
+            print(f"Analysing {filename}")
         
 
 for file in files:
@@ -183,6 +188,45 @@ for file in files:
                 vhost = get_vhost_name(line)
                 if queue == target_queue and vhost == target_vhost:
                     events.append((date_time_str, "leader_down", broker_name, queue, "", ""))
+            elif "may be down, setting pre-vote timeout" in line:
+                queue = get_queue_name(line)
+                vhost = get_vhost_name(line)
+                if queue == target_queue and vhost == target_vhost:
+                    events.append((date_time_str, "leader_maybe_down", broker_name, queue, "", ""))
+            elif "is back up, cancelling pre-vote timeout" in line:
+                queue = get_queue_name(line)
+                vhost = get_vhost_name(line)
+                if queue == target_queue and vhost == target_vhost:
+                    events.append((date_time_str, "leader_backup", broker_name, queue, "", ""))
+            elif "is not new, setting election timeout" in line:
+                queue = get_queue_name(line)
+                vhost = get_vhost_name(line)
+                if queue == target_queue and vhost == target_vhost:
+                    events.append((date_time_str, "setting_election_timeout", broker_name, queue, "", ""))
+            elif ": election called for in term" in line:
+                queue = get_queue_name(line)
+                vhost = get_vhost_name(line)
+                term = get_term(line)
+                if queue == target_queue and vhost == target_vhost:
+                    events.append((date_time_str, "election_called", broker_name, queue, "", term))
+            elif ": pre_vote election called for in term" in line:
+                queue = get_queue_name(line)
+                vhost = get_vhost_name(line)
+                term = get_term(line)
+                if queue == target_queue and vhost == target_vhost:
+                    events.append((date_time_str, "pre_vote_election_called", broker_name, queue, "", term))
+            elif "granting pre-vote for" in line:
+                queue = get_queue_name(line)
+                vhost = get_vhost_name(line)
+                term = get_term(line)
+
+                requesting_broker = "?"
+                match = re.match(r".+granting pre-vote for \{\'.+\','([a-zA-Z0-9_\.-]+@[a-zA-Z0-9_\.-]+)'\}.+", line)
+                if match:
+                    requesting_broker = match.group(1)
+
+                if queue == target_queue and vhost == target_vhost:
+                    events.append((date_time_str, "granted_pre_vote", broker_name, queue, requesting_broker, term))
             elif "detected a new leader" in line:
                 queue = get_queue_name(line)
                 vhost = get_vhost_name(line)
@@ -257,23 +301,28 @@ for event in events_sorted:
     queue = event[3]
     other_broker = event[4]
 
-
-    whitespace = "".rjust(50 * brokers_list.index(broker), " ")
-
     if event_type == "broker_up" or event_type == "broker_down":
-        value = f"{broker} sees {event_type} for {other_broker}"
+        value = f"{event_type} for {other_broker}"
     elif event_type.startswith("broker_start") or event_type.startswith("broker_stop"):
-        value = f"{broker} {event_type}"
+        value = f"{event_type}"
     elif event_type == "become_leader":
-        value = f"{broker} {event_type} of term {event[5]}"
+        value = f"{event_type} of term {event[5]}"
     elif event_type == "leader_down":
-        value = f"{broker} {event_type}"
+        value = f"{event_type}"
+    elif event_type == "leader_maybe_down":
+        value = f"{event_type} setting pre_vote timeout"
+    elif event_type == "leader_backup":
+        value = f"{event_type} cancelling pre_vote timeout"
+    elif event_type == "setting_election_timeout":
+        value = f"{event_type} (not new follower)"
     elif event_type.startswith("abdicates_term"):
-        value = f"{broker} {event_type} due to {event[6]} from {other_broker} term {event[5]}"        
+        value = f"{event_type} due to {event[6]} from {other_broker} term {event[5]}"        
+    elif event_type == "election_called" or event_type == "pre_vote_election_called":
+        value = f"{event_type} term {event[5]}"
     elif event_type == "terminating":
-        value = f"{broker} {event_type} reason={event[4]} state={event[5]}"
+        value = f"{event_type} reason={event[4]} state={event[5]}"
     else:
-        value = f"{broker} {event_type} {other_broker} term {event[5]}"
+        value = f"{event_type} {other_broker} term {event[5]}"
 
     values = list()
     values.append(ts)
