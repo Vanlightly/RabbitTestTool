@@ -76,6 +76,7 @@ public class SpanningMessageModel {
     boolean logLastMsg;
     boolean logCompaction;
     boolean logJumps;
+    boolean logViolationsLive;
 
     public SpanningMessageModel(String benchmarkId,
                                 int sequence,
@@ -88,7 +89,8 @@ public class SpanningMessageModel {
                                 Duration housekeepingInterval,
                                 boolean logLastMsg,
                                 boolean logCompaction,
-                                boolean logJumps) {
+                                boolean logJumps,
+                                boolean logViolationsLive) {
         this.logger = new BenchmarkLogger("MESSAGE_MODEL_"+sequence);
         this.benchmarkId = benchmarkId;
         this.sequence = sequence;
@@ -126,6 +128,7 @@ public class SpanningMessageModel {
         this.logLastMsg = logLastMsg;
         this.logCompaction = logCompaction;
         this.logJumps = logJumps;
+        this.logViolationsLive = logViolationsLive;
     }
 
     public void setBenchmarkId(String benchmarkId) {
@@ -466,6 +469,10 @@ public class SpanningMessageModel {
         try {
             allViolations.add(violation);
             unloggedViolations.add(violation);
+
+            if(logViolationsLive && !violation.getViolationType().equals(ViolationType.Missing)) {
+                logger.info("VIOLATION! " + violation.toLogString());
+            }
         }
         finally {
             violationsLock.writeLock().unlock();

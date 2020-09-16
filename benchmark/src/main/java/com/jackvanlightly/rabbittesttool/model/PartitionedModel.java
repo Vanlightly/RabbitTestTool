@@ -35,6 +35,7 @@ public class PartitionedModel implements MessageModel {
     boolean logLastMsg;
     boolean logCompaction;
     boolean logJumps;
+    boolean logViolationsLive;
 
     private final ReadWriteLock modelLock;
     final ReadWriteLock intervalsLock;
@@ -80,7 +81,8 @@ public class PartitionedModel implements MessageModel {
             boolean includeRedelivered,
             boolean logLastMsg,
             boolean logCompaction,
-            boolean logJumps) {
+            boolean logJumps,
+            boolean logViolationsLive) {
         this.register = register;
         this.enabled = true;
         this.logger = new BenchmarkLogger("PARTITIONED_MODEL");
@@ -112,6 +114,7 @@ public class PartitionedModel implements MessageModel {
         this.logLastMsg = logLastMsg;
         this.logCompaction = logCompaction;
         this.logJumps = logJumps;
+        this.logViolationsLive = logViolationsLive;
     }
 
     public void setBenchmarkId(String benchmarkId) {
@@ -287,7 +290,8 @@ public class PartitionedModel implements MessageModel {
                             houseKeepingInterval,
                             logLastMsg,
                             logCompaction,
-                            logJumps);
+                            logJumps,
+                            logViolationsLive);
                     model.monitorProperties(this.executorService);
                     models.put(sequence, model);
                 }

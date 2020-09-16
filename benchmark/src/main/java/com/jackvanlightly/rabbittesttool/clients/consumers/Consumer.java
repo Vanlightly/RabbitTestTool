@@ -239,13 +239,13 @@ public class Consumer implements Runnable  {
 
         factory.setConnectionTimeout(5000);
         factory.setAutomaticRecoveryEnabled(false);
-        factory.setShutdownTimeout(0);
 
         if(consumerSettings.getFrameMax() > 0)
             factory.setRequestedFrameMax(consumerSettings.getFrameMax());
 
-        factory.setRequestedHeartbeat(10);
+        factory.setRequestedHeartbeat(connectionSettings.getConsumerHeartbeatSeconds());
         factory.setSharedExecutor(consumerExecutorService);
+        factory.setShutdownExecutor(consumerExecutorService);
         factory.setThreadFactory(new NamedThreadFactory("ConsumerConnection-" + consumerId));
 
         if(!connectionSettings.isNoTcpDelay())

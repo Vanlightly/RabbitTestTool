@@ -14,6 +14,8 @@ public class ConnectionSettings {
     private ConnectToNode consumerConnectToNode;
     private boolean noTcpDelay;
     private boolean isDownstream;
+    private int publisherHeartbeatSeconds;
+    private int consumerHeartbeatSeconds;
 
     public List<Broker> getHosts() {
         return hosts;
@@ -87,6 +89,22 @@ public class ConnectionSettings {
         isDownstream = downstream;
     }
 
+    public int getPublisherHeartbeatSeconds() {
+        return publisherHeartbeatSeconds;
+    }
+
+    public void setPublisherHeartbeatSeconds(int publisherHeartbeatSeconds) {
+        this.publisherHeartbeatSeconds = publisherHeartbeatSeconds;
+    }
+
+    public int getConsumerHeartbeatSeconds() {
+        return consumerHeartbeatSeconds;
+    }
+
+    public void setConsumerHeartbeatSeconds(int consumerHeartbeatSeconds) {
+        this.consumerHeartbeatSeconds = consumerHeartbeatSeconds;
+    }
+
     public ConnectionSettings getClone(String vhostName) {
         ConnectionSettings cs = new ConnectionSettings();
         cs.setNoTcpDelay(noTcpDelay);
@@ -98,6 +116,8 @@ public class ConnectionSettings {
         cs.setPublisherConnectToNode(publisherConnectToNode);
         cs.setConsumerConnectToNode(consumerConnectToNode);
         cs.setDownstream(isDownstream);
+        cs.setPublisherHeartbeatSeconds(publisherHeartbeatSeconds);
+        cs.setConsumerHeartbeatSeconds(consumerHeartbeatSeconds);
 
         return cs;
     }

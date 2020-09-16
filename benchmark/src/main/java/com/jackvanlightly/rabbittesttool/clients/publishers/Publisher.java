@@ -13,7 +13,6 @@ import com.rabbitmq.client.*;
 import io.micrometer.core.instrument.util.NamedThreadFactory;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -289,6 +288,7 @@ public class Publisher implements Runnable {
                 if (this.useConfirms) {
                     channel.confirmSelect();
                     channel.addConfirmListener(listener);
+                    channel.addShutdownListener(listener);
                 }
 
                 if (publisherSettings.useMandatoryFlag()) {
@@ -320,7 +320,7 @@ public class Publisher implements Runnable {
 
                         // keep trying to acquire until the cancelation or connection dies
                         while(!isCancelled.get() && !flowController.tryGetSendPermit(1000, TimeUnit.MILLISECONDS)) {
-                            if (!channel.isOpen()) {
+                            if (!channel.isOpen() || !connection.isOpen() || listener.isShutdownCompleted()) {
                                 reconnect = true;
                                 break;
                             }
@@ -453,9 +453,9 @@ public class Publisher implements Runnable {
         if(publisherSettings.getFrameMax() > 0)
             factory.setRequestedFrameMax(publisherSettings.getFrameMax());
 
-        factory.setRequestedHeartbeat(10);
+        factory.setRequestedHeartbeat(connectionSettings.getPublisherHeartbeatSeconds());
         factory.setSharedExecutor(executorService);
-        //factory.setSharedExecutor(this.executorService);
+        factory.setShutdownExecutor(executorService);
         factory.setThreadFactory(new NamedThreadFactory("PublisherConnection-" + publisherId));
 
         if(!connectionSettings.isNoTcpDelay())

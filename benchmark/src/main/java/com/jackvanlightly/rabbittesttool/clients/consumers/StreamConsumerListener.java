@@ -89,6 +89,9 @@ public class StreamConsumerListener implements Client.ChunkListener, Client.Mess
 
     void handleMessage(Message message) throws IOException {
         MessagePayload mp = MessageGenerator.toMessagePayload(message.getBodyAsBinary());
+        if(mp == null)
+            return;
+
         long now = System.nanoTime();
         long lag = MessageUtils.getLag(now, mp.getTimestamp());
         messageModel.received(new ReceivedMessage(consumerId, vhost, queue, mp, false, lag, System.currentTimeMillis()));

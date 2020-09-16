@@ -182,6 +182,7 @@ public class AMQPBenchmarker {
             boolean logLastMsg = arguments.getBoolean("--print-last-msg", false);
             boolean logCompaction = arguments.getBoolean("--print-compaction", false);
             boolean logGaps = arguments.getBoolean("--print-gaps", false);
+            boolean logViolationsLive = arguments.getBoolean("--print-non-missing-violations", false);
 
 
             MessageModel messageModel = new PartitionedModel(benchmarkRegister,
@@ -197,7 +198,8 @@ public class AMQPBenchmarker {
                     includeRedelivered,
                     logLastMsg,
                     logCompaction,
-                    logGaps);
+                    logGaps,
+                    logViolationsLive);
 
             ExecutorService modelExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("MessageModel"));
             messageModel.monitorProperties(modelExecutor);
@@ -680,6 +682,8 @@ public class AMQPBenchmarker {
         connectionSettings.setPublisherConnectToNode(getConnectToNode(cmdArguments.getStr("--pub-connect-to-node", "roundrobin")));
         connectionSettings.setConsumerConnectToNode(getConnectToNode(cmdArguments.getStr("--con-connect-to-node", "roundrobin")));
         connectionSettings.setDownstream(isDownstream);
+        connectionSettings.setPublisherHeartbeatSeconds(cmdArguments.getInt("--pub-heartbeat-sec", 10));
+        connectionSettings.setConsumerHeartbeatSeconds(cmdArguments.getInt("--con-heartbeat-sec", 10));
 
         return connectionSettings;
     }

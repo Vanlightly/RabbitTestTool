@@ -163,6 +163,9 @@ public class EventingConsumer extends DefaultConsumer {
 
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
         MessagePayload mp = MessageGenerator.toMessagePayload(body);
+        if(mp == null)
+            return;
+
         long now = System.nanoTime();
         long lag = MessageUtils.getLag(now, mp.getTimestamp());
         SequenceLag seqLag = sequenceLagMap.get(mp.getSequence());

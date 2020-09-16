@@ -9,17 +9,14 @@ import com.jackvanlightly.rabbittesttool.clients.consumers.EventingConsumer;
 import com.jackvanlightly.rabbittesttool.model.MessageModel;
 import com.jackvanlightly.rabbittesttool.statistics.MetricGroup;
 import com.jackvanlightly.rabbittesttool.statistics.MetricType;
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.BlockedListener;
-import com.rabbitmq.client.ConfirmListener;
-import com.rabbitmq.client.ReturnListener;
+import com.rabbitmq.client.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class PublisherListener implements ConfirmListener, ReturnListener, BlockedListener {
+public class PublisherListener implements ConfirmListener, ReturnListener, BlockedListener, ShutdownListener {
 
     BenchmarkLogger logger;
     MessageModel messageModel;
@@ -30,6 +27,7 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
     Lock timeoutLock;
     long lastRecordedLatency;
     Map<Integer, SequenceLag> sequenceLag;
+    boolean shutdownCompleted;
 
     public PublisherListener(MessageModel messageModel,
                              MetricGroup metricGroup,
@@ -158,7 +156,8 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
                              byte[] body) {
         try {
             MessagePayload mp = MessageGenerator.toMessagePayload(body);
-            undeliverable.add(mp);
+            if(mp != null)
+                undeliverable.add(mp);
         }
         catch(Exception e) {
             logger.error("Failed registering basic return", e);
@@ -178,5 +177,15 @@ public class PublisherListener implements ConfirmListener, ReturnListener, Block
 
     public int getPendingConfirmCount() {
         return pendingConfirmCount.get();
+    }
+
+    @Override
+    public void shutdownCompleted(ShutdownSignalException cause) {
+        logger.info("Received shutdown signal");
+        shutdownCompleted = true;
+    }
+
+    public boolean isShutdownCompleted() {
+        return shutdownCompleted;
     }
 }

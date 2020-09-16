@@ -2,6 +2,8 @@ package com.jackvanlightly.rabbittesttool.model;
 
 import com.jackvanlightly.rabbittesttool.clients.MessagePayload;
 
+import java.text.MessageFormat;
+
 public class Violation implements Comparable<Violation> {
     private ViolationType violationType;
     private MessagePayload messagePayload;
@@ -71,5 +73,34 @@ public class Violation implements Comparable<Violation> {
         long seqNo2 = o.getMessagePayload() != null ? o.getMessagePayload().getSequenceNumber() : o.getSpan().getLow();
 
         return Long.compare(seqNo1, seqNo2);
+    }
+
+    public String toLogString() {
+        if(getViolationType() == ViolationType.Ordering || getViolationType() == ViolationType.RedeliveredOrdering) {
+            return MessageFormat.format("Type: {0}, Sequence: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}, Prior Seq No {4,number,#}, Prior Timestamp {5,number,#}",
+                    getViolationType(),
+                    getMessagePayload().getSequence(),
+                    getMessagePayload().getSequenceNumber(),
+                    getMessagePayload().getTimestamp(),
+                    getPriorMessagePayload().getSequenceNumber(),
+                    getPriorMessagePayload().getTimestamp()
+            );
+        }
+        else if(getMessagePayload() != null) {
+            return MessageFormat.format("Type: {0}, Sequence: {1,number,#}, SeqNo: {2,number,#}, Timestamp {3,number,#}",
+                    getViolationType(),
+                    getMessagePayload().getSequence(),
+                    getMessagePayload().getSequenceNumber(),
+                    getMessagePayload().getTimestamp());
+        }
+        else {
+            return MessageFormat.format("Type: {0}, Sequence: {1,number,#}, Size: {2,number,#}, Low SeqNo: {3,number,#}, High SeqNo: {4,number,#}, Span ts {5}",
+                    getViolationType(),
+                    getSpan().getSequence(),
+                    getSpan().size(),
+                    getSpan().getLow(),
+                    getSpan().getHigh(),
+                    getSpan().getCreated());
+        }
     }
 }

@@ -29,6 +29,8 @@ public class MessageGenerator {
     }
 
     public static MessagePayload toMessagePayload(byte[] body) throws IOException {
+        if(body.length < MessagePayload.MinimumMessageSize)
+            return null;
         ByteBuffer bbuffer = ByteBuffer.wrap(body);
         Integer sequence = bbuffer.getInt();
         Long seqNumber = bbuffer.getLong();
