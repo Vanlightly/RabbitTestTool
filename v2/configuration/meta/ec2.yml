@@ -1,0 +1,7 @@
+keypair: my-keypair
+aws-user: my-user
+broker-sg: sg-abc
+loadgen-sg: sg-xyz
+subnets: subnet-1,subnet-2,subnet-3
+deploy-root-dir: /path/to/RabbitTestTool/v2/deploy/ec2
+run-root-dir: /path/to/RabbitTestTool/v2/run/ec2

@@ -1,0 +1,11 @@
+- hosts: tag_inventorygroup_benchmarking_metrics
+  remote_user: ubuntu
+  become: yes
+  vars_files:
+    # change to location of var files
+    - .variables/influx-vars.yml
+    - .variables/grafana-vars.yml
+  roles:
+    - role: preliminary
+    - role: influx
+    - role: cloudalchemy.grafana    

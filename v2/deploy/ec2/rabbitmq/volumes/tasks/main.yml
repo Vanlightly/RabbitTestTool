@@ -1,0 +1,161 @@
+# create, put fs and mount volume1
+- name: create volume1 directory
+  file: 
+    path: "{{ volume1_mountpoint }}"
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+  when: volume1|int > 0
+
+- name: Get name of volume1
+  shell: "lsblk | grep -E '{{ volume1_size_label }}' | cut -d' ' -f1"
+  register: volume1_name
+  when: volume1|int > 0
+
+- name: Create a filesystem on EBS volume1
+  filesystem:
+    fstype: "{{ filesystem }}"
+    dev: "/dev/{{ volume1_name.stdout }}"
+  when: volume1|int > 0
+
+- name: Mount EBS volume1
+  mount:
+    path: "{{ volume1_mountpoint }}"
+    src: "/dev/{{ volume1_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
+  when: volume1|int > 0
+
+- name: Get UUID of volume1
+  shell: "blkid -s UUID -o value $( df {{ volume1_mountpoint }} )"
+  register: volume1_uuid
+  become: true
+  when: volume1|int > 0
+
+- name: Convert fstab device name to UUID format for volume1
+  replace:
+    dest=/etc/fstab
+    regexp="/dev/{{ volume1_name.stdout }}"
+    replace="UUID={{volume1_uuid.stdout}}"
+    backup=yes
+  when: volume1|int > 0
+
+# create, put fs and mount volume2
+- name: create volume2 directory
+  file: 
+    path: "{{ volume2_mountpoint }}"
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+  when: volume2|int > 0
+
+- name: Get name of volume2
+  shell: "lsblk | grep -E '{{ volume2_size_label }}' | cut -d' ' -f1"
+  register: volume2_name
+  when: volume2|int > 0
+
+- name: Create a filesystem on EBS volume2
+  filesystem:
+    fstype: "{{ filesystem }}"
+    dev: "/dev/{{ volume2_name.stdout }}"
+  when: volume2|int > 0
+
+- name: Mount EBS volume2
+  mount:
+    path: "{{ volume2_mountpoint }}"
+    src: "/dev/{{ volume2_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
+  when: volume2|int > 0
+
+- name: Get UUID of volume2
+  shell: "blkid -s UUID -o value $( df {{ volume2_mountpoint }} )"
+  register: volume2_uuid
+  become: true
+  when: volume2|int > 0
+
+- name: Convert fstab device name to UUID format for volume2
+  replace:
+    dest=/etc/fstab
+    regexp="/dev/{{ volume2_name.stdout }}"
+    replace="UUID={{volume2_uuid.stdout}}"
+    backup=yes
+  when: volume2|int > 0
+
+# create, put fs and mount volume3
+- name: create volume3 directory
+  file: 
+    path: "{{ volume3_mountpoint }}" 
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+  when: volume3|int > 0
+
+- name: Get name of volume3
+  shell: "lsblk | grep -E '{{ volume3_size_label }}' | cut -d' ' -f1"
+  register: volume3_name
+  when: volume3|int > 0
+
+- name: Create a filesystem on EBS volume3
+  filesystem:
+    fstype: "{{ filesystem }}"
+    dev: "/dev/{{ volume3_name.stdout }}"
+  when: volume3|int > 0
+
+- name: Mount EBS volume3
+  mount:
+    path: "{{ volume3_mountpoint }}"
+    src: "/dev/{{ volume3_name.stdout }}"
+    fstype: "{{ filesystem }}"
+    state: mounted
+  when: volume3|int > 0
+
+- name: Get UUID of volume3
+  shell: "blkid -s UUID -o value $( df {{ volume3_mountpoint }} )"
+  register: volume3_uuid
+  become: true
+  when: volume3|int > 0
+
+- name: Convert fstab device name to UUID format for volume3
+  replace:
+    dest=/etc/fstab
+    regexp="/dev/{{ volume3_name.stdout }}"
+    replace="UUID={{volume3_uuid.stdout}}"
+    backup=yes
+  when: volume3|int > 0
+
+# create data, logs and wal directories
+- name: create data directory
+  file: 
+    path: "{ location_data }}/data"
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create logs directory
+  file: 
+    path: "{{ location_logs }}/logs"
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create quorum directory
+  file: 
+    path: "{{ location_quorum }}/quorum"
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+  
+- name: create wal directory
+  file: 
+    path: "{{ location_wal }}/wal"
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true

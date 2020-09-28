@@ -1,0 +1,47 @@
+name: test-eks-playlist
+systems:
+  - name: s1
+    host: k8s
+    k8s-engine: eks
+    base: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        volume-config: 1-gp2-1000
+        count: 3
+    run: 1
+common:
+  workload:
+    topology:
+      file: point-to-point/point-to-point-safe.yml
+      variables:
+        queues: 1
+        consumers: 1
+    policies:
+      file: mirrored-queue.yml
+      variables:
+        ha-mode: exactly
+        ha-params: 2
+    network:
+    rabbitmq:
+      config:
+benchmarks:
+  - benchmark:
+      - workload:
+          topology:
+            variables:
+              publishers: 1
+  - benchmark:
+      - workload:
+          topology:
+            variables:
+              publishers: 2
+  - benchmark:
+      - workload:
+          topology:
+            variables:
+              publishers: 4
+  - benchmark:
+      - workload:
+          topology:
+            variables:
+              publishers: 8

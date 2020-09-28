@@ -1,0 +1,49 @@
+---
+- name: Ensure PostgreSQL Python libraries are installed.
+  apt:
+    name: "{{ postgresql_python_library }}"
+    state: present
+
+- name: Ensure PostgreSQL packages are installed.
+  apt:
+    name: "{{ postgresql_packages }}"
+    state: present
+
+- name: Stop PostgreSQL before creating symlink
+  service:
+    name: "{{ postgresql_daemon }}"
+    state: stopped
+
+- name: create symlink to postgres log directory
+  file:
+    src: /var/log/postgresql
+    dest: /data/postgres/log
+    owner: postgres
+    group: postgres
+    state: link
+    force: true
+
+- name: create symlink to postgres lib directory
+  file:
+    src: /var/lib/postgresql
+    dest: /data/postgres/lib
+    owner: postgres
+    group: postgres
+    state: link
+    force: true
+
+- name: Start PostgreSQL after creating symlink
+  service:
+    name: "{{ postgresql_daemon }}"
+    state: started
+
+- name: Ensure all configured locales are present.
+  locale_gen: "name={{ item }} state=present"
+  with_items: "{{ postgresql_locales }}"
+  register: locale_gen_result
+
+- name: Force-restart PostgreSQL after new locales are generated.
+  service:
+    name: "{{ postgresql_daemon }}"
+    state: restarted
+  when: locale_gen_result.changed

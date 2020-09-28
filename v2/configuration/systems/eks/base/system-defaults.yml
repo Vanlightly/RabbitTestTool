@@ -1,0 +1,11 @@
+hardware:
+  instance: 4-vcpu-intel
+  volume-config: 1-gp2-200
+  count: 1
+rabbitmq:
+  broker: 
+    version: 3.8.9
+    image: docker.io/rabbitmq:3.8.9-management
+  # restart-brokers: true TODO: not yet supported
+  # federation-enabled: false TODO: not yet supported
+  config: pause-minority-debug.yml

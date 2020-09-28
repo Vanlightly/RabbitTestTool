@@ -1,0 +1,90 @@
+---
+# tasks file for preliminary
+
+- name: set hostname
+  hostname:
+    name: "{{ hostname }}"
+
+- name: Create a xfs filesystem on EBS /dev/xvdb
+  filesystem:
+    fstype: xfs
+    dev: /dev/xvdb
+
+- name: create data directory
+  file: 
+    path: /data 
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: Mount EBS volume for data directory
+  mount:
+    path: /data
+    src: /dev/xvdb
+    fstype: xfs
+    state: mounted
+
+- name: create influxdb lib directory
+  file: 
+    path: /data/influxdb/lib
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create influxdb lib data directory
+  file: 
+    path: /data/influxdb/lib/data
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create influxdb lib wal directory
+  file: 
+    path: /data/influxdb/lib/wal
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create influxdb lib meta directory
+  file: 
+    path: /data/influxdb/lib/meta
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+# - name: create postgres log directory
+#   file: 
+#     path: /data/postgres/log
+#     state: directory 
+#     owner: ubuntu 
+#     group: ubuntu
+#   become: true
+
+# - name: create postgres lib directory
+#   file: 
+#     path: /data/postgres/lib
+#     state: directory 
+#     owner: ubuntu 
+#     group: ubuntu
+#   become: true
+
+- name: create grafana log directory
+  file: 
+    path: /data/grafana/log
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: create grafana lib directory
+  file: 
+    path: /data/grafana/lib
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true

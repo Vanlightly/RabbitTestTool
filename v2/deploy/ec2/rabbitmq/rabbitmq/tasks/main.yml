@@ -1,0 +1,46 @@
+---
+- name: Set hosts file with instance ips
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {{ item.ip }} {{ item.host }}
+    marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.host }}"
+  with_items: "{{ rabbitmq_hosts }}"
+  tags: [installation]
+  when: rabbitmq_hosts is defined
+  
+# - name: Install RabbitMQ public key
+#   apt_key:
+#     url: https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc
+#     state: present
+#   tags: [installation]
+
+# - name: Install Erlang Solutions public key
+#   apt_key:
+#     url: https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
+#     state: present
+#   tags: [installation]
+
+- name: Download Erlang deb file
+  command: "wget -O /tmp/erlang.deb {{ erlang_deb_file_url }} "
+  tags: [installation]
+
+- name: Install Erlang from DEB file
+  apt:
+    deb: "/tmp/erlang.deb"
+  tags: [installation]
+  
+- include_tasks: configuration.yml
+  tags: [configuration]
+
+- include_tasks: install_from_generic.yml
+  tags: [installation]
+  
+- include_tasks: join_cluster_generic.yml
+  tags: [installation]
+  when: node_role == "joinee"
+
+# hack because when quorum dir is set, feature flags don't turn on (on some versions)
+- include_tasks: feature_flags.yml
+  tags: [installation]
+  when: location_quorum != location_data

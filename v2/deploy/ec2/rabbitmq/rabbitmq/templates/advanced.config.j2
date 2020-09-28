@@ -1,0 +1,17 @@
+[
+    {rabbit, [
+        {% for config in advanced_config_rabbit %}
+        {{ config }}
+        {% endfor %}
+    ]},
+    {ra, [
+        {% for config in advanced_config_ra %}
+        {{ config }}
+        {% endfor %}
+    ]},
+    {aten, [
+        {% for config in advanced_config_aten %}
+        {{ config }}
+        {% endfor %}
+    ]}
+].

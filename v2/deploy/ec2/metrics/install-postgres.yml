@@ -1,0 +1,8 @@
+- hosts: tag_inventorygroup_benchmarking_metrics
+  remote_user: ubuntu
+  become: yes
+  vars_files:
+    # change to location of var files
+    - .variables/postgres-vars.yml
+  roles:
+    - role: postgres

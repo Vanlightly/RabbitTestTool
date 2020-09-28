@@ -1,0 +1,9 @@
+from where tfvars files are
+
+terraform init ~/GitHub/RabbitTestTool/deploy/aws/metrics/
+terraform apply -var-file=vars.tfvars ~/GitHub/RabbitTestTool/deploy/aws/metrics/
+terraform destroy -var-file=vars.tfvars ~/GitHub/RabbitTestTool/deploy/aws/metrics/
+
+from this dir
+ansible-playbook install.yml --private-key=~/.ssh/rmq.pem
+

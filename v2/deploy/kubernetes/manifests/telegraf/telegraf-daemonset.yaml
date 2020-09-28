@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: telegraf
+data:
+  telegraf.conf: |+
+    [global_tags]
+      env = "$ENV"
+    [agent]
+      hostname = "$HOSTNAME"
+      interval = "5s"
+      round_interval = true
+      metric_batch_size = 1000
+      metric_buffer_limit = 10000
+      collection_jitter = "0s"
+      flush_interval = "10s"
+      flush_jitter = "2s"
+      precision = ""
+      debug = false
+      quiet = true
+      logfile = ""
+
+    [[inputs.cpu]]
+        percpu = true
+        totalcpu = true
+        collect_cpu_time = false
+        report_active = false
+    [[inputs.disk]]
+        ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+    [[inputs.diskio]]
+    [[inputs.mem]]
+    [[inputs.net]]
+    [[inputs.system]]
+    [[inputs.swap]]
+    [[inputs.netstat]]
+    [[inputs.processes]]
+    [[inputs.kernel]]
+
+    [[inputs.prometheus]]
+      ## An array of urls to scrape metrics from.
+      urls = ["http://localhost:15692/metrics"]
+      interval = "30s"
+      response_timeout = "25s"
+
+    # Output Plugin InfluxDB
+    [[outputs.influxdb]]
+      database = "{{ influx_db_name }}"
+      urls = [ "{{ influx_url }}" ]
+      username = "{{ influx_user.name }}"
+      password = "{{ influx_user.password }}"

@@ -1,0 +1,19 @@
+rabbitmq:
+  config:
+    name: pause-minority-debug
+    standard:
+      log_level: debug
+    advanced_rabbit:
+    advanced_ra:
+    advanced_aten:
+    plugins:
+      - rabbitmq_management
+      - rabbitmq_top
+      - rabbitmq_prometheus
+      - rabbitmq_sharding
+      - rabbitmq_consistent_hash_exchange
+      - rabbitmq_federation
+      - rabbitmq_federation_management
+      - rabbitmq_shovel
+    env: 
+    #  - SERVER_ADDITIONAL_ERL_ARGS=??

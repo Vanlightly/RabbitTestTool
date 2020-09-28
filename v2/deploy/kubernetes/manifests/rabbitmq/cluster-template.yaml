@@ -1,0 +1,59 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: ${cluster_name}
+spec:
+  replicas: ${cluster_size}
+  image: ${image}
+  rabbitmq:
+    <#list standard_config>
+    additionalConfig: |
+      <#items as config>
+      ${config}
+     </#items>
+    </#list>
+    advancedConfig: |
+      [
+        {rabbit, [
+          ${advanced_config_rabbit}
+        ]},
+        {ra, [
+          ${advanced_config_ra}
+        ]},
+        {aten, [
+          ${advanced_config_aten}
+        ]}
+      ].
+    <#list plugins>
+    additionalPlugins:
+     <#items as plugin>
+      - ${plugin}
+     </#items>
+    </#list>
+    <#if env_config??>
+    envConfig: |
+      ${env_config}
+    </#if>
+  service:
+    <#if service_type??>
+    type: ${service_type}
+    <#else>
+    type: NodePort
+    </#if>
+  persistence:
+    storage: ${volume_size}G
+    storageClassName: ${volume_type}
+  resources:
+    limits:
+      cpu: ${cpu_limit}
+      memory: ${memory_mb_limit}Mi
+    requests:
+      cpu: ${cpu_limit}
+      memory: ${memory_mb_limit}Mi
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "rabbitmq"
+      effect: "NoSchedule"
+    
+  

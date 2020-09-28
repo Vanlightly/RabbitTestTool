@@ -1,0 +1,48 @@
+---
+
+- name: Add APT key
+  apt_key:
+    url: https://repos.influxdata.com/influxdb.key
+    state: present
+
+- name: Add APT repository
+  apt_repository:
+    repo: deb https://repos.influxdata.com/ubuntu bionic stable
+    state: present
+    filename: influx
+
+- name: Install Telegraf package
+  apt:    
+    name: telegraf
+    update_cache: yes
+    install_recommends: yes
+    state: present
+  notify:
+    - Restart Telegraf service
+
+- name: Create Telegraf configuration file
+  template:
+    src: telegraf.conf.j2
+    dest: "{{ telegraf_config_file }}"
+    owner: "{{ telegraf_owner }}"
+    group: "{{ telegraf_group }}"
+    mode: "{{ telegraf_mode }}"
+  notify:
+    - Reload Telegraf service
+  tags:
+    - telegraf_config
+
+- name: Make sure Telegraf service is enabled
+  service:
+    name: "{{ telegraf_service }}"
+    enabled: yes
+  tags:
+    - telegraf_service
+
+- name: Make sure Telegraf service is running
+  service:
+    name: "{{ telegraf_service }}"
+    state: started
+  register: telegraf_service_started
+  tags:
+    - telegraf_service

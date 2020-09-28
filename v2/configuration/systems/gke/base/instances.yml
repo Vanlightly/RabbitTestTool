@@ -1,0 +1,18 @@
+instances:
+  - name: 4-vcpu-intel
+    type: n2-standard-4
+    vcpus: 4
+    memory-gb: 16
+  - name: 8-vcpu-intel
+    type: n2-standard-8
+    vcpus: 32
+    memory-gb: 16
+  - name: 16-vcpu-intel
+    type: n2-standard-16
+    vcpus: 16
+    memory-gb: 64
+  - name: 36-vcpu-intel
+    type: n2-standard-32
+    vcpus: 32
+    memory-gb: 128
+    

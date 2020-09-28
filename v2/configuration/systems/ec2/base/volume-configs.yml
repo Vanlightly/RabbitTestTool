@@ -1,0 +1,78 @@
+volume-configs:
+  - name: 1-gp2-200
+    volumes: 
+      - name: volume1
+        type: gp2
+        size-gb: 200
+        mountpoint: /volume1
+        data:
+          - mnesia
+          - logs
+          - quorum
+          - wal
+  - name: 1-gp2-1000
+    volumes: 
+      - name: volume1
+        type: gp2
+        size-gb: 1000
+        mountpoint: /volume1
+        data:
+          - mnesia
+          - logs
+          - quorum
+          - wal
+  - name: 1-io1-200
+    volumes: 
+      - name: volume1
+        type: io1
+        size-gb: 200
+        iops-per-gb: 50
+        mountpoint: /volume1
+        data:
+          - mnesia
+          - logs
+          - quorum
+          - wal
+  - name: 3-gp2-200
+    volumes: 
+      - name: volume1
+        type: gp2
+        size-gb: 200
+        mountpoint: /volume1
+        data:
+          - mnesia
+          - logs
+      - name: volume2
+        type: gp2
+        size-gb: 200
+        mountpoint: /volume2
+        data:
+          - quorum
+      - name: volume3
+        type: gp2
+        size-gb: 200
+        mountpoint: /volume3
+        data:
+          - wal
+  - name: 1-st1-2000
+    volumes: 
+      - name: volume1
+        type: st1
+        size-gb: 2000
+        mountpoint: /volume1
+        data:
+          - mnesia
+          - logs
+          - quorum
+          - wal
+  - name: 1-local-nvme-1000
+    volumes: 
+      - name: volume1
+        type: local_nvme
+        size-gb: 1000
+        mountpoint: /volume1
+        data:
+          - mnesia
+          - logs
+          - quorum
+          - wal

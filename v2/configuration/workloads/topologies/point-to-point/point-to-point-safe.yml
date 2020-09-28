@@ -1,0 +1,99 @@
+topologyType: fixed
+benchmarkType: {{ var.benchmarkType }}
+variables:
+  benchmarkType: throughput
+  groupScale: 1
+  scaleType: single-vhost
+  queuePrefix: q1
+  queueCount: 1
+  sac: false
+  hasDlx: false
+  publisherCount: 1
+  consumerCount: 1
+  deliveryMode: persistent
+  messageSize: 20
+  publishRate: 0  
+  useConfirms: true
+  inflightLimit: 1000
+  manualAcks: true
+  consumerPrefetch: 1000
+  globalPrefetch: false
+  ackInterval: 1
+  ackIntervalMs: 0
+  processingMs: 0
+  requeueEveryNth: 0
+  queueMode: default
+  durationSeconds: 120
+  initialPublish: 0
+topologyGroups:
+  - name: benchmark
+    scale: {{ var.groupScale }}
+    scaleType: {{ var.scaleType }}
+    exchanges:
+      - include: {{ var.hasDlx }}
+        name: {{ var.queuePrefix }}-deadletter
+        type: fanout
+    queues:
+      - prefix: {{ var.queuePrefix }}
+        scale: {{ var.queueCount }}
+        properties:
+          - key: x-queue-mode
+            value: {{ var.queueMode }}
+            type: string
+          - key: x-single-active-consumer
+            value: {{ var.sac }}
+            type: boolean
+        dlx: 
+          hasDlx: {{ var.hasDlx }}
+          name: {{ var.queuePrefix }}-deadletter
+      - include: {{ var.hasDlx }}
+        prefix: {{ var.queuePrefix }}-deadletter
+        scale: 1
+        bindings: 
+          - from: {{ var.queuePrefix }}-deadletter
+        properties:
+          - key: x-queue-mode
+            value: {{ var.queueMode }}
+            type: string
+          - key: x-single-active-consumer
+            value: {{ var.sac }}
+            type: boolean
+    publishers:
+      - prefix: p1
+        scale: {{ var.publisherCount }}
+        publishMode:
+          useConfirms: {{ var.useConfirms }}
+          inFlightLimit: {{ var.inflightLimit }}
+        sendToQueuePrefix:
+          queuePrefix: {{ var.queuePrefix }}
+          mode: Counterpart
+        deliveryMode: {{ var.deliveryMode }}
+        messageSize: {{ var.messageSize }}
+        msgsPerSecondPerPublisher: {{ var.publishRate }}
+        initialPublish: {{ var.initialPublish }}
+    consumers:  
+      - prefix: c1
+        scale: {{ var.consumerCount }}
+        queuePrefix: {{ var.queuePrefix }}
+        ackMode:
+          manualAcks: {{ var.manualAcks }}
+          consumerPrefetch: {{ var.consumerPrefetch }}
+          globalPrefetch: {{ var.globalPrefetch }}
+          ackInterval: {{ var.ackInterval }}
+          ackIntervalMs: {{ var.ackIntervalMs }}
+          requeueEveryNth: {{ var.requeueEveryNth }}
+        processingMs: {{ var.processingMs }}
+      - include: {{ var.hasDlx }}
+        prefix: c1-overflow 
+        scale: {{ var.consumerCount }}
+        queuePrefix: {{ var.queuePrefix }}-deadletter
+        ackMode:
+          manualAcks: {{ var.manualAcks }}
+          consumerPrefetch: {{ var.consumerPrefetch }}
+          ackInterval: {{ var.ackInterval }}
+          ackIntervalMs: {{ var.ackIntervalMs }}
+        processingMs: {{ var.processingMs }}
+dimensions :
+  fixedDimensions":
+    durationSeconds: {{ var.durationSeconds }}
+    rampUpSeconds: 10

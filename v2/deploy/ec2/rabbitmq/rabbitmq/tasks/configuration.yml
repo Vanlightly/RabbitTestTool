@@ -1,0 +1,41 @@
+---
+- name: Ensure rabbitmq directory
+  file: 
+    path: /rabbitmq
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: Ensure rabbitmq config directory
+  file: 
+    path: /rabbitmq/etc/rabbitmq
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: Set default configuration
+  template:
+    src: rabbitmq.conf.j2
+    dest: /rabbitmq/etc/rabbitmq/rabbitmq.conf
+    mode: 0400
+    force: true
+  tags: [configuration]
+
+- name: Set advanced raft configuration, location of wal...
+  template:
+    src: advanced.config.j2
+    dest: /rabbitmq/etc/rabbitmq/advanced.config
+    mode: 0400
+    force: true
+  tags: [configuration]
+  
+- name: Set environment variables file
+  template:
+    src: rabbitmq-env.conf.j2
+    dest: /rabbitmq/etc/rabbitmq/rabbitmq-env.conf
+    mode: 0400
+    force: true
+  tags: [configuration]
+  #when: additional_erl_args != 'none'

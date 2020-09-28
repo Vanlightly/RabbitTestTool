@@ -1,0 +1,76 @@
+---
+# detect skipping due to no matching hosts found issue
+- name: Create a file to signal the playbook ran
+  file:
+    path: run_check
+    state: touch
+
+- name: set hostname
+  hostname:
+    name: "{{ hostname }}"
+
+- name: Increase file descriptor limit for root
+  lineinfile:
+    path: /etc/security/limits.conf
+    insertbefore: '# End of file'
+    line: 'root - nofile {{ fd_limit }}'
+
+- name: Increase file descriptor limit for ubuntu
+  lineinfile:
+    path: /etc/security/limits.conf
+    insertbefore: '# End of file'
+    line: 'ubuntu soft nofile {{ fd_limit }}'
+
+- name: Enable pam_limits.so
+  lineinfile:
+    path: /etc/pam.d/common-session
+    insertbefore: '# end of pam-auth-update config'
+    line: 'session required pam_limits.so'
+
+- name: Ensure the locale exists
+  locale_gen:
+    name: en_US.UTF-8
+    state: present
+
+- name: set as default locale
+  command: update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+
+- name: Add RabbitMQ directories to /etc/environment
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: "RABBITMQ_MNESIA_DIR", value: "{{ location_data }}/data" }
+    - { key: "RABBITMQ_LOG_BASE", value: "{{ location_logs }}/logs" }
+
+- name: Set quorum directory
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: "RABBITMQ_QUORUM_DIR", value: "{{ location_quorum }}/quorum" }
+  when: location_quorum != location_data
+
+- name: Set IO Thread pool size
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: "RABBITMQ_IO_THREAD_POOL_SIZE", value: "{{ io_thread_pool_size }}" }
+  when: io_thread_pool_size|int > 0
+
+- name: Reboot the machine with all defaults
+  reboot:
+
+- name: Update all packages
+  apt:
+    name: "*"
+    state: latest
+    update_cache: yes
+    force_apt_get: true

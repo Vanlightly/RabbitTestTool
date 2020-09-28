@@ -1,0 +1,4 @@
+amis:
+  ubuntu-1804-x86: ami-08d658f84a6d84a80
+  ubuntu-2004-x86: ami-0dad359ff462124ca
+  ubuntu-2004-arm: ami-025ba019793af957b

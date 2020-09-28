@@ -1,0 +1,25 @@
+volume-configs:
+  - name: 1-gp2-200
+    type: gp2
+    size-gb: 200
+  - name: 1-gp2-1000
+    type: gp2
+    size-gb: 1000
+  - name: 1-io1-200
+    type: io1
+    size-gb: 200
+    # iops-per-gb: 10 TODO: this is not supported yet, requires templating of volume StorageClass
+  - name: 1-st1-2000
+    type: st1
+    size-gb: 2000
+  # high GB to avoid drop to lowe baseline
+  - name: 1-st1-10000
+    type: st1
+    size-gb: 10000
+  - name: 1-sc1-2000
+    type: sc1
+    size-gb: 2000
+  # high GB to avoid drop to lowe baseline
+  - name: 1-sc1-10000
+    type: sc1
+    size-gb: 10000

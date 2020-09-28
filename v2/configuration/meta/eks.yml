@@ -1,0 +1,6 @@
+aws-user: my-user
+region: the-region
+k8s-version: 1.17
+manifests-dir: /path/to/RabbitTestTool/v2/deploy/kubernetes/manifests/rabbitmq
+deploy-root-dir: /path/to/RabbitTestTool/v2/deploy/kubernetes
+run-root-dir: /path/to/RabbitTestTool/v2/run/eks

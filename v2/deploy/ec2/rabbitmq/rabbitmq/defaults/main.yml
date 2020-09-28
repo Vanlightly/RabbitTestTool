@@ -1,0 +1,24 @@
+sbin_dir: /rabbitmq/sbin
+node_role: "master"
+rabbitmq_erlang_cookie: 12345
+is_cluster: false
+prometheus_enabled: true
+disk_limit: 1000000000
+location_data: volume1
+location_logs: volume1
+location_wal: volume1
+location_quorum: volume1
+additional_erl_args: none
+standard_config:
+  - "file.log.level=debug"
+  - "cluster_partition_handling=pause_minority"
+rabbitmq_plugins:
+  - "rabbitmq_management"
+  - "rabbitmq_top"
+  - "rabbitmq_prometheus"
+  - "rabbitmq_sharding"
+  - "rabbitmq_consistent_hash_exchange"
+  - "rabbitmq_federation"
+  - "rabbitmq_federation_management"
+  - "rabbitmq_shovel"
+env_config:

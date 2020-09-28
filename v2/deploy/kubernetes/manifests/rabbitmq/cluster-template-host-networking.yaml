@@ -1,0 +1,50 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: CLUSTER_NAME
+spec:
+  replicas: CLUSTER_SIZE
+  service:
+    type: NodePort
+  persistence:
+    storage: VOLUME_SIZEG
+    storageClassName: VOLUME_TYPE
+  resources:
+    limits:
+      cpu: VCPUS
+      memory: MEMORY_MBMi
+    requests:
+      cpu: VCPUS
+      memory: MEMORY_MBMi
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "rabbitmq"
+      effect: "NoSchedule"
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            hostNetwork: true
+            dnsPolicy: ClusterFirstWithHostNet
+            containers:
+            - name: rabbitmq
+              ports:
+              - containerPort: 4369
+                hostPort: 4369
+                name: epmd
+                protocol: TCP
+              - containerPort: 5672
+                hostPort: 5672
+                name: amqp
+                protocol: TCP
+              - containerPort: 15672
+                hostPort: 15672
+                name: http
+                protocol: TCP
+              - containerPort: 15692
+                hostPort: 15692
+                name: prometheus
+                protocol: TCP
+  

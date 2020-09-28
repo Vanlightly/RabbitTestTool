@@ -1,0 +1,76 @@
+---
+
+- name: Ensure rabbitmq directory exists
+  file: 
+    path: /rabbitmq
+    state: directory 
+    owner: ubuntu 
+    group: ubuntu
+  become: true
+
+- name: download tarball
+  command: "wget -O /tmp/rabbit.tar.xz {{ generic_unix_url }} "
+
+- name: Create unpack dir
+  file:
+    path: /tmp/rabbitmq
+    state: directory
+    mode: '0755'
+
+- name: Extract tarball into /tmp/rabbitmq
+  command: tar xvf /tmp/rabbit.tar.xz -C /tmp/rabbitmq
+
+- name: Move extracted dir to target location
+  shell: "cp -a /tmp/rabbitmq/*/* /rabbitmq"
+
+- name: add sbin to path
+  lineinfile: >
+   dest=/etc/environment
+   state=present
+   backrefs=yes
+   regexp='PATH=(["]*)((?!.*?/{{ sbin_dir }}).*?)(["]*)$'
+   line="PATH=\1\2:{{ sbin_dir }}\3"
+
+- name: make var/lib/rabbitmq/ directory
+  file:
+    path: /rabbitmq/var/lib/rabbitmq/
+    state: directory
+    recurse: yes
+    mode: 0775
+
+- name: Set rabbitmq erlang cookie
+  template:
+    src: erlang.cookie.j2
+    dest: /rabbitmq/var/lib/rabbitmq/.erlang.cookie
+    mode: 0400
+
+- name: Set rabbitmq erlang cookie for root
+  template:
+    src: erlang.cookie.j2
+    dest: /root/.erlang.cookie
+    mode: 0400
+
+- name: Set rabbitmq erlang cookie for ubuntu
+  template:
+    src: erlang.cookie.j2
+    dest: /home/ubuntu/.erlang.cookie
+    owner: ubuntu
+    group: ubuntu
+    mode: 0400
+
+- name: Start RabbitMQ
+  command: /rabbitmq/sbin/rabbitmq-server start -detached
+
+- name: Enable RabbitMQ plugins
+  command: /rabbitmq/sbin/rabbitmq-plugins enable {{ item }}
+  retries: 3
+  delay: 20
+  register: result
+  until: result.rc == 0
+  with_items: "{{ rabbitmq_plugins }}"
+    
+- name: Create benchmark user
+  command: "/rabbitmq/sbin/rabbitmqctl add_user {{ rabbitmq_username }} {{ rabbitmq_password }}"
+
+- name: Set adminstrator tag
+  command: "/rabbitmq/sbin/rabbitmqctl set_user_tags {{ rabbitmq_username }} administrator"

@@ -1,0 +1,22 @@
+variables: 
+  name: mirrored-queues
+  pattern: 
+  priority: 0
+  haMode: all
+  haParams: 0
+  haSyncMode: automatic
+policies: 
+  - name: {{ var.name }}
+    applyTo: queues
+    pattern: {{ var.pattern }}
+    priority: {{ var.priority }}
+    properties :
+      - key: ha-mode
+        value: {{ var.haMode }}
+        type: string
+      - key: ha-params
+        value: {{ var.haParams }}
+        type: int
+      - key: ha-sync-mode
+        value: {{ var.haSyncMode }}
+        type: string

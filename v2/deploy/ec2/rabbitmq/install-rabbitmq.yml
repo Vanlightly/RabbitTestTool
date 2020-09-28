@@ -1,0 +1,8 @@
+- hosts: "tag_inventorygroup_benchmarking_rabbitmq{{ node }}_{{ run_tag }}"
+  remote_user: ubuntu
+  become: yes
+  roles:
+    - volumes
+    - preliminary
+    - rabbitmq
+    - telegraf

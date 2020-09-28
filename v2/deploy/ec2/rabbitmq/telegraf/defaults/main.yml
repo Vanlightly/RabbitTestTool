@@ -1,0 +1,9 @@
+---
+# Name of the telegraf service
+telegraf_service: telegraf
+
+# Config file permissions
+telegraf_owner: telegraf
+telegraf_group: telegraf
+telegraf_mode: 0640
+telegraf_config_file: /etc/telegraf/telegraf.conf

@@ -1,0 +1,11 @@
+postgres-jdbc-url: my-jdbc-connection
+postgres-database: my-jdbc-connection
+postgres-password: my-postgres-password
+postgres-username: my-postgres-user
+influx-subpath: my-influx-subpath
+influx-db_name: my-influx-db-name
+influx-url: http://my-ip-or-host-for-influx:8086
+influx-username: my-influx-username-for-agents
+influx-password: my-influx-pasword-for-agents
+rabbitmq-username: rabbit-username-in-iaas
+rabbitmq-password: rabbit-password-in-iaas

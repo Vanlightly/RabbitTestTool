@@ -1,0 +1,6 @@
+---
+# defaults file for preliminary
+hostname: rabbitmq1
+filesystem: xfs
+fd_limit: 500000
+io_thread_pool_size: 0

@@ -1,0 +1,7 @@
+volume-configs:
+  - name: 1-ssd-200
+    type: ssd
+    size-gb: 200
+  - name: 1-ssd-1000
+    type: ssd
+    size-gb: 1000

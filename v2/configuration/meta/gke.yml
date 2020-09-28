@@ -1,0 +1,6 @@
+project: my-project
+zones: zone1,zone2,zone3
+k8s-version: 1.16.13-gke.1
+manifests-dir: /path/to/RabbitTestTool/v2/deploy/kubernetes/manifests/rabbitmq
+deploy-root-dir: /path/to/RabbitTestTool/v2/deploy/kubernetes
+run-root-dir: /path/to/RabbitTestTool/v2/run/gke
