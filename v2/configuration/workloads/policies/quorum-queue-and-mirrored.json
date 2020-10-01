@@ -1,0 +1,36 @@
+{
+    "variables": [
+        { "name": "qqPattern", "default": "" },
+        { "name": "qqGroupSize", "default": "3" },
+        { "name": "qqMaxInMemoryLength", "default": "0" },
+        { "name": "qqLengthLimit", "default": "1000000" },
+        { "name": "cmqPattern", "default": "" },
+        { "name": "cmqHaMode", "default": "all" },
+        { "name": "cmqHaParams", "default": "0" },
+        { "name": "cmqHaSyncMode", "default": "automatic" }
+    ],
+    "policies": [
+        {
+            "name": "quorum",
+            "applyTo": "queues",
+            "pattern": "{{ var.qqPattern }}",
+            "priority": "0",
+            "properties" : [
+                { "key": "x-queue-type", "value": "quorum", "type": "string" },
+                { "key": "x-quorum-initial-group-size", "value": "{{ var.qqGroupSize }}", "type": "int" },
+                { "key": "x-max-in-memory-length", "value": "{{ var.qqMaxInMemoryLength }}", "type": "int" }
+            ]
+        },
+        {
+            "name": "mirrored",
+            "applyTo": "queues",
+            "pattern": "{{ var.cmqPattern }}",
+            "priority": "0",
+            "properties" : [
+                { "key": "ha-mode", "value": "{{ var.cmqHaMode }}", "type": "string" },
+                { "key": "ha-params", "value": "{{ var.cmqHaParams }}", "type": "int" },
+                { "key": "ha-sync-mode", "value": "{{ var.cmqHaSyncMode }}", "type": "string" }
+            ]
+        }
+    ]
+}

@@ -19,16 +19,8 @@ public class EC2RabbitMQ {
         return rabbitmqVersion;
     }
 
-    public void setRabbitmqVersion(String rabbitmqVersion) {
-        this.rabbitmqVersion = rabbitmqVersion;
-    }
-
     public String getRabbitmqUrl() {
         return rabbitmqUrl;
-    }
-
-    public void setRabbitmqUrl(String rabbitmqUrl) {
-        this.rabbitmqUrl = rabbitmqUrl;
     }
 
     public String getErlangVersion() {
@@ -43,15 +35,7 @@ public class EC2RabbitMQ {
         return erlangUrl;
     }
 
-    public void setErlangUrl(String erlangUrl) {
-        this.erlangUrl = erlangUrl;
-    }
-
-    public boolean isRebootBetweenBenchmarks() {
+    public boolean rebootBetweenBenchmarks() {
         return rebootBetweenBenchmarks;
-    }
-
-    public void setRebootBetweenBenchmarks(boolean rebootBetweenBenchmarks) {
-        this.rebootBetweenBenchmarks = rebootBetweenBenchmarks;
     }
 }

@@ -1,21 +1,21 @@
 name: test-gke-playlist
+run: 1
 systems:
   - name: s1
     host: k8s
     k8s-engine: gke
-    base: standard-8-vcpu-latest.yml
+    file: standard-8-vcpu-latest.yml
     overrides:
       hardware:
         volume-config: 1-ssd-1000
         count: 3
-    run: 1
 common:
   workload:
     topology:
       file: point-to-point/point-to-point-safe.yml
       variables:
-        queues: 1
-        consumers: 1
+        queueCount: 1
+        consumerCount: 1
     policies:
       file: mirrored-queue.yml
       variables:
@@ -29,19 +29,19 @@ benchmarks:
       - workload:
           topology:
             variables:
-              publishers: 1
+              publisherCount: 1
   - benchmark:
       - workload:
           topology:
             variables:
-              publishers: 2
+              publisherCount: 2
   - benchmark:
       - workload:
           topology:
             variables:
-              publishers: 4
+              publisherCount: 4
   - benchmark:
       - workload:
           topology:
             variables:
-              publishers: 8
+              publisherCount: 8

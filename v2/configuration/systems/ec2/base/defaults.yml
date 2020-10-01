@@ -1,0 +1,22 @@
+hardware:
+  loadgen:
+    instance: 4-core-intel
+  rabbitmq:
+    instance: 4-core-intel
+    volume-config: 1-gp2-200
+    tenancy: default
+    count: 1
+os:
+  fd-limit: 500000
+  filesystem: xfs
+rabbitmq:
+  broker: 
+    version: 3.8.9
+    generic-unix-url: https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.9/rabbitmq-server-generic-unix-3.8.9.tar.xz
+  erlang: 
+    version: 23.0.3
+    deb-url: https://packages.erlang-solutions.com/erlang/debian/pool/esl-erlang_23.0.3-1~ubuntu~bionic_amd64.deb
+  restart-brokers: true
+  federation-enabled: false
+  config:
+    file: pause-minority-debug.yml

@@ -1,0 +1,24 @@
+{
+    "variables": [
+        { "name": "fedPrefetch", "default": "10000" },
+        { "name": "reconnectSec", "default": "5" },
+        { "name": "fedAckMode", "default": "on-confirm" }
+    ],
+    "policies": [
+        {
+            "name": "fed-exchanges",
+            "applyTo": "exchanges",
+            "pattern": "",
+            "priority": 0,
+            "federation": "downstream",
+            "properties" : [
+                { "key": "federation-upstream-set", "value": "all", "type": "string" }
+            ]
+        }
+    ],
+    "federation": {
+        "fed-prefetch-count": "{{ var.fedPrefetch }}",
+        "fed-reconnect-delay-seconds": "{{ var.reconnectSec }}",
+        "fed-ack-mode": "{{ var.fedAckMode }}"
+    }
+}

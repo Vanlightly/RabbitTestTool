@@ -1,0 +1,29 @@
+# this is somewhat a hack I know
+hardware:
+  loadgen:
+    instance: text
+  rabbitmq:
+    instance: text
+    volume-config: text
+    tenancy: text
+    count: 1
+os:
+  fd-limit: 1
+  filesystem: text
+rabbitmq:
+  broker: 
+    version: text
+    generic-unix-url: text
+  erlang: 
+    version: 23.0.3
+    deb-url: text
+  restart-brokers: boolean
+  federation-enabled: boolean
+  config:
+    file: text
+    standard:
+    advanced_rabbit:
+    advanced_ra:
+    advanced_aten:
+    plugins:
+    env:

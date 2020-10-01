@@ -1,0 +1,91 @@
+{
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queuePrefix", "default": "q1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "retentionSizeMb", "default": "20000" },
+    { "name": "segmentSizeMb", "default": "500" },
+    { "name": "maxBatchSize", "default": "1" },
+    { "name": "maxBatchSizeBytes", "default": "0" },
+    { "name": "maxBatchWaitMs", "default": "0" },
+    { "name": "maxSubEntrySizeBytes", "default": "0" },
+    { "name": "singleMessageBucketSize", "default": "1" },
+    { "name": "streamPublishMode", "default": "single" },
+    { "name": "initialCredit", "default": "10" },
+    { "name": "creditInterval", "default": "1" },
+    { "name": "creditIntervalMs", "default": "1000" },
+    { "name": "processingMs", "default": "0" },
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "initialPublish", "default": "0" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "queues": [ 
+        { 
+          "prefix": "{{ var.queuePrefix }}", 
+          "scale": "{{ var.queueCount }}",
+          "queueType": "stream",
+          "retentionSizeMb": "{{ var.retentionSizeMb }}",
+          "segmentSizeMb": "{{ var.segmentSizeMb }}"
+        } 
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": true,
+            "protocol": "stream",
+            "inFlightLimit": "{{ var.inflightLimit }}",
+            "maxBatchSize": "{{ var.maxBatchSize }}",
+            "maxBatchSizeBytes": "{{ var.maxBatchSizeBytes }}",
+            "maxBatchWaitMs": "{{ var.maxBatchWaitMs }}",
+            "maxSubEntrySizeBytes": "{{ var.maxSubEntrySizeBytes }}",
+            "streamPublishMode": "{{ var.streamPublishMode }}",
+            "singleMessageBucketSize": "{{ var.singleMessageBucketSize }}"
+          },
+          "sendToQueuePrefix": {
+            "queuePrefix": "{{ var.queuePrefix }}",
+            "mode": "Counterpart"
+          },
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
+        }
+      ],
+      "consumers": [ 
+        { 
+          "prefix": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}",
+          "protocol": "stream",
+          "ackMode": {
+            "manualAcks": true,
+            "consumerPrefetch": "{{ var.initialCredit }}",
+            "ackInterval": "{{ var.creditInterval }}",
+            "ackIntervalMs": "{{ var.creditIntervalMs }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

@@ -1,0 +1,16 @@
+workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.json
+      variables:
+        queueCount: 1
+        publisherCount: 1
+        consumerCount: 1
+    step-seconds: 600
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 60
+  rabbitmq:
+    config:
+      standard:
+        log.file.level: info

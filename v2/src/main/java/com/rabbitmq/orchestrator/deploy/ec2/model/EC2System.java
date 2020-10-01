@@ -18,7 +18,10 @@ public class EC2System extends BaseSystem {
     List<Integer> nodeNumbers;
     List<Integer> downstreamNodeNumbers;
     boolean federationEnabled;
-    String downstreamBrokerIps;
+    List<String> downstreamPrivateIps;
+    List<String> downstreamPublicIps;
+    List<String> mainPrivateIps;
+    List<String> mainPublicIps;
 
     private static AtomicInteger nodeNumberSource = new AtomicInteger();
 
@@ -105,11 +108,35 @@ public class EC2System extends BaseSystem {
         this.federationEnabled = federationEnabled;
     }
 
-    public String getDownstreamBrokerIps() {
-        return downstreamBrokerIps;
+    public List<String> getDownstreamPrivateIps() {
+        return downstreamPrivateIps;
     }
 
-    public void setDownstreamBrokerIps(String downstreamBrokerIps) {
-        this.downstreamBrokerIps = downstreamBrokerIps;
+    public void setDownstreamPrivateIps(List<String> downstreamPrivateIps) {
+        this.downstreamPrivateIps = downstreamPrivateIps;
+    }
+
+    public List<String> getDownstreamPublicIps() {
+        return downstreamPublicIps;
+    }
+
+    public void setDownstreamPublicIps(List<String> downstreamPublicIps) {
+        this.downstreamPublicIps = downstreamPublicIps;
+    }
+
+    public List<String> getMainPrivateIps() {
+        return mainPrivateIps;
+    }
+
+    public void setMainPrivateIps(List<String> mainPrivateIps) {
+        this.mainPrivateIps = mainPrivateIps;
+    }
+
+    public List<String> getMainPublicIps() {
+        return mainPublicIps;
+    }
+
+    public void setMainPublicIps(List<String> mainPublicIps) {
+        this.mainPublicIps = mainPublicIps;
     }
 }

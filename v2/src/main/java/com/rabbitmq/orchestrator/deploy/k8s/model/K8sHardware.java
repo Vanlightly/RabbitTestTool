@@ -28,6 +28,10 @@ public class K8sHardware {
     }
 
     public int getMemoryMbLimit() {
-        return instance.getMemoryGb()*800; // 80% of available
+        // up to 80%
+        int pct20 = instance.getMemoryGb() / 5;
+        int remainder = pct20 < 4 ? 4 : pct20;
+
+        return (instance.getMemoryGb()-remainder)*1000;
     }
 }

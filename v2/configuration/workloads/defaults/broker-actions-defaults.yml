@@ -1,0 +1,16 @@
+broker-actions:
+  action-type: none
+  trigger-type: seconds
+  trigger-value: 0
+  traffic-control:
+    apply-to-client-traffic: false
+    apply-to-all-brokers: false
+    delay-ms: 0
+    delay-jtter-ms: 0
+    delay-distribution: none
+    bandwidth: 0
+    packet-loss-mode: none
+    packet-loss-arg1: 0%
+    packet-loss-arg2: 0%
+    packet-loss-arg3: 0%
+    packet-loss-arg4: 0%

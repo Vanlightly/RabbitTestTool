@@ -1,0 +1,107 @@
+name: test-ec2-playlist
+run: 1
+systems:
+  - name: s1
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-1000
+          count: 3
+  - name: s2
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-1000
+          count: 3
+common-workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.yml
+      variables:
+        queues: 1
+        consumers: 1
+    policies:
+      file: mirrored-queue.yml
+      variables:
+        ha-mode: exactly
+        ha-params: 2
+  background:
+    topology:
+      file: point-to-point/point-to-point-safe.yml
+      variables:
+        queueCount: 1
+        publisherCount: 1
+        consumerCount: 1
+    policies:
+      file: mirrored-queue.yml
+      variables:
+        ha-mode: exactly
+        ha-params: 2
+  broker-actions:
+    action-type: traffic-control
+    trigger-type: seconds
+    trigger-value: 300
+    traffic-control:
+      apply-to-client-traffic: true
+      apply-to-all-brokers: true
+      delay-ms: 10
+      delay-jtter-ms: 5
+      delay-distribution: pareto
+      bandwidth: 1000
+      packet-loss-mode: random
+      packet-loss-arg1: 10%
+  client-config:
+    tcp-no-delay: false
+    publisher-connect-mode: random
+    consumer-connect-mode: random
+    publisher-heartbeat-seconds: 10
+    consumer-heartbeat-seconds: 10
+  loadgen-config:
+    mode: model
+    grace-period-seconds: 60
+    warm-up-seconds: 60
+    checks:
+      - dataloss
+      - ordering
+      - duplicates
+      - connectivity
+      - consume-gaps
+  rabbitmq:
+    config:
+      standard:
+        log.file.level: info
+benchmarks:
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                publisherCount: 1
+        systems:
+          - s1
+      - workload:
+          main:
+            topology:
+              variables:
+                publisherCount: 10
+        systems:
+          - s2
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                publisherCount: 1
+        systems:
+          - s1
+      - workload:
+          main:
+            topology:
+              variables:
+                publisherCount: 10
+        systems:
+          - s2

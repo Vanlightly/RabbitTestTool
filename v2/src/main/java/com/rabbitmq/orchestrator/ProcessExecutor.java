@@ -92,7 +92,7 @@ public class ProcessExecutor {
         try {
             ProcessBuilder processBuilder = new ProcessBuilder()
                     .directory(scriptDir)
-                    .inheritIO()
+                    //.inheritIO()
                     .command(args);
             Process p = processBuilder.start();
 

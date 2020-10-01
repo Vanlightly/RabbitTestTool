@@ -87,7 +87,6 @@ ansible-playbook install-rabbitmq.yml --private-key=~/.ssh/$KEY_PAIR.pem --ssh-c
 --extra-vars "node_role=$NODE_ROLE" \
 --extra-vars '{"rabbitmq_hosts":'"${HOSTS}"'}' \
 --extra-vars "rabbitmq_cluster_master=rabbitmq${NODE_RANGE_START}" \
---extra-vers "additional_erl_args=$ADDITIONAL_ERL_ARGS" \
 --extra-vars '{"standard_config":['"${STANDARD_VARS}"']}' \
 --extra-vars '{"advanced_config_rabbit":['"${ADVANCED_VARS_RABBIT}"']}' \
 --extra-vars '{"advanced_config_ra":['"${ADVANCED_VARS_RA}"']}' \

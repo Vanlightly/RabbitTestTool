@@ -1,0 +1,151 @@
+{
+    "topologyType": "fixed",
+    "benchmarkType": "throughput",
+    "topologyGroups": [
+      {
+        "name": "p2p",
+        "scale": 1,
+        "scaleType": "single-vhost",
+        "queues": [ 
+          { 
+            "prefix": "q1", 
+            "scale": 100,
+            "properties": [
+              { "key": "x-queue-mode", "value": "normal", "type": "string" }
+            ]
+          } 
+        ],
+        "publishers": [
+          {
+            "prefix": "p1",
+            "scale": 10,
+            "publishMode": {
+              "useConfirms": true,
+              "inFlightLimit": 100
+            },
+            "sendToQueuePrefix": {
+              "queuePrefix": "q1",
+              "mode": "Counterpart"
+            },
+            "deliveryMode": "Persistent",
+            "messageSize": 1024,
+            "msgsPerSecondPerPublisher": 15
+          }
+        ],
+        "consumers": [ 
+          { 
+            "prefix": "c1", 
+            "scale": 2, 
+            "queuePrefix": "q1",
+            "ackMode": {
+              "manualAcks": true,
+              "consumerPrefetch": 10,
+              "ackInterval": 1
+            },
+            "processingMs": 0
+          } 
+        ]
+      },
+      {
+        "name": "fanout",
+        "scale": 2,
+        "scaleType": "single-vhost",
+        "exchanges": [ 
+          { "name": "fanout1", "type": "fanout" }
+        ],
+        "queues": [ 
+          { 
+            "prefix": "q2", 
+            "scale": 5,
+            "bindings": [{ "from": "fanout1" }],
+            "properties": [
+              { "key": "x-queue-mode", "value": "normal", "type": "string" }
+            ]
+          }
+        ],
+        "publishers": [
+          {
+            "prefix": "p2",
+            "scale": 5,
+            "publishMode": {
+              "useConfirms": true,
+              "inFlightLimit": 100
+            },
+            "sendToExchange": {
+              "exchange": "fanout1",
+              "routingKeyMode": "none"
+            },
+            "deliveryMode": "Persistent",
+            "messageSize": 1024,
+            "msgsPerSecondPerPublisher": 15
+          }
+        ],
+        "consumers": [ 
+          { 
+            "prefix": "c2", 
+            "scale": 5, 
+            "queuePrefix": "q2",
+            "ackMode": {
+              "manualAcks": true,
+              "consumerPrefetch": 10,
+              "ackInterval": 1
+            },
+            "processingMs": 0
+          } 
+        ]
+      },
+      {
+        "name": "topic",
+        "scale": 5,
+        "scaleType": "single-vhost",
+        "exchanges": [ { "name": "topic1", "type": "topic" }],
+        "queues": [ 
+          { 
+            "prefix": "q3", 
+            "scale": 2,
+            "bindings": [{ "from": "topic1", "bindingKeys": ["#.rk1", "#.rk2", "#.rk3", "#.rk4", "#.rk5","#.rk6", "#.rk7", "#.rk8", "#.rk9", "#.rk10"]}],
+            "properties": [
+              { "key": "x-queue-mode", "value": "normal", "type": "string" }
+            ]
+          } 
+        ],
+        "publishers": [
+          {
+            "prefix": "p3",
+            "scale": 10,
+            "publishMode": {
+              "useConfirms": true,
+              "inFlightLimit": 10
+            },
+            "sendToExchange": {
+              "exchange": "topic1",
+              "routingKeyMode": "MultiValue",
+              "routingKeys": ["blah.rk1", "blah.rk3", "blah.rk3", "blah.rk4", "blah.rk5", "blah.rk6", "blah.rk7", "blah.rk8", "blah.rk9", "blah.rk10"]
+            },
+            "deliveryMode": "Persistent",
+            "messageSize": 200000,
+            "msgsPerSecondPerPublisher": 10
+          }
+        ],
+        "consumers": [ 
+          { 
+            "prefix": "c3", 
+            "scale": 5, 
+            "queuePrefix": "q3",
+            "ackMode": {
+              "manualAcks": true,
+              "consumerPrefetch": 10,
+              "ackInterval": 1
+            },
+            "processingMs": 0
+          }
+        ]
+      }
+    ],
+    "dimensions" : {
+      "fixedDimensions": {
+        "durationSeconds": 300,
+        "rampUpSeconds": 10
+      }
+    }
+  }

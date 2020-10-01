@@ -1,5 +1,7 @@
 package com.rabbitmq.orchestrator.model.clients;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,6 +19,14 @@ public class LoadGenConfiguration {
         this.gracePeriodSeconds = gracePeriodSeconds;
         this.warmUpSeconds = warmUpSeconds;
         this.checks = checks;
+    }
+
+    public LoadGenConfiguration(String mode,
+                                int warmUpSeconds) {
+        this.mode = mode;
+        this.gracePeriodSeconds = 0;
+        this.warmUpSeconds = warmUpSeconds;
+        this.checks = Arrays.asList(Check.All);
     }
 
     public String getMode() {

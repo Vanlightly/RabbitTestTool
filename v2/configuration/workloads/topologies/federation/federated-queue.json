@@ -1,0 +1,88 @@
+{
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "100" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "federation": "upstream",
+      "queues": [
+        {
+          "prefix": "q1",
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        }
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToQueuePrefix": {
+            "queuePrefix": "q1",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        }
+      ]
+    },
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "federation": "downstream",
+      "queues": [
+        { "prefix": "q1",
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        }
+      ],
+      "consumers": [
+        {
+          "prefix": "c1",
+          "scale": "{{ var.consumerCount }}",
+          "queuePrefix": "q1",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}"
+          }
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

@@ -1,15 +1,22 @@
 package com.rabbitmq.orchestrator.deploy;
 
+import com.rabbitmq.orchestrator.model.actions.BrokerAction;
+import com.rabbitmq.orchestrator.run.BrokerActioner;
 import com.rabbitmq.orchestrator.run.Runner;
 
 public class Deployment {
     Deployer deployer;
     Runner runner;
     BaseSystem baseSystem;
+    BrokerActioner brokerActioner;
 
-    public Deployment(Deployer deployer, Runner runner, BaseSystem baseSystem) {
+    public Deployment(Deployer deployer,
+                      Runner runner,
+                      BrokerActioner brokerActioner,
+                      BaseSystem baseSystem) {
         this.deployer = deployer;
         this.runner = runner;
+        this.brokerActioner = brokerActioner;
         this.baseSystem = baseSystem;
     }
 
@@ -17,23 +24,15 @@ public class Deployment {
         return deployer;
     }
 
-    public void setDeployer(Deployer deployer) {
-        this.deployer = deployer;
-    }
-
     public Runner getRunner() {
         return runner;
     }
 
-    public void setRunner(Runner runner) {
-        this.runner = runner;
+    public BrokerActioner getBrokerActioner() {
+        return brokerActioner;
     }
 
     public BaseSystem getBaseSystem() {
         return baseSystem;
-    }
-
-    public void setBaseSystem(BaseSystem baseSystem) {
-        this.baseSystem = baseSystem;
     }
 }

@@ -1,0 +1,18 @@
+hardware:
+  instance: text
+  volume-config: text
+  count: 1
+rabbitmq:
+  broker: 
+    version: text
+    image: text
+  # restart-brokers: true TODO: not yet supported
+  # federation-enabled: false TODO: not yet supported
+  config: 
+    file: text
+    standard:
+    advanced_rabbit:
+    advanced_ra:
+    advanced_aten:
+    plugins:
+    env:

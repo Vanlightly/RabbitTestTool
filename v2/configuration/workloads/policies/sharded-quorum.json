@@ -1,0 +1,23 @@
+{
+    "variables": [
+        { "name": "name", "default": "sharded" },
+        { "name": "priority", "default": "0" },
+        { "name": "shardsPerNode", "default": "1" },
+        { "name": "groupSize", "default": "3" },
+        { "name": "maxInMemoryLength", "default": "0" }
+    ],
+    "policies": [
+        {
+            "name": "sharded",
+            "applyTo": "exchanges",
+            "pattern": "^sharded$",
+            "priority": "{{ var.priority }}",
+            "properties" : [
+                { "key": "shards-per-node", "value": "{{ var.shardsPerNode }}", "type": "int" },
+                { "key": "x-queue-type", "value": "quorum", "type": "string" },
+                { "key": "x-quorum-initial-group-size", "value": "{{ var.groupSize }}", "type": "int" },
+                { "key": "x-max-in-memory-length", "value": "{{ var.maxInMemoryLength }}", "type": "int" }
+            ]
+        }
+    ]
+}

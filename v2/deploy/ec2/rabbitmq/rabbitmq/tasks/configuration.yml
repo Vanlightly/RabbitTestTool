@@ -38,4 +38,3 @@
     mode: 0400
     force: true
   tags: [configuration]
-  #when: additional_erl_args != 'none'

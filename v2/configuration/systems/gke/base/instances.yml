@@ -5,8 +5,8 @@ instances:
     memory-gb: 16
   - name: 8-vcpu-intel
     type: n2-standard-8
-    vcpus: 32
-    memory-gb: 16
+    vcpus: 8
+    memory-gb: 32
   - name: 16-vcpu-intel
     type: n2-standard-16
     vcpus: 16

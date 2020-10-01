@@ -1,0 +1,188 @@
+{
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "false" },
+    { "name": "inflightLimit", "default": "0" },
+    { "name": "manualAcks", "default": "false" },
+    { "name": "consumerPrefetch", "default": "0" },
+    { "name": "ackInterval", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "exchanges": [ { "name": "ex1", "type": "topic" }],
+      "queues": [ 
+        { "prefix": "q000", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.000"]}]},
+        { "prefix": "q001", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.001"]}]},
+        { "prefix": "q002", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.002"]}]},
+        { "prefix": "q003", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.003"]}]},
+        { "prefix": "q004", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.004"]}]},
+        { "prefix": "q005", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.005"]}]},
+        { "prefix": "q006", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.006"]}]},
+        { "prefix": "q007", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.007"]}]},
+        { "prefix": "q008", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.008"]}]},
+        { "prefix": "q009", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.009"]}]},
+
+        { "prefix": "q010", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.010"]}]},
+        { "prefix": "q011", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.011"]}]},
+        { "prefix": "q012", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.012"]}]},
+        { "prefix": "q013", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.013"]}]},
+        { "prefix": "q014", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.014"]}]},
+        { "prefix": "q015", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.015"]}]},
+        { "prefix": "q016", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.016"]}]},
+        { "prefix": "q017", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.017"]}]},
+        { "prefix": "q018", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.018"]}]},
+        { "prefix": "q019", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.019"]}]},
+
+        { "prefix": "q020", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.020"]}]},
+        { "prefix": "q021", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.021"]}]},
+        { "prefix": "q022", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.022"]}]},
+        { "prefix": "q023", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.023"]}]},
+        { "prefix": "q024", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.024"]}]},
+        { "prefix": "q025", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.025"]}]},
+        { "prefix": "q026", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.026"]}]},
+        { "prefix": "q027", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.027"]}]},
+        { "prefix": "q028", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.028"]}]},
+        { "prefix": "q029", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.029"]}]},
+
+        { "prefix": "q030", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.030"]}]},
+        { "prefix": "q031", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.031"]}]},
+        { "prefix": "q032", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.032"]}]},
+        { "prefix": "q033", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.033"]}]},
+        { "prefix": "q034", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.034"]}]},
+        { "prefix": "q035", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.035"]}]},
+        { "prefix": "q036", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.036"]}]},
+        { "prefix": "q037", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.037"]}]},
+        { "prefix": "q038", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.038"]}]},
+        { "prefix": "q039", "scale": 1, "bindings": [{ "from": "ex1", "bindingKeys": ["a.*.039"]}]}
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToExchange": {
+            "exchange": "ex1",
+            "routingKeys": [
+                "a.b.000",
+                "a.b.001",
+                "a.b.002",
+                "a.b.003",
+                "a.b.004",
+                "a.b.005",
+                "a.b.006",
+                "a.b.007",
+                "a.b.008",
+                "a.b.009",
+
+                "a.b.010",
+                "a.b.011",
+                "a.b.012",
+                "a.b.013",
+                "a.b.014",
+                "a.b.015",
+                "a.b.016",
+                "a.b.017",
+                "a.b.018",
+                "a.b.019",
+
+                "a.b.020",
+                "a.b.021",
+                "a.b.022",
+                "a.b.023",
+                "a.b.024",
+                "a.b.025",
+                "a.b.026",
+                "a.b.027",
+                "a.b.028",
+                "a.b.029",
+
+                "a.b.030",
+                "a.b.031",
+                "a.b.032",
+                "a.b.033",
+                "a.b.034",
+                "a.b.035",
+                "a.b.036",
+                "a.b.037",
+                "a.b.038",
+                "a.b.039"
+              ],
+            "routingKeyMode": "multivalue"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}"
+        }
+      ],
+      "consumers": [ 
+        { "prefix": "c000", "scale": 1, "queuePrefix": "q000", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c001", "scale": 1, "queuePrefix": "q001", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c002", "scale": 1, "queuePrefix": "q002", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c003", "scale": 1, "queuePrefix": "q003", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c004", "scale": 1, "queuePrefix": "q004", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c005", "scale": 1, "queuePrefix": "q005", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c006", "scale": 1, "queuePrefix": "q006", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c007", "scale": 1, "queuePrefix": "q007", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c008", "scale": 1, "queuePrefix": "q008", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c009", "scale": 1, "queuePrefix": "q009", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+
+        { "prefix": "c010", "scale": 1, "queuePrefix": "q010", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c011", "scale": 1, "queuePrefix": "q011", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c012", "scale": 1, "queuePrefix": "q012", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c013", "scale": 1, "queuePrefix": "q013", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c014", "scale": 1, "queuePrefix": "q014", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c015", "scale": 1, "queuePrefix": "q015", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c016", "scale": 1, "queuePrefix": "q016", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c017", "scale": 1, "queuePrefix": "q017", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c018", "scale": 1, "queuePrefix": "q018", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c019", "scale": 1, "queuePrefix": "q019", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+
+        { "prefix": "c020", "scale": 1, "queuePrefix": "q020", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c021", "scale": 1, "queuePrefix": "q021", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c022", "scale": 1, "queuePrefix": "q022", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c023", "scale": 1, "queuePrefix": "q023", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c024", "scale": 1, "queuePrefix": "q024", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c025", "scale": 1, "queuePrefix": "q025", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c026", "scale": 1, "queuePrefix": "q026", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c027", "scale": 1, "queuePrefix": "q027", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c028", "scale": 1, "queuePrefix": "q028", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c029", "scale": 1, "queuePrefix": "q029", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+
+        { "prefix": "c030", "scale": 1, "queuePrefix": "q030", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c031", "scale": 1, "queuePrefix": "q031", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c032", "scale": 1, "queuePrefix": "q032", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c033", "scale": 1, "queuePrefix": "q033", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c034", "scale": 1, "queuePrefix": "q034", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c035", "scale": 1, "queuePrefix": "q035", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c036", "scale": 1, "queuePrefix": "q036", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c037", "scale": 1, "queuePrefix": "q037", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c038", "scale": 1, "queuePrefix": "q038", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}},
+        { "prefix": "c039", "scale": 1, "queuePrefix": "q039", "ackMode": { "manualAcks": "{{ var.manualAcks }}","consumerPrefetch": "{{ var.consumerPrefetch }}","ackInterval": "{{ var.ackInterval }}"}}
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

@@ -12,10 +12,11 @@ public class OutputData {
     final String postgresDatabase;
     final String rabbitmqUsername;
     final String rabbitmqPassword;
+    final String logsStorageDir;
 
     public OutputData(String influxSubpath, String influxUser, String influxPassword, String influxUrl, String influxDbName,
                    String postgresUrl, String postgresUser, String postgresPassword, String postgresDatabase,
-                      String rabbitmqUsername, String rabbitmqPassword) {
+                      String rabbitmqUsername, String rabbitmqPassword, String logsStorageDir) {
         this.influxSubpath = influxSubpath;
         this.influxUser = influxUser;
         this.influxPassword = influxPassword;
@@ -27,6 +28,7 @@ public class OutputData {
         this.postgresDatabase = postgresDatabase;
         this.rabbitmqUsername = rabbitmqUsername;
         this.rabbitmqPassword = rabbitmqPassword;
+        this.logsStorageDir = logsStorageDir;
     }
 
     public String getInfluxSubpath() {
@@ -71,5 +73,9 @@ public class OutputData {
 
     public String getRabbitmqPassword() {
         return rabbitmqPassword;
+    }
+
+    public String getLogsStorageDir() {
+        return logsStorageDir;
     }
 }

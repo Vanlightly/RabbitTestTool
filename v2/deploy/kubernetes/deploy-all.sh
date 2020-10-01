@@ -95,7 +95,7 @@ wait_for_cluster() {
 
   while [[ $STATUS != "$BROKERS/$BROKERS" ]]
   do
-      echo "Cluster not ready yet. Actual: $STATUS, expected: $BROKERS/$BROKERS"
+      echo "Cluster $KUBE_CLUSTER_NAME not ready yet. Actual: $STATUS, expected: $BROKERS/$BROKERS"
       sleep 5
       STATUS=$(kubectl --context ${K_CONTEXT} get statefulsets | grep $RABBITMQ_CLUSTER_NAME | awk '{ print $2 }')
   done

@@ -1,0 +1,24 @@
+{
+    "variables": [
+        { "name": "name", "default": "sharded" },
+        { "name": "priority", "default": "0" },
+        { "name": "shardsPerNode", "default": "1" },
+        { "name": "haMode", "default": "all" },
+        { "name": "haParams", "default": "0" },
+        { "name": "haSyncMode", "default": "automatic" }
+    ],
+    "policies": [
+        {
+            "name": "sharded",
+            "applyTo": "exchanges",
+            "pattern": "^sharded$",
+            "priority": "{{ var.priority }}",
+            "properties" : [
+                { "key": "shards-per-node", "value": "{{ var.shardsPerNode }}", "type": "int" },
+                { "key": "ha-mode", "value": "{{ var.haMode }}", "type": "string" },
+                { "key": "ha-params", "value": "{{ var.haParams }}", "type": "int" },
+                { "key": "ha-sync-mode", "value": "{{ var.haSyncMode }}", "type": "string" }
+            ]
+        }
+    ]
+}

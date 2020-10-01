@@ -1,0 +1,13 @@
+{
+    "policies": [
+        {
+            "name": "lazy-queues",
+            "applyTo": "queues",
+            "pattern": "",
+            "priority": 0,
+            "properties" : [
+                { "key": "queue-mode", "value": "lazy", "type": "string" }
+            ]
+        }
+    ]
+}

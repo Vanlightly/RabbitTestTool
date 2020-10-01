@@ -1,0 +1,15 @@
+benchmark:
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 60
+model:
+  loadgen-config:
+    mode: model
+    grace-period-seconds: 60
+    warm-up-seconds: 60
+    checks:
+      - dataloss
+      - ordering
+      - duplicates
+      - connectivity
+      - consume-gaps

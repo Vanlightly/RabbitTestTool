@@ -130,7 +130,7 @@
 # create data, logs and wal directories
 - name: create data directory
   file: 
-    path: "{ location_data }}/data"
+    path: "{{ location_data }}/data"
     state: directory 
     owner: ubuntu 
     group: ubuntu

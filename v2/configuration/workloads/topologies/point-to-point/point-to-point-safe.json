@@ -1,0 +1,117 @@
+{
+  "topologyType": "fixed",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queuePrefix", "default": "q1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "sac", "default": "false" },
+    { "name": "hasDlx", "default": "false" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "globalPrefetch", "default": "false" },
+    { "name": "ackInterval", "default": "1" },
+    { "name": "ackIntervalMs", "default": "0" },
+    { "name": "processingMs", "default": "0" },
+    { "name": "requeueEveryNth", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "initialPublish", "default": "0" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "exchanges": [
+        { "include": "{{ var.hasDlx }}", "name": "{{ var.queuePrefix }}-deadletter", "type": "fanout" }
+      ],
+      "queues": [ 
+        { 
+          "prefix": "{{ var.queuePrefix }}", 
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" },
+            { "key": "x-single-active-consumer", "value": "{{ var.sac }}", "type": "boolean"}
+          ],
+          "dlx": {
+            "hasDlx": "{{ var.hasDlx }}",
+            "name": "{{ var.queuePrefix }}-deadletter"
+          }
+        },
+        { 
+          "include": "{{ var.hasDlx }}",
+          "prefix": "{{ var.queuePrefix }}-deadletter", 
+          "scale": 1,
+          "bindings": [{ "from": "{{ var.queuePrefix }}-deadletter" }],
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" },
+            { "key": "x-single-active-consumer", "value": "{{ var.sac }}", "type": "boolean"}
+          ]
+        } 
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToQueuePrefix": {
+            "queuePrefix": "{{ var.queuePrefix }}",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
+        }
+      ],
+      "consumers": [ 
+        { 
+          "prefix": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "globalPrefetch": "{{ var.globalPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "ackIntervalMs": "{{ var.ackIntervalMs }}",
+            "requeueEveryNth": "{{ var.requeueEveryNth }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        },
+        { 
+          "include": "{{ var.hasDlx }}",
+          "prefix": "c1-overflow", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}-deadletter",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "ackIntervalMs": "{{ var.ackIntervalMs }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": "{{ var.durationSeconds }}",
+      "rampUpSeconds": 10
+    }
+  }
+}

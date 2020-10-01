@@ -3,10 +3,11 @@ host: k8s
 k8s-engine: gke
 hardware:
   instance: 8-vcpu-intel
-  volume-config: 1-gp2-200
+  volume-config: 1-ssd-200
   count: 1
 rabbitmq:
   broker: 
     version: 3.8.9
     image: docker.io/rabbitmq:3.8.9-management
-  config: pause-minority-debug.yml
+  config: 
+    file: pause-minority-debug.yml

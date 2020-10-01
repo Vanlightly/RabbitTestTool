@@ -2,7 +2,8 @@ rabbitmq:
   config:
     name: pause-minority-debug
     standard:
-      log_level: debug
+      log.file.level: debug
+      cluster_partition_handling: pause_minority
     advanced_rabbit:
     advanced_ra:
     advanced_aten:

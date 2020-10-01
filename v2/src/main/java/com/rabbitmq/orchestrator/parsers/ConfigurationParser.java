@@ -3,6 +3,8 @@ package com.rabbitmq.orchestrator.parsers;
 import com.rabbitmq.orchestrator.run.RabbitMQConfiguration;
 import org.yaml.snakeyaml.Yaml;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,13 +13,27 @@ public class ConfigurationParser extends Parser {
         super(yaml, rootDir);
     }
 
-    public RabbitMQConfiguration getConfiguration(List<Map<String,Object>> sources) {
+    public RabbitMQConfiguration getConfiguration(Map<String,Object>... sources) {
+        if(!pathExists("rabbitmq.config", sources))
+            return null;
+
+        Map<String,Object>[] sourcesMod = new HashMap[sources.length];
+        for(int i=0; i<sources.length; i++) {
+            if(pathExists("rabbitmq.config.file", sources[i])) {
+                Map<String,Object> fileSource = loadYamlFile(rootDir + "/rabbitmq-config/" + getStrValue("rabbitmq.config.file", sources[i]));
+                sourcesMod[i] = fileSource;
+            }
+            else {
+                sourcesMod[i] = sources[i];
+            }
+        }
+
         return new RabbitMQConfiguration(
-                toStringVal((Map<String,Object>)getObj("rabbitmq.config.standard", sources)),
-                toStringVal((Map<String,Object>)getObj("rabbitmq.config.advanced_rabbit", sources)),
-                toStringVal((Map<String,Object>)getObj("rabbitmq.config.advanced_ra", sources)),
-                toStringVal((Map<String,Object>)getObj("rabbitmq.config.advanced_aten", sources)),
-                toStringVal((Map<String,Object>)getObj("rabbitmq.config.env", sources)),
-                (List<String>)getObj("rabbitmq.config.plugins", sources));
+                mergeStringMap(getSubTreesOfEachSource("rabbitmq.config.standard", sourcesMod)),
+                mergeStringMap(getSubTreesOfEachSource("rabbitmq.config.advanced_rabbit", sourcesMod)),
+                mergeStringMap(getSubTreesOfEachSource("rabbitmq.config.advanced_ra", sourcesMod)),
+                mergeStringMap(getSubTreesOfEachSource("rabbitmq.config.advanced_aten", sourcesMod)),
+                mergeStringMap(getSubTreesOfEachSource("rabbitmq.config.env", sourcesMod)),
+                getOptionalStringList("rabbitmq.config.plugins", new ArrayList<>(), sourcesMod));
     }
 }

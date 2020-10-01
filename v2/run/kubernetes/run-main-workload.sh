@@ -7,9 +7,8 @@ set -e
 
 INFLUX_IP=$(aws ec2 describe-instances --profile benchmarking --filters "Name=tag:inventorygroup,Values=benchmarking_metrics" --query "Reservations[*].Instances[*].PublicIpAddress" --output=text)
 INFLUX_URL="http://$INFLUX_IP/$INFLUX_SUBPATH"
-echo "Will connect to InfluxDB at ip $INFLUX_IP"
 
-echo "Discovering pods..."
+echo "Discovering pods... for $RABBITMQ_CLUSTER_NAME"
 
 if [[ $KUBERNETES_ENGINE == "eks" ]]; then
   export AWS_PROFILE=benchmarking
@@ -20,18 +19,26 @@ BROKER_IPS=""
 STREAM_PORTS=""
 while IFS= read -r POD; do
     BROKER_IP=$(kubectl --context ${K_CONTEXT} get pod ${POD} -o jsonpath="{.status.podIP}")
+    
+    if [[ $BROKER_IP == "" ]]; then
+      while [[ $BROKER_IP == "" ]]; do
+        echo "Broker IP for $POD is blank, retrying in 10 seconds"
+        sleep 10
+        BROKER_IP=$(kubectl --context ${K_CONTEXT} get pod ${POD} -o jsonpath="{.status.podIP}")
+      done
+    fi
+
     BROKER_IPS+="${BROKER_IP}:5672,"
     STREAM_PORTS+="5555,"
-    echo "$POD"
 done <<< "$PODS"
 
 BROKER_IPS=${BROKER_IPS%?}
 STREAM_PORTS=${STREAM_PORTS%?}
-echo "Broker IPS: $BROKER_IPS"
+echo "Broker IPS: $BROKER_IPS for $RABBITMQ_CLUSTER_NAME"
 
 if [[ $(kubectl --context ${K_CONTEXT} get pods | awk '{ print $1 }' | grep ^main-load$ | wc -l) != "0" ]]
 then
-    echo "Deleting existing main-load pod"
+    echo "Deleting existing main-load pod for $RABBITMQ_CLUSTER_NAME"
     kubectl --context ${K_CONTEXT} delete pod main-load
     sleep 10
 fi
@@ -39,12 +46,7 @@ fi
 RMQ_USER=$(kubectl --context ${K_CONTEXT} get secret $RABBITMQ_CLUSTER_NAME-rabbitmq-admin -o jsonpath="{.data.username}" | base64 --decode)
 RMQ_PASS=$(kubectl --context ${K_CONTEXT} get secret $RABBITMQ_CLUSTER_NAME-rabbitmq-admin -o jsonpath="{.data.password}" | base64 --decode)
 
-CPU=$(( ($VCPU_COUNT - 1 ) * 1000 ))
-REMAINDER=$(( $MEMORY_GB / 5 ))
-MEMORY=$(( ($MEMORY_GB - $REMAINDER) * 1000 ))
-CORES=$(( $VCPU_COUNT/2 ))
-
-LIMITS="--limits=cpu=${CPU}m,memory=${MEMORY}Mi"
+LIMITS="--limits=cpu=${CPU_LIMIT}m,memory=${MEMORY_LIMIT}Mi"
 echo "kubectl --context ${K_CONTEXT} run main-load ${LIMITS} --image=jackvanlightly/rtt:1.1.26 --restart=Never --"
 
 kubectl --context ${K_CONTEXT} run main-load ${LIMITS} --image=jackvanlightly/rtt:1.1.26 --restart=Never -- \
@@ -60,7 +62,7 @@ kubectl --context ${K_CONTEXT} run main-load ${LIMITS} --image=jackvanlightly/rt
 --filesystem "$FILESYSTEM" \
 --hosting "$HOSTING" \
 --tenancy "$TENANCY" \
---core-count "$CORES" \
+--core-count "$VCPU_COUNT" \
 --threads-per-core 2 \
 --no-tcp-delay "$NO_TCP_DELAY" \
 --config-tag "$CONFIG_TAG" \
@@ -96,13 +98,17 @@ kubectl --context ${K_CONTEXT} run main-load ${LIMITS} --image=jackvanlightly/rt
 
 STATUS=$(kubectl --context ${K_CONTEXT} get pods main-load | grep main-load | awk '{ print $3}')
 
-while [[ $STATUS != "Running" ]]
+while [[ $STATUS != "Running" && $STATUS != "Error" ]]
 do
-  echo "Waiting for benchmark to start"
+  echo "Waiting for $RABBITMQ_CLUSTER_NAME benchmark to start"
   sleep 5
   STATUS=$(kubectl --context ${K_CONTEXT} get pods main-load | grep main-load | awk '{ print $3}')
 done
 
-kubectl --context ${K_CONTEXT} logs -f main-load
-
-echo "Benchmark completed"
+if [[ $STATUS == "Error" ]]; then
+  kubectl --context ${K_CONTEXT} logs main-load
+  echo "Benchmark $RABBITMQ_CLUSTER_NAME failed"
+else
+  kubectl --context ${K_CONTEXT} logs -f main-load
+  echo "Benchmark $RABBITMQ_CLUSTER_NAME completed"
+fi

@@ -1,0 +1,18 @@
+{
+    "variables": [
+        { "name": "name", "default": "sharded" },
+        { "name": "priority", "default": "0" },
+        { "name": "shardsPerNode", "default": "1" }
+    ],
+    "policies": [
+        {
+            "name": "sharded",
+            "applyTo": "exchanges",
+            "pattern": "^sharded$",
+            "priority": "{{ var.priority }}",
+            "properties" : [
+                { "key": "shards-per-node", "value": "{{ var.shardsPerNode }}", "type": "int" }
+            ]
+        }
+    ]
+}

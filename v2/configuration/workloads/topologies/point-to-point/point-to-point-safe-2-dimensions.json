@@ -1,0 +1,103 @@
+{
+  "topologyType": "MultipleDimensions",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queuePrefix", "default": "q1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "10" },
+    { "name": "ackInterval", "default": "1" },
+    { "name": "ackIntervalMs", "default": "1000" },
+    { "name": "processingMs", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "initialPublish", "default": "0" },
+    { "name": "dimension1", "default": "Prefetch" },
+    { "name": "dimension2", "default": "AckInterval" },
+    { "name": "dim1Value1", "default": "10" },
+    { "name": "dim1Value2", "default": "50" },
+    { "name": "dim1Value3", "default": "100" },
+    { "name": "dim1Value4", "default": "200" },
+    { "name": "dim1Value5", "default": "500" },
+    { "name": "dim1Value6", "default": "1000" },
+    { "name": "dim2Value1", "default": "1" },
+    { "name": "dim2Value2", "default": "5" },
+    { "name": "dim2Value3", "default": "10" },
+    { "name": "dim2Value4", "default": "50" },
+    { "name": "dim2Value5", "default": "100" },
+    { "name": "dim2Value6", "default": "500" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "queues": [ 
+        { 
+          "prefix": "{{ var.queuePrefix }}", 
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        } 
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToQueuePrefix": {
+            "queuePrefix": "{{ var.queuePrefix }}",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
+        }
+      ],
+      "consumers": [ 
+        { 
+          "prefix": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "ackIntervalMs": "{{ var.ackIntervalMs }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "multipleDimensions": {
+        "dimensions": [ "{{ var.dimension1 }}", "{{ var.dimension2 }}" ],
+        "multiValues": [
+          ["{{ var.dim1Value1 }}", "{{ var.dim2Value1 }}"], 
+          ["{{ var.dim1Value2 }}", "{{ var.dim2Value2 }}"], 
+          ["{{ var.dim1Value3 }}", "{{ var.dim2Value3 }}"],
+          ["{{ var.dim1Value4 }}", "{{ var.dim2Value4 }}"],
+          ["{{ var.dim1Value5 }}", "{{ var.dim2Value5 }}"],
+          ["{{ var.dim1Value6 }}", "{{ var.dim2Value6 }}"]
+        ],
+        "stepDurationSeconds": "{{ var.durationSeconds }}",
+        "rampUpSeconds": 10
+    }
+  }
+}

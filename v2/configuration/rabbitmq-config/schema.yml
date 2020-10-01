@@ -1,0 +1,9 @@
+rabbitmq:
+  config:
+    name: text
+    standard:
+    advanced_rabbit:
+    advanced_ra:
+    advanced_aten:
+    plugins:
+    env: 

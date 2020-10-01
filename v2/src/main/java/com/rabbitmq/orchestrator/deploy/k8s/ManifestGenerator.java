@@ -4,6 +4,7 @@ import com.rabbitmq.orchestrator.InvalidInputException;
 import com.rabbitmq.orchestrator.ProcessExecutor;
 import com.rabbitmq.orchestrator.deploy.RabbitConfigGenerator;
 import com.rabbitmq.orchestrator.deploy.k8s.model.K8sSystem;
+import com.rabbitmq.orchestrator.run.RabbitMQConfiguration;
 import freemarker.core.ParseException;
 import freemarker.template.*;
 import org.slf4j.Logger;
@@ -30,6 +31,12 @@ public class ManifestGenerator {
     }
 
     public String generateManifest(K8sSystem system, ProcessExecutor processExecutor) {
+        return generateManifest(system, system.getRabbitmqConfig(), processExecutor);
+    }
+
+    public String generateManifest(K8sSystem system,
+                                    RabbitMQConfiguration rabbitMQConfiguration,
+                                    ProcessExecutor processExecutor) {
         try {
             Template temp = cfg.getTemplate("cluster-template.yaml");
 
@@ -41,10 +48,10 @@ public class ManifestGenerator {
             root.put("volume_type", String.valueOf(system.getHardware().getVolumeConfig().getVolumeType()).toLowerCase());
             root.put("cpu_limit", system.getHardware().getCpuLimit());
             root.put("memory_mb_limit", toStr(system.getHardware().getMemoryMbLimit()));
-            root.put("standard_config", RabbitConfigGenerator.generateStandardConfigList(system.getRabbitmqConfig().getStandard()));
-            root.put("advanced_config_rabbit", RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedRabbit()));
-            root.put("advanced_config_ra", RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedRa()));
-            root.put("advanced_config_aten", RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedAten()));
+            root.put("standard_config", RabbitConfigGenerator.generateStandardConfigList(rabbitMQConfiguration.getStandard()));
+            root.put("advanced_config_rabbit", RabbitConfigGenerator.generateAdvancedConfig(rabbitMQConfiguration.getAdvancedRabbit()));
+            root.put("advanced_config_ra", RabbitConfigGenerator.generateAdvancedConfig(rabbitMQConfiguration.getAdvancedRa()));
+            root.put("advanced_config_aten", RabbitConfigGenerator.generateAdvancedConfig(rabbitMQConfiguration.getAdvancedAten()));
 
             if(system.getRabbitmqConfig().getPlugins() != null && !system.getRabbitmqConfig().getPlugins().isEmpty())
                 root.put("plugins", system.getRabbitmqConfig().getPlugins());

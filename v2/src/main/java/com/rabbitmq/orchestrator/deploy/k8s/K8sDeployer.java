@@ -67,6 +67,11 @@ public class K8sDeployer implements Deployer {
         }
     }
 
+    @Override
+    public void obtainSystemInfo() {
+        // not required for this host
+    }
+
     private boolean deployOnManagedK8s() {
         String logPrefix = "Deployment of instances for system: " + system.getName();
 
@@ -75,7 +80,7 @@ public class K8sDeployer implements Deployer {
             ManifestGenerator g = new ManifestGenerator(new File(k8sMeta.getManifestsDir()));
             manifestFilePath = g.generateManifest(system, processExecutor);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed generating manifest", e);
         }
 
         List<String> args = Arrays.asList("bash",
@@ -96,13 +101,41 @@ public class K8sDeployer implements Deployer {
     }
 
     @Override
-    public void updateBroker(RabbitMQConfiguration brokerConfiguration) {
+    public void updateBrokers(RabbitMQConfiguration brokerConfiguration) {
+        String logPrefix = "Configuration update of instances for system: " + system.getName();
+        String manifestFilePath = null;
+        try {
+            ManifestGenerator g = new ManifestGenerator(new File(k8sMeta.getManifestsDir()));
+            manifestFilePath = g.generateManifest(system, brokerConfiguration, processExecutor);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed generating manifest", e);
+        }
 
+        List<String> args = Arrays.asList("bash",
+                "update-configuration.sh",
+                "-b", String.valueOf(system.getHardware().getInstanceCount()),
+                "-n", k8sMeta.getKubeClusterName(system.getName(), system.getK8sEngine(), runTag),
+                "-N", k8sMeta.getRabbitClusterName(system.getName(), system.getK8sEngine()),
+                "-k", String.valueOf(system.getK8sEngine()).toLowerCase(),
+                "-m", manifestFilePath,
+                "-c", k8sMeta.getK8sContext(system.getName(), system.getK8sEngine(), runTag)
+        );
+
+        processExecutor.runProcess(scriptDir, args, logPrefix, isCancelled, failedSystems);
     }
 
     @Override
     public void restartBrokers() {
-        LOGGER.info("Restart not yet supported for K8s");
+        if(system.getRabbitmq().rebootBetweenBenchmarks()) {
+            String logPrefix = "Restarting brokers for system: " + system.getName() + " and run_tag: " + runTag;
+
+            List<String> args = Arrays.asList("bash",
+                    "restart.sh",
+                    "-c", k8sMeta.getK8sContext(system.getName(), system.getK8sEngine(), runTag),
+                    "-N", system.getRabbitClusterName(),
+                    "-b", String.valueOf(system.getHardware().getInstanceCount()));
+            processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
+        }
     }
 
     @Override
@@ -116,39 +149,15 @@ public class K8sDeployer implements Deployer {
     }
 
     @Override
-    public void retrieveLogs() {
-        LOGGER.info("Log retrieval not yet supported for K8s");
-//        for(K8sSystem system : systems) {
-//            retrieveLogs(system);
-//        }
-    }
+    public void retrieveLogs(String path) {
+        String logPrefix = "Log retrieval for system: " + system.getName() + " and run_tag: " + runTag;
+        String log_dir = path + "/" + system.getName();
 
-    private void retrieveLogs(K8sSystem system) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")
-                .withZone(ZoneId.systemDefault());
-        String log_dir = "logs/" + formatter.format(new Date().toInstant());
-
-//        List<String> args = Arrays.asList("bash",
-//                "get-logs.sh",
-//                ec2Meta.getKeyPair(),
-//                system.getHardware().getVolumeFor(RabbitMQData.Logs).getMountpoint(),
-//                String.valueOf(system.getFirstNode(isDownstream)),
-//                String.valueOf(system.getLastNode(isDownstream)),
-//                runTag,
-//                log_dir);
-//        String logPrefix = "Retrieval of logs for "
-//                + (isDownstream ? "downstream" : "main")
-//                + " system: " + system.getName();
-//        processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
+        List<String> args = Arrays.asList("bash",
+                "get-logs.sh",
+                "-c", k8sMeta.getK8sContext(system.getName(), system.getK8sEngine(), runTag),
+                "-d", log_dir);
+        processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
     }
-    @Override
-    public void cancelOperation() {
-        isCancelled.set(true);
-        while(opInProgress.get()) {
-            Waiter.waitMs(1000);
-            LOGGER.info("Waiting for current cancelled operations to stop");
-        }
-    }
-
 
 }

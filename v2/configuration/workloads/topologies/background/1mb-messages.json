@@ -1,0 +1,55 @@
+{
+  "topologyType": "fixed",
+  "benchmarkType": "throughput",
+  "topologyGroups": [
+    {
+      "name": "background",
+      "scale": 1,
+      "scaleType": "single-vhost",
+      "queues": [ 
+        { 
+          "prefix": "bgq", 
+          "scale": 1
+        }
+      ],
+      "publishers": [
+        {
+          "prefix": "bgp",
+          "scale": 1,
+          "publishMode": {
+            "useConfirms": true,
+            "inFlightLimit": 100
+          },
+          "sendToQueuePrefix": {
+            "queuePrefix": "bgq",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "persistent",
+          "messageSize": 1000000,
+          "msgsPerSecondPerPublisher": 10,
+          "initialPublish": 0
+        }
+      ],
+      "consumers": [ 
+        { 
+          "prefix": "bgc", 
+          "scale": 1, 
+          "queuePrefix": "bgq",
+          "ackMode": {
+            "manualAcks": true,
+            "consumerPrefetch": 100,
+            "globalPrefetch": false,
+            "ackInterval": 1
+          },
+          "processingMs": 0
+        }
+      ]
+    }
+  ],
+  "dimensions" : {
+    "fixedDimensions": {
+      "durationSeconds": 300,
+      "rampUpSeconds": 10
+    }
+  }
+}

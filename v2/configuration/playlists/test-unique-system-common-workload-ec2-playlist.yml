@@ -1,0 +1,59 @@
+name: test-unique-system-common-workload-ec2-playlist
+run: 1
+systems:
+  - name: s1
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-1000
+          count: 3
+  - name: s2
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-io1-200
+          count: 3
+common-workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.json
+    policies:
+      file: mirrored-queue.json
+      variables:
+        ha-mode: exactly
+        ha-params: 2
+    step-seconds: 200
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 60
+benchmarks:
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 1
+                consumerCount: 1
+                publisherCount: 1
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 2
+                consumerCount: 2
+                publisherCount: 2
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 3
+                consumerCount: 3
+                publisherCount: 3
+
+            

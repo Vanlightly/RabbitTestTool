@@ -1,0 +1,134 @@
+{
+  "topologyType": "SingleDimension",
+  "benchmarkType": "{{ var.benchmarkType }}",
+  "variables": [
+    { "name": "benchmarkType", "default": "throughput" },
+    { "name": "groupScale", "default": "1" },
+    { "name": "scaleType", "default": "single-vhost" },
+    { "name": "queuePrefix", "default": "q1" },
+    { "name": "queueCount", "default": "1" },
+    { "name": "hasDlx", "default": "false" },
+    { "name": "publisherCount", "default": "1" },
+    { "name": "consumerCount", "default": "1" },
+    { "name": "deliveryMode", "default": "persistent" },
+    { "name": "messageSize", "default": "20" },
+    { "name": "publishRate", "default": "0"},
+    { "name": "useConfirms", "default": "true" },
+    { "name": "inflightLimit", "default": "1000" },
+    { "name": "manualAcks", "default": "true" },
+    { "name": "consumerPrefetch", "default": "1000" },
+    { "name": "ackInterval", "default": "1" },
+    { "name": "ackIntervalMs", "default": "1000" },
+    { "name": "processingMs", "default": "0" },
+    { "name": "queueMode", "default": "default" },
+    { "name": "durationSeconds", "default": "120" },
+    { "name": "initialPublish", "default": "0" },
+    { "name": "dimension", "default": "PublishRate" },
+    { "name": "value1", "default": "10" },
+    { "name": "value2", "default": "100" },
+    { "name": "value3", "default": "500" },
+    { "name": "value4", "default": "1000" },
+    { "name": "value5", "default": "5000" },
+    { "name": "value6", "default": "10000" },
+    { "name": "value7", "default": "50000" },
+    { "name": "value8", "default": "100000" },
+    { "name": "value9", "default": "500000" },
+    { "name": "value10", "default": "1000000" }
+  ],
+  "topologyGroups": [
+    {
+      "name": "benchmark",
+      "scale": "{{ var.groupScale }}",
+      "scaleType": "{{ var.scaleType }}",
+      "exchanges": [
+        { "include": "{{ var.hasDlx }}", "name": "{{ var.queuePrefix }}-deadletter", "type": "fanout" }
+      ],
+      "queues": [ 
+        { 
+          "prefix": "{{ var.queuePrefix }}", 
+          "scale": "{{ var.queueCount }}",
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ],
+          "dlx": {
+            "hasDlx": "{{ var.hasDlx }}",
+            "name": "{{ var.queuePrefix }}-deadletter"
+          }
+        },
+        { 
+          "include": "{{ var.hasDlx }}",
+          "prefix": "{{ var.queuePrefix }}-deadletter", 
+          "scale": 1,
+          "bindings": [{ "from": "{{ var.queuePrefix }}-deadletter" }],
+          "properties": [
+            { "key": "x-queue-mode", "value": "{{ var.queueMode }}", "type": "string" }
+          ]
+        } 
+      ],
+      "publishers": [
+        {
+          "prefix": "p1",
+          "scale": "{{ var.publisherCount }}",
+          "publishMode": {
+            "useConfirms": "{{ var.useConfirms }}",
+            "inFlightLimit": "{{ var.inflightLimit }}"
+          },
+          "sendToQueuePrefix": {
+            "queuePrefix": "{{ var.queuePrefix }}",
+            "mode": "Counterpart"
+          },
+          "deliveryMode": "{{ var.deliveryMode }}",
+          "messageSize": "{{ var.messageSize }}",
+          "msgsPerSecondPerPublisher": "{{ var.publishRate }}",
+          "initialPublish": "{{ var.initialPublish }}"
+        }
+      ],
+      "consumers": [ 
+        { 
+          "prefix": "c1", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "ackIntervalMs": "{{ var.ackIntervalMs }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        },
+        { 
+          "include": "{{ var.hasDlx }}",
+          "prefix": "c1-overflow", 
+          "scale": "{{ var.consumerCount }}", 
+          "queuePrefix": "{{ var.queuePrefix }}-deadletter",
+          "ackMode": {
+            "manualAcks": "{{ var.manualAcks }}",
+            "consumerPrefetch": "{{ var.consumerPrefetch }}",
+            "ackInterval": "{{ var.ackInterval }}",
+            "ackIntervalMs": "{{ var.ackIntervalMs }}"
+          },
+          "processingMs": "{{ var.processingMs }}"
+        } 
+      ]
+    }
+  ],
+  "dimensions" : {
+    "singleDimension": {
+        "dimension": "{{ var.dimension }}",
+        "points": [
+          "{{ var.value1 }}", 
+          "{{ var.value2 }}", 
+          "{{ var.value3 }}",
+          "{{ var.value4 }}",
+          "{{ var.value5 }}",
+          "{{ var.value6 }}",
+          "{{ var.value7 }}",
+          "{{ var.value8 }}",
+          "{{ var.value9 }}",
+          "{{ var.value10 }}"
+        ],
+        "stepDurationSeconds": "{{ var.durationSeconds }}",
+        "rampUpSeconds": 10
+    }
+  }
+}

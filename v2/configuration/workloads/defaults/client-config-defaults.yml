@@ -1,0 +1,6 @@
+client-config:
+  tcp-no-delay: false
+  publisher-connect-mode: round-robin
+  consumer-connect-mode: round-robin
+  publisher-heartbeat-seconds: 10
+  consumer-heartbeat-seconds: 10

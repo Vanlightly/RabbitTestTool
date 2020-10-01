@@ -7,6 +7,7 @@ import com.rabbitmq.orchestrator.deploy.ec2.model.EC2System;
 import com.rabbitmq.orchestrator.deploy.ec2.model.EC2VolumeConfig;
 import com.rabbitmq.orchestrator.deploy.ec2.model.EC2VolumeType;
 import com.rabbitmq.orchestrator.meta.EC2Meta;
+import com.rabbitmq.orchestrator.model.actions.BrokerAction;
 import com.rabbitmq.orchestrator.run.RabbitMQConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 public class EC2Deployer implements Deployer {
     private static final Logger LOGGER = LoggerFactory.getLogger("EC2_DEPLOYER");
@@ -50,7 +52,7 @@ public class EC2Deployer implements Deployer {
 
         this.scriptDir = new File(ec2Meta.getDeployScriptsRoot());
         if(!scriptDir.exists())
-            throw new InvalidInputException("The script directory provided does not exist");
+            throw new InvalidInputException("The script directory '" + ec2Meta.getDeployScriptsRoot() + "' provided does not exist");
     }
 
     @Override
@@ -68,8 +70,6 @@ public class EC2Deployer implements Deployer {
 
             if(!isCancelled.get() && !anyOpHasFailed()) {
                 addUpstreamHosts();
-                String downstreamIps = getBrokerIps( true);
-                system.setDownstreamBrokerIps(downstreamIps);
                 LOGGER.info("Deployment of upstream and downstream cluster complete");
             }
         }
@@ -78,17 +78,33 @@ public class EC2Deployer implements Deployer {
         }
     }
 
+    @Override
+    public void obtainSystemInfo() {
+        LOGGER.info("Obtaining IP addresses for system: " + system.getName());
+        List<String> mainPrivateIps = getPrivateBrokerIps( false);
+        system.setMainPrivateIps(mainPrivateIps);
+
+        List<String> mainPublicIps = getPublicBrokerIps( false);
+        system.setMainPublicIps(mainPublicIps);
+
+        List<String> downstreamIps = getPrivateBrokerIps( true);
+        system.setDownstreamPrivateIps(downstreamIps);
+
+        List<String> downstreamPublicIps = getPublicBrokerIps( true);
+        system.setDownstreamPublicIps(downstreamPublicIps);
+    }
+
     private void deployCluster(boolean isDownstream) {
         String whichCluster = isDownstream ? "downstream" : "main";
-        String logPrefix = "Deployment of " + whichCluster + " cluster complete for system " + system.getName();
+        String logPrefix = "Deployment of " + whichCluster + " cluster for system " + system.getName();
 
         try {
-            if(!deployEC2Instances(system, isDownstream)) {
+            if (!deployEC2Instances(system, isDownstream)) {
                 failedSystems.add(system.getName());
                 return;
             }
 
-            if(this.isCancelled.get()) {
+            if (this.isCancelled.get()) {
                 LOGGER.info("Stopping deployment, cancellation requested");
                 return;
             }
@@ -96,36 +112,37 @@ public class EC2Deployer implements Deployer {
 
             int masterNodeNumber = system.getNodeNumbers().get(0);
             deployBroker(system, masterNodeNumber, isDownstream);
-            if(anyOpHasFailed())
+            if (anyOpHasFailed())
                 return;
 
-            if(this.isCancelled.get()) {
+            if (this.isCancelled.get()) {
                 LOGGER.info("Stopping deployment, cancellation requested");
                 return;
             }
 
             ExecutorService executorService = Executors.newCachedThreadPool();
-            for(int nodeNumber : system.getNodeNumbers()) {
-                if(nodeNumber == masterNodeNumber)
+            for (int nodeNumber : system.getNodeNumbers()) {
+                if (nodeNumber == masterNodeNumber)
                     continue;
 
                 executorService.submit(() -> deployBroker(system, nodeNumber, isDownstream));
             }
 
-            if(!isDownstream)
+            if (!isDownstream)
                 executorService.submit(() -> deployBenchmark(system));
 
             executorService.shutdown();
 
-            while(!isCancelled.get() && !anyOpHasFailed() && !executorService.isTerminated()) {
+            while (!isCancelled.get() && !anyOpHasFailed() && !executorService.isTerminated()) {
                 Waiter.waitMs(1000, isCancelled);
             }
 
-            if(isCancelled.get()) {
-                LOGGER.info(logPrefix + " waiting for current op to terminate.");
-                executorService.awaitTermination(30, TimeUnit.SECONDS);
-            }
-            else if(!anyOpHasFailed()) {
+            if (isCancelled.get()) {
+                LOGGER.info(logPrefix + " is cancelled, waiting for current op to terminate.");
+                Waiter.awaitTermination(executorService, 30, TimeUnit.SECONDS);
+            } else if (failedSystems.contains(system.getName())) {
+                LOGGER.info(logPrefix + " has failed");
+            } else {
                 LOGGER.info(logPrefix + " is complete");
             }
 
@@ -142,7 +159,7 @@ public class EC2Deployer implements Deployer {
             firstNodeNumber = system.getDownstreamNodeNumbers().get(0);
 
         List<String> variables = Arrays.asList(
-                "LOAD_AMI=" + system.getHardware().getLoadGenInstance().getAmi(),
+                "LOADGEN_AMI=" + system.getHardware().getLoadGenInstance().getAmi(),
                 "BROKER_AMI=" + system.getHardware().getRabbitMQInstance().getAmi(),
                 "CLUSTER_SIZE=" + system.getHardware().getInstanceCount(),
                 "CORE_COUNT=" + system.getHardware().getRabbitMQInstance().getCoreCount(),
@@ -205,6 +222,7 @@ public class EC2Deployer implements Deployer {
     }
 
     private void deployBroker(EC2System system, int nodeNumber, boolean isDownstream) {
+        int deployedNode = isDownstream ? nodeNumber + 100 : nodeNumber;
         int firstNode = system.getNodeNumbers().get(0);
         int lastNode = system.getNodeNumbers().get(system.getNodeNumbers().size()-1);
         String role = nodeNumber == firstNode ? "master" : "joinee";
@@ -231,7 +249,7 @@ public class EC2Deployer implements Deployer {
                 "INFLUX_SUBPATH=" + outputData.getInfluxSubpath(),
                 "INSTANCE=" + system.getHardware().getRabbitMQInstance().getInstanceType(),
                 "KEY_PAIR=" + ec2Meta.getKeyPair(),
-                "NODE_NUMBER=" + nodeNumber,
+                "NODE_NUMBER=" + deployedNode,
                 "NODE_RANGE_START=" + firstNode,
                 "NODE_RANGE_END=" + lastNode,
                 "NODE_ROLE=" + role,
@@ -246,13 +264,13 @@ public class EC2Deployer implements Deployer {
                 "VOL2_MOUNTPOINT=" + getVolumeMountpoint(2, system.getHardware().getVolumeConfigs()),
                 "VOL3_SIZE=" + getVolumeSize(3, system.getHardware().getVolumeConfigs()),
                 "VOL3_MOUNTPOINT=" + getVolumeMountpoint(3, system.getHardware().getVolumeConfigs()),
-                "ENV_VARS=" + RabbitConfigGenerator.generateEnvConfig(system.getRabbitmqConfig().getEnvConfig(), ","),
-                "STANDARD_VARS=" + RabbitConfigGenerator.generateStandardConfig(system.getRabbitmqConfig().getStandard(), ","),
-                "ADVANCED_VARS_RABBIT=" + RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedRabbit()),
-                "ADVANCED_VARS_RA=" + RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedRa()),
-                "ADVANCED_VARS_ATEN=" + RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedAten()),
+                "ENV_VARS='" + RabbitConfigGenerator.generateEnvConfig(system.getRabbitmqConfig().getEnvConfig(), ",") + "'",
+                "STANDARD_VARS='" + RabbitConfigGenerator.generateStandardConfig(system.getRabbitmqConfig().getStandard(), ",") + "'",
+                "ADVANCED_VARS_RABBIT='" + RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedRabbit()) + "'",
+                "ADVANCED_VARS_RA='" + RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedRa()) + "'",
+                "ADVANCED_VARS_ATEN='" + RabbitConfigGenerator.generateAdvancedConfig(system.getRabbitmqConfig().getAdvancedAten()) + "'",
                 "SECRET_VARS_FILE=" + secretsFilePath,
-                "RABBITMQ_PLUGINS=" + String.join(",", system.getRabbitmqConfig().getPlugins())
+                "RABBITMQ_PLUGINS='" + String.join(",", system.getRabbitmqConfig().getPlugins()) + "'"
         );
 
         String variablesFilePath = processExecutor.createFile(variables, ".vars");
@@ -263,6 +281,20 @@ public class EC2Deployer implements Deployer {
 
         String logPrefix = "Deployment of broker " + role + "  for system: " + system.getName();
         processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
+
+        if(!isCancelled.get() && !anyOpHasFailed())
+            deployScripts(deployedNode);
+    }
+
+    private void deployScripts(int nodeNumber) {
+        String logPrefix = "Deploying scripts for node " + nodeNumber + " in system: " + system.getName();
+        List<String> args = Arrays.asList("bash",
+                "deploy-scripts.sh",
+                ec2Meta.getKeyPair(),
+                String.valueOf(nodeNumber),
+                runTag,
+                "rabbitmq");
+        processExecutor.runProcess(scriptDir, args, logPrefix, isCancelled, failedSystems);
     }
 
     private void deployBenchmark(EC2System system) {
@@ -295,26 +327,117 @@ public class EC2Deployer implements Deployer {
         processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
     }
 
-    private String getBrokerIps(boolean isDownstream) {
+    private List<String> getPrivateBrokerIps(boolean isDownstream) {
         String logPrefix = "Getting private IPs for system: " + system.getName();
         List<String> args = Arrays.asList("bash",
-                "get_broker_ips.sh",
+                "get-broker-private-ips.sh",
                 String.valueOf(system.getHardware().getInstanceCount()),
                 String.valueOf(system.getFirstNode(isDownstream)),
                 runTag,
                 "rabbitmq");
-        return processExecutor.readFromProcess(scriptDir, args, logPrefix, isCancelled, failedSystems);
+        String ips = processExecutor.readFromProcess(scriptDir, args, logPrefix, isCancelled, failedSystems);
+        return Arrays.stream(ips.split(",")).collect(Collectors.toList());
+    }
+
+    private List<String> getPublicBrokerIps(boolean isDownstream) {
+        String logPrefix = "Getting private IPs for system: " + system.getName();
+        List<String> args = Arrays.asList("bash",
+                "get-broker-public-ips.sh",
+                String.valueOf(system.getHardware().getInstanceCount()),
+                String.valueOf(system.getFirstNode(isDownstream)),
+                runTag,
+                "rabbitmq");
+        String ips = processExecutor.readFromProcess(scriptDir, args, logPrefix, isCancelled, failedSystems);
+        return Arrays.stream(ips.split(",")).collect(Collectors.toList());
     }
 
     @Override
-    public void updateBroker(RabbitMQConfiguration brokerConfiguration) {
+    public void updateBrokers(RabbitMQConfiguration brokerConfiguration) {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        for(int nodeNumber : system.getNodeNumbers()) {
+            executorService.submit(() -> updateBroker(brokerConfiguration, nodeNumber));
 
+            if(system.isFederationEnabled())
+                executorService.submit(() -> updateBroker(brokerConfiguration, nodeNumber + 100));
+        }
+
+        executorService.shutdown();
+
+        while(!isCancelled.get() && !anyOpHasFailed() && !executorService.isTerminated()) {
+            Waiter.waitMs(1000, isCancelled);
+        }
+
+        if(isCancelled.get()) {
+            LOGGER.warn("Update cancelled before completion for system " + system.getName());
+            Waiter.awaitTermination(executorService, 30, TimeUnit.SECONDS);
+        }
+        else if(failedSystems.contains(system.getName()))
+            LOGGER.warn("Update failed for system " + system.getName());
+        else
+            LOGGER.info("Update complete for system " + system.getName());
+    }
+
+    private void updateBroker(RabbitMQConfiguration brokerConfiguration, int nodeNumber) {
+        List<String> variables = Arrays.asList(
+            "KEY_PAIR=" + ec2Meta.getKeyPair(),
+                "NODE=" + nodeNumber,
+                "RUN_TAG=" + runTag,
+                "ENV_VARS='" + RabbitConfigGenerator.generateEnvConfig(brokerConfiguration.getEnvConfig(), ",") + "'",
+                "STANDARD_VARS='" + RabbitConfigGenerator.generateStandardConfig(brokerConfiguration.getStandard(), ",") + "'",
+                "ADVANCED_VARS_RABBIT='" + RabbitConfigGenerator.generateAdvancedConfig(brokerConfiguration.getAdvancedRabbit()) + "'",
+                "ADVANCED_VARS_RA='" + RabbitConfigGenerator.generateAdvancedConfig(brokerConfiguration.getAdvancedRa()) + "'",
+                "ADVANCED_VARS_ATEN='" + RabbitConfigGenerator.generateAdvancedConfig(brokerConfiguration.getAdvancedAten()) + "'"
+        );
+
+        String variablesFilePath = processExecutor.createFile(variables, ".vars");
+
+        List<String> args = Arrays.asList("bash",
+                "update-rabbitmq-config.sh",
+                variablesFilePath);
+
+        String logPrefix = "Updating of RabbitMQ configuration on broker " + nodeNumber + " in system: " + system.getName();
+        processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
     }
 
     @Override
     public void restartBrokers() {
+        if(system.getRabbitmq().rebootBetweenBenchmarks()) {
+            ExecutorService executorService = Executors.newCachedThreadPool();
+            for (int nodeNumber : system.getNodeNumbers()) {
+                executorService.submit(() -> restartBroker(nodeNumber));
 
+                if (system.isFederationEnabled())
+                    executorService.submit(() -> restartBroker(nodeNumber + 100));
+            }
+
+            executorService.shutdown();
+
+            while (!isCancelled.get() && !anyOpHasFailed() && !executorService.isTerminated()) {
+                Waiter.waitMs(1000, isCancelled);
+            }
+
+            if (isCancelled.get()) {
+                LOGGER.warn("Restart of RabbitMQ apps cancelled before completion for system " + system.getName());
+                Waiter.awaitTermination(executorService, 30, TimeUnit.SECONDS);
+            } else if (failedSystems.contains(system.getName()))
+                LOGGER.warn("Restart of RabbitMQ apps failed for system " + system.getName());
+            else
+                LOGGER.info("Restart of RabbitMQ apps complete");
+        }
     }
+
+    private void restartBroker(int nodeNumber) {
+        List<String> args = Arrays.asList("bash",
+                "restart-broker.sh",
+                ec2Meta.getKeyPair(),
+                String.valueOf(nodeNumber),
+                runTag,
+                "rabbitmq");
+
+        String logPrefix = "Restarting RabbitMQ app on node " + nodeNumber + " in system: " + system.getName();
+        processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
+    }
+
 
     @Override
     public void teardown() {
@@ -340,17 +463,15 @@ public class EC2Deployer implements Deployer {
     }
 
     @Override
-    public void retrieveLogs() {
-        retrieveLogs(false);
+    public void retrieveLogs(String path) {
+        retrieveLogs(path, false);
 
         if(system.isFederationEnabled())
-            retrieveLogs(true);
+            retrieveLogs(path, true);
     }
 
-    private void retrieveLogs(boolean isDownstream) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")
-                .withZone(ZoneId.systemDefault());
-        String log_dir = "logs/" + formatter.format(new Date().toInstant());
+    private void retrieveLogs(String path, boolean isDownstream) {
+        String log_dir = path + "/" + system.getName();
 
         List<String> args = Arrays.asList("bash",
                         "get-logs.sh",
@@ -359,6 +480,7 @@ public class EC2Deployer implements Deployer {
                         String.valueOf(system.getFirstNode(isDownstream)),
                         String.valueOf(system.getLastNode(isDownstream)),
                         runTag,
+                        "rabbitmq",
                         log_dir);
         String logPrefix = "Retrieval of logs for "
                 + (isDownstream ? "downstream" : "main")
@@ -366,16 +488,8 @@ public class EC2Deployer implements Deployer {
         processExecutor.runProcess(scriptDir, args, logPrefix, system.getName(), isCancelled, failedSystems);
     }
 
-    @Override
-    public void cancelOperation() {
-        while(opInProgress.get()) {
-            Waiter.waitMs(1000);
-            LOGGER.info("Waiting for current cancelled operations to stop");
-        }
-    }
-
     private boolean anyOpHasFailed() {
-        return !failedSystems.isEmpty();
+        return failedSystems.contains(system.getName());
     }
 
 

@@ -15,23 +15,11 @@ public class K8sRabbitMQ {
         return rabbitmqVersion;
     }
 
-    public void setRabbitmqVersion(String rabbitmqVersion) {
-        this.rabbitmqVersion = rabbitmqVersion;
-    }
-
     public String getRabbitmqImage() {
         return rabbitmqImage;
     }
 
-    public void setRabbitmqImage(String rabbitmqImage) {
-        this.rabbitmqImage = rabbitmqImage;
-    }
-
-    public boolean isRebootBetweenBenchmarks() {
+    public boolean rebootBetweenBenchmarks() {
         return rebootBetweenBenchmarks;
-    }
-
-    public void setRebootBetweenBenchmarks(boolean rebootBetweenBenchmarks) {
-        this.rebootBetweenBenchmarks = rebootBetweenBenchmarks;
     }
 }

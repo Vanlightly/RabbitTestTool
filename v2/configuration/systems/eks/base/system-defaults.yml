@@ -8,4 +8,5 @@ rabbitmq:
     image: docker.io/rabbitmq:3.8.9-management
   # restart-brokers: true TODO: not yet supported
   # federation-enabled: false TODO: not yet supported
-  config: pause-minority-debug.yml
+  config: 
+    file: pause-minority-debug.yml

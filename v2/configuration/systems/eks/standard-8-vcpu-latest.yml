@@ -9,6 +9,7 @@ rabbitmq:
   broker: 
     version: 3.8.9
     image: docker.io/rabbitmq:3.8.9-management
-  andard:
-      log_level: debug
-config: pause-minority-debug.yml
+  standard:
+      log.file.level: debug
+config: 
+  file: pause-minority-debug.yml

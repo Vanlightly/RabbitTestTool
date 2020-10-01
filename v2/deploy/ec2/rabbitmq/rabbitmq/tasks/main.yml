@@ -8,18 +8,6 @@
   with_items: "{{ rabbitmq_hosts }}"
   tags: [installation]
   when: rabbitmq_hosts is defined
-  
-# - name: Install RabbitMQ public key
-#   apt_key:
-#     url: https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc
-#     state: present
-#   tags: [installation]
-
-# - name: Install Erlang Solutions public key
-#   apt_key:
-#     url: https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
-#     state: present
-#   tags: [installation]
 
 - name: Download Erlang deb file
   command: "wget -O /tmp/erlang.deb {{ erlang_deb_file_url }} "

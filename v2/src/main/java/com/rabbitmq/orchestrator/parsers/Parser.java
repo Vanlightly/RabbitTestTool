@@ -7,10 +7,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.DecimalFormat;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class Parser {
@@ -49,7 +47,7 @@ public abstract class Parser {
         }
     }
 
-    protected Object getObj(String fieldPath, List<Map<String,Object>> sources) {
+    protected Object getObj(String fieldPath, Map<String,Object>... sources) {
         for(Map<String, Object> source : sources) {
             Object obj = getObjAtPath(source, fieldPath, false);
 
@@ -60,28 +58,39 @@ public abstract class Parser {
         throw new InvalidInputException("Field path '" + fieldPath + "' does not exist in any source");
     }
 
-    protected String getStrValue(Map<String,Object> f, String fieldPath) {
-        return (String) getObjAtPath(f, fieldPath, true);
+    protected Object getOptionalObj(String fieldPath, Map<String,Object>... sources) {
+        for(Map<String, Object> source : sources) {
+            Object obj = getObjAtPath(source, fieldPath, false);
+
+            if (obj != null)
+                return obj;
+        }
+
+        return null;
     }
 
-    protected String getOptionalStrValue(Map<String,Object> f, String fieldPath, String defaultValue) {
-        Object obj = getObjAtPath(f, fieldPath, false);
+    protected String getStrValue(String fieldPath, Map<String,Object>... sources) {
+        return (String) getObj(fieldPath, sources);
+    }
+
+    protected String getOptionalStrValue(String fieldPath, String defaultValue, Map<String,Object>... sources) {
+        Object obj = getOptionalObj(fieldPath, sources);
         if(obj == null)
             return defaultValue;
 
         return (String)obj;
     }
 
-    protected String getValidatedValue(Map<String,Object> f, String fieldPath, String... permitted) {
-        String value = getStrValue(f, fieldPath);
+    protected String getValidatedValue(String fieldPath, String[] permitted, Map<String,Object>... sources) {
+        String value = getStrValue(fieldPath, sources);
         if(isValid(permitted, value))
             return value;
 
         throw new InvalidInputException("'" + fieldPath + "' can only have values: " + String.join(",", permitted));
     }
 
-    protected String getOptionalValidatedValue(Map<String,Object> f, String fieldPath, String defaultValue, String... permitted) {
-        Object value = getObjAtPath(f, fieldPath, false);
+    protected String getOptionalValidatedValue(String fieldPath, String defaultValue, String[] permitted, Map<String,Object>... sources) {
+        Object value = getOptionalObj(fieldPath, sources);
         if(value == null)
             return defaultValue;
 
@@ -102,12 +111,12 @@ public abstract class Parser {
         return found;
     }
 
-    protected Integer getIntValue(Map<String,Object> f, String fieldPath) {
-        return (Integer) getObjAtPath(f, fieldPath, true);
+    protected Integer getIntValue(String fieldPath, Map<String,Object>... sources) {
+        return (Integer) getObj(fieldPath, sources);
     }
 
-    protected Integer getOptionalIntValue(Map<String,Object> f, String fieldPath, Integer defaultValue) {
-        Object value = getObjAtPath(f, fieldPath, false);
+    protected Integer getOptionalIntValue(String fieldPath, Integer defaultValue, Map<String,Object>... sources) {
+        Object value = getOptionalObj(fieldPath, sources);
 
         if(value == null)
             return defaultValue;
@@ -115,12 +124,12 @@ public abstract class Parser {
         return (Integer)value;
     }
 
-    protected Boolean getBoolValue(Map<String,Object> f, String fieldPath) {
-        return (Boolean) getObjAtPath(f, fieldPath, true);
+    protected Boolean getBoolValue(String fieldPath, Map<String,Object>... sources) {
+        return (Boolean) getObj(fieldPath, sources);
     }
 
-    protected Boolean getOptionalBoolValue(Map<String,Object> f, String fieldPath, Boolean defaultValue) {
-        Object value = getObjAtPath(f, fieldPath, false);
+    protected Boolean getOptionalBoolValue(String fieldPath, Boolean defaultValue, Map<String,Object>... sources) {
+        Object value = getOptionalObj(fieldPath, sources);
 
         if(value == null)
             return defaultValue;
@@ -128,29 +137,37 @@ public abstract class Parser {
         return (Boolean) value;
     }
 
-    protected  List<String> getListValue(Map<String,Object> f, String fieldPath) {
-        String value = getStrValue(f, fieldPath);
-        return Arrays.stream(f.get(value).toString().split(",")).collect(Collectors.toList());
+    protected  List<String> getListValue(String fieldPath, Map<String,Object>... sources) {
+        String value = getStrValue(fieldPath, sources);
+        return Arrays.stream(value.split(",")).collect(Collectors.toList());
     }
 
-    protected Map<String,Object> getSubTree(Map<String,Object> f, String fieldPath) {
-        return (Map<String,Object>)getObjAtPath(f, fieldPath, true);
+    protected Map<String,Object> getSubTree(String fieldPath, Map<String,Object>... sources) {
+        return (Map<String,Object>)getObj(fieldPath, sources);
     }
 
-    protected Map<String,Object> getOptionalSubTree(Map<String,Object> f, String fieldPath, Map<String, Object> defaultValue>) {
-        Object subTree = getObjAtPath(f, fieldPath, false);
+    protected Map<String,Object> getOptionalSubTree(String fieldPath, Map<String, Object> defaultValue, Map<String,Object>... sources) {
+        Object subTree = getOptionalObj(fieldPath, sources);
         if(subTree == null)
             return defaultValue;
 
         return (Map<String,Object>)subTree;
     }
 
-    protected  List<Map<String,Object>> getSubTreeList(Map<String,Object> f, String fieldPath) {
-        return (List<Map<String,Object>>)getObjAtPath(f, fieldPath, true);
+    protected  List<Map<String,Object>> getSubTreeList(String fieldPath, Map<String,Object>... sources) {
+        return (List<Map<String,Object>>)getObj(fieldPath, sources);
     }
 
-    protected List<String> getStringList(Map<String,Object> f, String fieldPath) {
-        return (List<String>) getObjAtPath(f, fieldPath, true);
+    protected List<String> getStringList(String fieldPath, Map<String,Object>... sources) {
+        return (List<String>) getObj(fieldPath, sources);
+    }
+
+    protected List<String> getOptionalStringList(String fieldPath, List<String> defaultValue, Map<String,Object>... sources) {
+        Object obj = getOptionalObj(fieldPath, sources);
+        if(obj == null)
+            return defaultValue;
+
+        return (List<String>)obj;
     }
 
     protected Object getObjAtPath(Map<String,Object> f, String fieldPath, boolean isMandatory) {
@@ -159,11 +176,11 @@ public abstract class Parser {
         for(int i=0; i<fieldList.length; i++) {
             String field = fieldList[i];
 
-            if(i == fieldList.length-1) {
-                return currObject.get(field);
-            }
-            else if(currObject.containsKey(field))
-                currObject = (Map<String, Object>)currObject.get(field);
+            if(currObject.containsKey(field))
+                if(i == fieldList.length-1)
+                    return currObject.get(field);
+                else
+                    currObject = (Map<String, Object>)currObject.get(field);
             else
                 break;
         }
@@ -174,21 +191,73 @@ public abstract class Parser {
         return null;
     }
 
-    protected Boolean pathExists(Map<String,Object> f, String fieldPath) {
-        Map<String, Object> currObject = f;
+    protected Boolean pathExists(String fieldPath, Map<String,Object>... sources) {
+        for(Map<String, Object> source : sources) {
+            if (pathExists(fieldPath, source))
+                return true;
+        }
+
+        return false;
+    }
+
+    protected Boolean pathExists(String fieldPath, Map<String,Object> source) {
+        Map<String, Object> currObject = source;
         String[] fieldList = fieldPath.split("\\.");
         for(int i=0; i<fieldList.length; i++) {
             String field = fieldList[i];
 
-            if(i == fieldList.length-1) {
-                return true;
+            if(currObject.containsKey(field)) {
+                if(i == fieldList.length-1)
+                    return true;
+                else
+                    currObject = (Map<String, Object>) currObject.get(field);
             }
-            else if(currObject.containsKey(field))
-                currObject = (Map<String, Object>)currObject.get(field);
             else
                 break;
         }
 
         return false;
+    }
+
+    protected List<Map<String,Object>> getSubTreesOfEachSource(String fieldPath, Map<String, Object>... sources) {
+        List<Map<String,Object>> fieldList = new ArrayList<>();
+        for(Map<String, Object> source : sources) {
+            Object obj = getObjAtPath(source, fieldPath, false);
+            if(obj != null)
+                fieldList.add((Map<String, Object>)obj);
+        }
+
+        return fieldList;
+    }
+
+    protected Map<String, String> mergeStringMap(List<Map<String, Object>> sources) {
+        Set<String> keys = new HashSet<>();
+        for(Map<String,Object> source : sources) {
+            keys.addAll(source.keySet());
+        }
+
+        Map<String, String> variables = new HashMap<>();
+        for(String key : keys) {
+            for(Map<String, Object> source : sources) {
+                if(source.containsKey(key)) {
+                    variables.put(key, convertToString(source.get(key)));
+                    break;
+                }
+            }
+        }
+
+        return variables;
+    }
+
+    private String convertToString(Object obj) {
+        if(obj.getClass().equals(String.class)) {
+            return (String)obj;
+        } else if(obj.getClass().equals(Integer.class) || obj.getClass().equals(Long.class)) {
+            DecimalFormat df = new DecimalFormat("#");
+            return df.format(obj);
+        } else {
+            throw new InvalidInputException("Unsupported map value type of: " + obj.getClass());
+        }
+
     }
 }

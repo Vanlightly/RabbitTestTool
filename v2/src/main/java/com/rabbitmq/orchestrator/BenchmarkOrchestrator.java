@@ -1,14 +1,13 @@
 package com.rabbitmq.orchestrator;
 
-import com.rabbitmq.orchestrator.deploy.BaseSystem;
 import com.rabbitmq.orchestrator.model.Playlist;
 import com.rabbitmq.orchestrator.model.Benchmark;
-import com.rabbitmq.orchestrator.parsers.YamlParser;
+import com.rabbitmq.orchestrator.parsers.PlaylistParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 public class BenchmarkOrchestrator {
     private static final Logger LOGGER = LoggerFactory.getLogger("MAIN");
@@ -50,26 +49,25 @@ public class BenchmarkOrchestrator {
         // step 1 - parse yaml
         String metaDataDir = arguments.getStr("--meta-data-dir");
         String configDir = arguments.getStr("--config-dir");
-        YamlParser yamlParser = new YamlParser(metaDataDir, configDir);
-        yamlParser.loadPlaylist(playlistFile);
+        PlaylistParser playlistParser = new PlaylistParser(metaDataDir, configDir);
+        playlistParser.loadPlaylist(playlistFile);
 
-        List<BaseSystem> systems = yamlParser.getSystems();
+        Playlist playlist = playlistParser.getPlaylist();
         ProcessExecutor processExecutor = new ProcessExecutor();
-        dispatcher = new WorkDispatcher(yamlParser,
-                yamlParser.loadOutputData(),
+        dispatcher = new WorkDispatcher(playlistParser,
+                playlistParser.loadOutputData(),
                 processExecutor,
                 noDeploy,
                 noDestroy);
 
-        boolean deploySuccess = dispatcher.deploySystems(runTag, systems);
+        boolean deploySuccess = dispatcher.deploySystems(runTag, playlist.getSystems());
         if(!deploySuccess) {
             LOGGER.warn("Deployment failed, terminating run");
             System.exit(1);
         }
 
         // step 3 - run benchmarks
-        Playlist playlist = yamlParser.getPlaylist();
-
+        String runId = UUID.randomUUID().toString();
         for(Benchmark benchmark : playlist.getBenchmarks()) {
             boolean updateSuccess = dispatcher.updateBrokers(benchmark);
             if(!updateSuccess){
@@ -77,7 +75,7 @@ public class BenchmarkOrchestrator {
                 break;
             }
 
-            boolean runSuccess = dispatcher.run(benchmark, tags);
+            boolean runSuccess = dispatcher.run(benchmark, tags, runId);
             if(!runSuccess) {
                 LOGGER.warn("Terminating playlist run due to failure of the previous benchmark");
                 break;

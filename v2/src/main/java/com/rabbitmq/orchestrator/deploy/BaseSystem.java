@@ -8,6 +8,8 @@ public class BaseSystem {
     Host host;
     K8sEngine k8sEngine;
 
+    public static String[] SystemSuffixes = {"a", "b", "c", "d", "e"};
+
     public BaseSystem(String name, Host host, K8sEngine k8sEngine) {
         this.name = name;
         this.host = host;

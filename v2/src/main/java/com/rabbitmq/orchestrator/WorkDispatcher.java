@@ -10,22 +10,28 @@ import com.rabbitmq.orchestrator.meta.EC2Meta;
 import com.rabbitmq.orchestrator.meta.K8sMeta;
 import com.rabbitmq.orchestrator.model.Workload;
 import com.rabbitmq.orchestrator.model.Benchmark;
-import com.rabbitmq.orchestrator.parsers.YamlParser;
-import com.rabbitmq.orchestrator.run.EC2Runner;
-import com.rabbitmq.orchestrator.run.K8sRunner;
+import com.rabbitmq.orchestrator.parsers.PlaylistParser;
+import com.rabbitmq.orchestrator.run.BrokerActioner;
+import com.rabbitmq.orchestrator.run.ec2.EC2BrokerActioner;
+import com.rabbitmq.orchestrator.run.ec2.EC2Runner;
+import com.rabbitmq.orchestrator.run.k8s.K8sBrokerActioner;
+import com.rabbitmq.orchestrator.run.k8s.K8sRunner;
 import com.rabbitmq.orchestrator.run.Runner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WorkDispatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger("DeploymentDispatcher");
 
-    YamlParser yamlParser;
+    PlaylistParser playlistParser;
     String runTag;
     List<BaseSystem> systems;
     AtomicBoolean isCancelled;
@@ -37,12 +43,12 @@ public class WorkDispatcher {
     boolean noDestroy;
     List<Deployment> deployments;
 
-    public WorkDispatcher(YamlParser yamlParser,
+    public WorkDispatcher(PlaylistParser playlistParser,
                           OutputData outputData,
                           ProcessExecutor processExecutor,
                           boolean noDeploy,
                           boolean noDestroy) {
-        this.yamlParser = yamlParser;
+        this.playlistParser = playlistParser;
         this.outputData = outputData;
         this.processExecutor = processExecutor;
         this.noDeploy = noDeploy;
@@ -61,19 +67,26 @@ public class WorkDispatcher {
             deployments.add(createDeployment(system, outputData));
         }
 
-        if(noDeploy) {
-            LOGGER.info("No deployment step - using existing systems with run tag " + runTag);
-            return true;
-        }
-
-        if(isCancelled.get()) {
-            LOGGER.warn("Deployment cancelled");
-            return false;
-        }
-
+        this.isCancelled.set(false);
         this.opInProgress.set(true);
         this.failedSystems.clear();
 
+        if(noDeploy) {
+            LOGGER.info("No deployment step - using existing systems with run tag " + runTag);
+        } else {
+            boolean deploySuccess = deploySystems();
+            if(!deploySuccess) {
+                opInProgress.set(false);
+                return false;
+            }
+        }
+
+        boolean success = obtainSystemInfo();
+        opInProgress.set(false);
+        return success;
+    }
+
+    private boolean deploySystems() {
         ExecutorService executorService = Executors.newCachedThreadPool();
         for(Deployment deployment : deployments) {
             executorService.submit(() -> deployment.getDeployer().deploySystem());
@@ -84,30 +97,55 @@ public class WorkDispatcher {
             Waiter.waitMs(1000, isCancelled);
         }
 
-        boolean success = true;
         if(anyOpHasFailed()) {
-            LOGGER.info("Deployment failed for systems: " + String.join(",", failedSystems));
+            LOGGER.info("Deployment failed for systems: " + String.join(",", failedSystems) + ". Cancelling all parallel operations.");
+            isCancelled.set(true);
+            Waiter.awaitTermination(executorService, 60, TimeUnit.SECONDS);
+
             try {
-                for(Deployment deployment : deployments) {
+                for (Deployment deployment : deployments) {
                     LOGGER.info("Tearing down system: " + deployment.getBaseSystem().getName());
                     deployment.getDeployer().teardown();
                 }
-            } catch(Exception e) {
+            } catch (Exception e) {
                 LOGGER.error("TEARDOWN FAILED! MANUAL TEARDOWN REQUIRED.", e);
             }
 
-            success = false;
+            return false;
         } else if(isCancelled.get()) {
             LOGGER.info("Deployment cancelled before completion");
-            success = false;
+            return false;
         }
 
-        opInProgress.set(false);
+        return true;
+    }
 
-        return success;
+    private boolean obtainSystemInfo() {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        for(Deployment deployment : deployments) {
+            executorService.submit(() -> deployment.getDeployer().obtainSystemInfo());
+        }
+
+        executorService.shutdown();
+        while(!isCancelled.get() && !anyOpHasFailed() && !executorService.isTerminated()) {
+            Waiter.waitMs(1000, isCancelled);
+        }
+
+        if(anyOpHasFailed()) {
+            LOGGER.info("Could not obtain information for systems: " + String.join(",", failedSystems));
+            isCancelled.set(true);
+            Waiter.awaitTermination(executorService, 60, TimeUnit.SECONDS);
+            return false;
+        } else if(isCancelled.get()) {
+            LOGGER.info("Could not obtain information - cancelled before completion");
+            return false;
+        }
+
+        return true;
     }
 
     public boolean updateBrokers(Benchmark benchmark) {
+        this.isCancelled.set(false);
         this.opInProgress.set(true);
         this.failedSystems.clear();
 
@@ -116,7 +154,7 @@ public class WorkDispatcher {
             Workload workload = benchmark.getWorkloadFor(deployment.getBaseSystem().getName());
 
             if (workload.hasConfigurationChanges()) {
-                executorService.submit(() -> deployment.getDeployer().updateBroker(workload.getBrokerConfiguration()));
+                executorService.submit(() -> deployment.getDeployer().updateBrokers(workload.getBrokerConfiguration()));
             }
         }
 
@@ -127,7 +165,9 @@ public class WorkDispatcher {
 
         boolean success = true;
         if(anyOpHasFailed()) {
-            LOGGER.info("Broker restart failed for systems: " + String.join(",", failedSystems));
+            LOGGER.info("Broker restart failed for systems: " + String.join(",", failedSystems) + ". Cancelling all other parallel operations.");
+            isCancelled.set(true);
+            Waiter.awaitTermination(executorService, 60, TimeUnit.SECONDS);
             success = false;
         } else if(isCancelled.get()) {
             LOGGER.info("Broker restart cancelled before completion");
@@ -139,16 +179,13 @@ public class WorkDispatcher {
         return success;
     }
 
-    public boolean run(Benchmark benchmark, String tags) {
-        if(isCancelled.get()) {
-            LOGGER.warn("Workload execution cancelled");
-            return false;
-        }
-
+    public boolean run(Benchmark benchmark,
+                       String tags,
+                       String runId) {
+        this.isCancelled.set(false);
         this.opInProgress.set(true);
         this.failedSystems.clear();
 
-        String runId = UUID.randomUUID().toString();
         ExecutorService executorService = Executors.newCachedThreadPool();
 
         LOGGER.info("Kicking off benchmark #" + benchmark.getOrdinal());
@@ -171,6 +208,12 @@ public class WorkDispatcher {
                                 failedSystems,
                                 isCancelled));
             }
+
+            executorService.submit(() -> deployment.getBrokerActioner().applyActionsIfAny(
+                    deployment.getBaseSystem(),
+                    workload.getBrokerAction(),
+                    isCancelled,
+                    failedSystems));
         }
 
         executorService.shutdown();
@@ -180,10 +223,18 @@ public class WorkDispatcher {
 
         boolean success = true;
         if(anyOpHasFailed()) {
-            LOGGER.info("Benchmark #" + benchmark.getOrdinal() + " failed for systems: " + String.join(",", failedSystems));
+            LOGGER.info("Benchmark #" + benchmark.getOrdinal() + " failed for systems: " + String.join(",", failedSystems) + ". Cancelling all parallel operations");
+            isCancelled.set(true);
+            Waiter.awaitTermination(executorService, 60, TimeUnit.SECONDS);
             success = false;
         } else if(isCancelled.get()) {
             LOGGER.info("Benchmark #" + benchmark.getOrdinal() + " cancelled before completion");
+            success = false;
+        }
+
+        removeAnyAffects(benchmark);
+        if(!failedSystems.isEmpty()) {
+            LOGGER.info("Benchmark #" + benchmark.getOrdinal() + " failed to remove effects");
             success = false;
         }
 
@@ -191,16 +242,82 @@ public class WorkDispatcher {
         return success;
     }
 
-    public void restartBrokers() {
+    private boolean removeAnyAffects(Benchmark benchmark) {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        for(Deployment deployment : deployments) {
+            Workload workload = benchmark.getWorkloadFor(deployment.getBaseSystem().getName());
+
+            executorService.submit(() -> deployment.getBrokerActioner().removeAnyAffects(
+                    deployment.getBaseSystem(),
+                    workload.getBrokerAction(),
+                    isCancelled,
+                    failedSystems));
+        }
+
+        executorService.shutdown();
+        while(!isCancelled.get() && !anyOpHasFailed() && !executorService.isTerminated()) {
+            Waiter.waitMs(1000, isCancelled);
+        }
+
+        boolean success = true;
+        if(anyOpHasFailed()) {
+            LOGGER.info("Failed removing effects for systems: " + String.join(",", failedSystems) + ". Cancelling all parallel operations");
+            isCancelled.set(true);
+            Waiter.awaitTermination(executorService, 60, TimeUnit.SECONDS);
+            success = false;
+        } else if(isCancelled.get()) {
+            LOGGER.info("Removal of effects cancelled before completion");
+            success = false;
+        }
+
+        return success;
+    }
+
+    public boolean restartBrokers() {
+        this.isCancelled.set(false);
         this.opInProgress.set(true);
         this.failedSystems.clear();
 
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        for(Deployment deployment : deployments)
+            executorService.submit(() -> deployment.getDeployer().restartBrokers());
+
+        executorService.shutdown();
+        while(!isCancelled.get() && !anyOpHasFailed() && !executorService.isTerminated()) {
+            Waiter.waitMs(1000, isCancelled);
+        }
+
+        boolean success = true;
+        if(anyOpHasFailed()) {
+            LOGGER.info("Failed restarting brokers for systems: " + String.join(",", failedSystems) + ". Cancelling all parallel operations");
+            isCancelled.set(true);
+            Waiter.awaitTermination(executorService, 60, TimeUnit.SECONDS);
+            success = false;
+        } else if(isCancelled.get()) {
+            LOGGER.info("Restarting of brokers cancelled before completion");
+            success = false;
+        }
+
         this.opInProgress.set(false);
+        return success;
     }
 
     public void retrieveLogs() {
+        this.isCancelled.set(false);
         this.opInProgress.set(true);
-        this.failedSystems.clear();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")
+                .withZone(ZoneId.systemDefault());
+        String path = outputData.getLogsStorageDir() + "/" + formatter.format(new Date().toInstant());
+
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        for(Deployment deployment : deployments)
+            executorService.submit(() -> deployment.getDeployer().retrieveLogs(path));
+
+        executorService.shutdown();
+        while(!isCancelled.get() && !executorService.isTerminated()) {
+            Waiter.waitMs(1000, isCancelled);
+        }
 
         this.opInProgress.set(false);
     }
@@ -211,6 +328,7 @@ public class WorkDispatcher {
             return;
         }
 
+        this.isCancelled.set(false);
         this.opInProgress.set(true);
         this.failedSystems.clear();
 
@@ -242,7 +360,7 @@ public class WorkDispatcher {
     private Deployment createDeployment(BaseSystem system, OutputData metrics) {
         switch(system.getHost()) {
             case EC2:
-                EC2Meta ec2Meta = yamlParser.loadEc2Meta();
+                EC2Meta ec2Meta = playlistParser.loadEc2Meta();
                 Deployer ec2Deployer = new EC2Deployer(
                         runTag,
                         system,
@@ -256,7 +374,13 @@ public class WorkDispatcher {
                         ec2Meta,
                         metrics,
                         processExecutor);
-                return new Deployment(ec2Deployer, ec2Runner, system);
+                BrokerActioner actioner = new EC2BrokerActioner(ec2Meta,
+                        processExecutor,
+                        runTag,
+                        outputData.getRabbitmqUsername(),
+                        outputData.getRabbitmqPassword(),
+                        ec2Meta.getRunScriptsRoot());
+                return new Deployment(ec2Deployer, ec2Runner, actioner, system);
             case K8S:
                 K8sMeta k8sMeta = getK8sMeta(system.getK8sEngine());
                 Deployer k8sDeployer = new K8sDeployer(
@@ -272,7 +396,7 @@ public class WorkDispatcher {
                         k8sMeta,
                         metrics,
                         processExecutor);
-                return new Deployment(k8sDeployer, k8sRunner, system);
+                return new Deployment(k8sDeployer, k8sRunner, new K8sBrokerActioner(), system);
             default:
                 throw new InvalidInputException("Host deployment not supported");
         }
@@ -281,9 +405,9 @@ public class WorkDispatcher {
     private K8sMeta getK8sMeta(K8sEngine k8sEngine) {
         switch(k8sEngine) {
             case EKS:
-                return yamlParser.loadEksMeta();
+                return playlistParser.loadEksMeta();
             case GKE:
-                return yamlParser.loadGkeMeta();
+                return playlistParser.loadGkeMeta();
             default:
                 throw new InvalidInputException("K8sEngine not supported: " + k8sEngine);
         }
