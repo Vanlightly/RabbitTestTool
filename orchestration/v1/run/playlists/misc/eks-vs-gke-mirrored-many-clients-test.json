@@ -1,0 +1,21 @@
+{
+    "benchmarks": [
+        
+        { "topologyVariables": 
+            { 
+                "queueCount": "35", "consumerCount": "35", "publisherCount": "35"
+            }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "inflightLimit": "1000",
+            "consumerPrefetch": "1000",
+            "messageSize": "20",
+            "ackInterval": "1",
+            "durationSeconds": "3600"
+        },
+        "policy": "mirrored-queue.json"
+    }
+}

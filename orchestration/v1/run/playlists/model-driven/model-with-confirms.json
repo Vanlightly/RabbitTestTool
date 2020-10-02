@@ -1,0 +1,20 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "50" } },
+        { "policy": "quorum-queue-mem-limit.json", "policyVariables": { "maxInMemoryLength": "0" } },
+        { "policy": "mirrored-queue.json", "policyVariables": { "haMode": "exactly", "haParams": "2", "ha-sync-mode": "automatic" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "publisherCount": "50", 
+            "inflightLimit": "100",
+            "queueCount": "50", 
+            "consumerCount": "50", 
+            "consumerPrefetch": "100", 
+            "ackInterval": "1",
+            "durationSeconds": "3600",
+            "messageSize": "20"
+        }
+    }
+}

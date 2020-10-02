@@ -1,0 +1,24 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "inflightLimit": "1" }},
+        { "topologyVariables": { "inflightLimit": "10" }},
+        { "topologyVariables": { "inflightLimit": "50" }},
+        { "topologyVariables": { "inflightLimit": "100" }},
+        { "topologyVariables": { "inflightLimit": "500" }},
+        { "topologyVariables": { "inflightLimit": "1000" }},
+        { "topologyVariables": { "inflightLimit": "0" }}
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe.json",
+        "topologyVariables": { 
+            "publisherCount": "500", 
+            "queueCount": "500", 
+            "consumerCount": "500",
+            "consumerPrefetch": "1000",
+            "messageSize": "20",
+            "ackInterval": "1",
+            "durationSeconds": "600"
+        },
+        "policy": "quorum-queue-mem-limit.json"
+    }
+}

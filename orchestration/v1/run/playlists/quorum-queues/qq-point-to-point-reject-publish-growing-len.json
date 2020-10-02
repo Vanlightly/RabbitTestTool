@@ -1,0 +1,31 @@
+{
+    "benchmarks": [
+        { "policyVariables": { "lengthLimit": "10" } },
+        { "policyVariables": { "lengthLimit": "100" } },
+        { "policyVariables": { "lengthLimit": "1000" } },
+        { "policyVariables": { "lengthLimit": "10000" } },
+        { "policyVariables": { "lengthLimit": "100000" } },
+        { "policyVariables": { "lengthLimit": "1000000" } },
+        { "policyVariables": { "lengthLimit": "10000000" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "durationSeconds": "600",
+            "messageSize": "20",
+            "publisherCount": "100", 
+            "queueCount": "1", 
+            "consumerCount": "1", 
+            "inflightLimit": "50"
+        },
+        "policy": "quorum-queue-overflow.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0",
+            "overflow": "reject-publish"
+        }
+    }
+}

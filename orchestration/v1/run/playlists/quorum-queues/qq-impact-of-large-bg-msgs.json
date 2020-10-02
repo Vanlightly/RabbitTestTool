@@ -1,0 +1,28 @@
+{
+    "benchmarks": [
+        { "bgTopology": "background/1mb-messages.json", "bgPolicy": "mirrored-queue.json"},
+        { "bgTopology": "background/10mb-messages.json", "bgPolicy": "mirrored-queue.json"},
+        { "bgTopology": "background/50mb-messages.json", "bgPolicy": "mirrored-queue.json"},
+        { "bgTopology": "background/1mb-messages.json", "bgPolicy": "quorum-queue-len-limit.json"},
+        { "bgTopology": "background/10mb-messages.json", "bgPolicy": "quorum-queue-len-limit.json"},
+        { "bgTopology": "background/50mb-messages.json", "bgPolicy": "quorum-queue-len-limit.json"}
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "publisherCount": "50", 
+            "publishRate": "10",
+            "queueCount": "50", 
+            "consumerCount": "50",
+            "useConfirms": "true", 
+            "inflightLimit": "1000", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "durationSeconds": "3600"
+        },
+        "policy": "quorum-queue-len-limit.json",
+        "bgStepSeconds": 3600
+        
+    }
+}

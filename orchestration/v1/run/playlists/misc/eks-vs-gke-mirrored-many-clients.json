@@ -1,0 +1,34 @@
+{
+    "benchmarks": [
+        
+        { "topologyVariables": 
+            { 
+                "dim1Value1": "10", "dim2Value1": "10", "dim3Value1": "10",
+                "dim1Value2": "30", "dim2Value2": "30", "dim3Value2": "30",
+                "dim1Value3": "50", "dim2Value3": "50", "dim3Value3": "50",
+                "dim1Value4": "70", "dim2Value4": "70", "dim3Value4": "70",
+                "dim1Value5": "90", "dim2Value5": "90", "dim3Value5": "90",
+                "dim1Value6": "110", "dim2Value6": "110", "dim3Value6": "110",
+                "dim1Value7": "130", "dim2Value7": "130", "dim3Value7": "130",
+                "dim1Value8": "150", "dim2Value8": "150", "dim3Value8": "150",
+                "dim1Value9": "170", "dim2Value9": "170", "dim3Value9": "170",
+                "dim1Value10": "190", "dim2Value10": "190", "dim3Value10": "190"
+            }
+        }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point-safe-3-dimensions-10-values.json",
+        "topologyVariables": { 
+            "dimension1": "queues",
+            "dimension2": "consumers",
+            "dimension3": "publishers",
+            "inflightLimit": "1000",
+            "consumerPrefetch": "100",
+            "messageSize": "20",
+            "ackInterval": "1",
+            "durationSeconds": "600",
+            "groupScale": "1"
+        },
+        "policy": "mirrored-queue.json"
+    }
+}

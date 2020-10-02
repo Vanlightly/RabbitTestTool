@@ -48,6 +48,7 @@ target/
 .variables
 .config
 .secret
+.secrets
 
 # terraform
 .terraform

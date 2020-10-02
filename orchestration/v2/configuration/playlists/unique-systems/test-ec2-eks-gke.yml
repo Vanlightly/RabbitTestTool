@@ -1,0 +1,70 @@
+run: 1
+systems:
+  - name: s1
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        count: 3
+  - name: s2
+    host: k8s
+    k8s-engine: eks
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        count: 3
+  - name: s3
+    host: k8s
+    k8s-engine: gke
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        count: 3
+common-workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.json
+      variables:
+        messageSize: 20
+        publishRate: 100
+    policies:
+      file: quorum-queue-mem-limit.json
+      variables:
+        maxInMemoryLength: 1000
+    step-seconds: 120
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 0
+benchmarks:
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 1
+                consumerCount: 1
+                publisherCount: 1
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 5
+                consumerCount: 5
+                publisherCount: 5
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 10
+                consumerCount: 10
+                publisherCount: 10
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 50
+                consumerCount: 50
+                publisherCount: 50

@@ -1,0 +1,99 @@
+run: 2
+systems:
+  - name: s1
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-1000
+          count: 3
+  - name: s2
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-1000
+          count: 3
+common-workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.json
+      variables:
+        queueCount: 1
+        consumerCount: 1
+    step-seconds: 300
+  broker-actions:
+    action-type: traffic-control
+    trigger-type: seconds
+    trigger-value: 120
+    traffic-control:
+      apply-to-client-traffic: true
+      apply-to-all-brokers: true
+      delay-ms: 0
+      delay-jtter-ms: 0
+      delay-distribution: none
+      bandwidth: 0
+      packet-loss-mode: random
+      packet-loss-arg1: 10%
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 60
+  rabbitmq:
+    config:
+      standard:
+        log.file.level: info
+benchmarks:
+  - benchmark:
+      - workload:
+          main:
+            policies:
+              file: mirrored-queue.json
+              variables:
+                ha-mode: exactly
+                ha-params: 2
+            topology:
+              variables:
+                queueCount: 1
+                publisherCount: 1
+                consumerCount: 1
+        systems:
+          - s1
+      - workload:
+          main:
+            policies:
+              file: quorum-queue.json
+            topology:
+              variables:
+                queueCount: 1
+                publisherCount: 1
+                consumerCount: 1
+        systems:
+          - s2
+  - benchmark:
+      - workload:
+          main:
+            policies:
+              file: mirrored-queue.json
+              variables:
+                ha-mode: exactly
+                ha-params: 2
+            topology:
+              variables:
+                queueCount: 10
+                publisherCount: 10
+                consumerCount: 10
+        systems:
+          - s1
+      - workload:
+          main:
+            policies:
+              file: quorum-queue.json
+            topology:
+              variables:
+                queueCount: 10
+                publisherCount: 10
+                consumerCount: 10
+        systems:
+          - s2

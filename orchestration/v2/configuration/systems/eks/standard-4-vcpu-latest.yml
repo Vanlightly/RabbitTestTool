@@ -1,0 +1,15 @@
+name: standard-4-vcpu-latest
+host: k8s
+k8s-engine: eks
+hardware:
+  instance: 4-vcpu-intel
+  volume-config: 1-gp2-200
+  count: 1
+rabbitmq:
+  broker: 
+    version: 3.8.9
+    image: docker.io/rabbitmq:3.8.9-management
+  standard:
+      log.file.level: debug
+config: 
+  file: pause-minority-debug.yml

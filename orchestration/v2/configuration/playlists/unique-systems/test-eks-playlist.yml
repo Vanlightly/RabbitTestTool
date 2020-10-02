@@ -1,0 +1,68 @@
+run: 2
+systems:
+  - name: s1
+    host: k8s
+    k8s-engine: eks
+    file: standard-4-vcpu-latest.yml
+    overrides:
+      hardware:
+        count: 3
+  - name: s2
+    host: k8s
+    k8s-engine: eks
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        count: 3
+common-workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.json
+    policies:
+      file: mirrored-queue.json
+      variables:
+        ha-mode: exactly
+        ha-params: 2
+    step-seconds: 120
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 30
+benchmarks:
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 1
+                consumerCount: 1
+                publisherCount: 1
+          rabbitmq:
+            config:
+              standard:
+                log.file.level: info
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 2
+                consumerCount: 2
+                publisherCount: 2
+          rabbitmq:
+            config:
+              standard:
+                log.file.level: info
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 3
+                consumerCount: 3
+                publisherCount: 3
+          rabbitmq:
+            config:
+              standard:
+                log.file.level: info
+
+            

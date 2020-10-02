@@ -1,0 +1,65 @@
+run: 1
+systems:
+  - name: s1
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-1000
+          count: 3
+  - name: s2
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-io1-200
+          count: 3
+  - name: s3
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-st1-2000
+          count: 3
+common-workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.json
+      variables:
+        queueCount: 10
+        consumerCount: 10
+        publisherCount: 10
+    policies:
+      file: quorum-queue.json
+    step-seconds: 600
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 60
+benchmarks:
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                messageSize: 20
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                messageSize: 1000
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                messageSize: 10000
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                messageSize: 100000                

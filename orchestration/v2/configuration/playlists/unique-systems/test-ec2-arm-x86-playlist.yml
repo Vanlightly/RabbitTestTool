@@ -1,0 +1,75 @@
+run: 1
+systems:
+  - name: s1
+    host: ec2
+    file: standard-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-200
+          count: 3
+  - name: s2
+    host: ec2
+    file: arm-8-vcpu-latest.yml
+    overrides:
+      hardware:
+        rabbitmq:
+          volume-config: 1-gp2-200
+          count: 3
+common-workload:
+  main:
+    topology:
+      file: point-to-point/point-to-point-safe.json
+    step-seconds: 600
+  loadgen-config:
+    mode: benchmark
+    warm-up-seconds: 60
+benchmarks:
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 1
+                consumerCount: 1
+                publisherCount: 1
+            policies:
+              file: mirrored-queue.json
+              variables:
+                ha-mode: exactly
+                ha-params: 2
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 50
+                consumerCount: 50
+                publisherCount: 50
+            policies:
+              file: mirrored-queue.json
+              variables:
+                ha-mode: exactly
+                ha-params: 2
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 1
+                consumerCount: 1
+                publisherCount: 1
+            policies:
+              file: quorum-queue-mem-limit.json
+  - benchmark:
+      - workload:
+          main:
+            topology:
+              variables:
+                queueCount: 50
+                consumerCount: 50
+                publisherCount: 50
+            policies:
+              file: quorum-queue-mem-limit.json
+
+            

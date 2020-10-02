@@ -1,0 +1,22 @@
+{
+    "benchmarks": [
+        { "topologyVariables": { "publisherCount": "100", "queueCount": "1", "consumerCount": "1", "inflightLimit": "50" } }
+    ],
+    "commonAttributes": {
+        "topology": "point-to-point/point-to-point.json",
+        "topologyVariables": { 
+            "useConfirms": "true", 
+            "manualAcks": "true", 
+            "consumerPrefetch": "1000", 
+            "ackInterval": "1",
+            "durationSeconds": "600",
+            "messageSize": "20"
+        },
+        "policy": "quorum-queue-overflow.json",
+        "policyVariables": { 
+            "maxInMemoryLength": "0",
+            "lengthLimit": "2000000",
+            "overflow": "reject-publish"
+        }
+    }
+}
