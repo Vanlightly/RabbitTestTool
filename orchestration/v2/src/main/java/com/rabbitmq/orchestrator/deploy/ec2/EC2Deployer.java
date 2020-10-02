@@ -455,16 +455,39 @@ public class EC2Deployer implements Deployer {
     }
 
     private void teardownSystem(boolean isDownstream) {
-        String logPrefix = "Teardown for system: " + system.getName() + " and run_tag: " + runTag;
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        List<Integer> nodeNumbers = null;
+        if(isDownstream)
+            nodeNumbers = system.getDownstreamNodeNumbers();
+        else
+            nodeNumbers = system.getNodeNumbers();
 
-        String nodeNumber = isDownstream
-                            ? String.valueOf(system.getNodeNumbers().get(0))
-                            : String.valueOf(system.getDownstreamNodeNumbers().get(0));
+        for (int nodeNumber : nodeNumbers) {
+            executorService.submit(() -> teardownNode(nodeNumber));
+        }
+
+        executorService.shutdown();
+
+        while (!anyOpHasFailed() && !executorService.isTerminated()) {
+            Waiter.waitMs(1000, isCancelled);
+        }
+
+        String logMessage = isDownstream ? "Termination of downstream instances"
+                : "Termination of instances";
+
+        if (failedSystems.contains(system.getName()))
+            LOGGER.warn(logMessage + " failed for system " + system.getName());
+        else
+            LOGGER.info(logMessage + " complete for system " + system.getName());
+    }
+
+    private void teardownNode(int nodeNumber) {
+        String logPrefix = "Teardown for system: " + system.getName() + " and run_tag: " + runTag;
 
         List<String> args = Arrays.asList("bash",
                 "terminate-instances.sh",
                 "rabbitmq",
-                nodeNumber,
+                String.valueOf(nodeNumber),
                 runTag);
 
         // pass it a separate AtomicBoolean to ensure that cancellation does not interrupt teardown.
